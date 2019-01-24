@@ -7,5 +7,6 @@ int main()
 { 
     boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::debug);
     DMChannel chan("dm03disp03");
+    chan.getBufferPtr<uint8_t>();
 
 }

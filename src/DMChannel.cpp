@@ -21,4 +21,33 @@ DMChannel::~DMChannel()
     ImageStreamIO_closeIm(dmImage);
 
 }
- 
+
+
+//TODO: implement the rest of the datatypes
+template <class T> T* DMChannel::getBufferPtr(){;}
+
+template <> float* DMChannel::getBufferPtr<float>()
+{
+    if((dmImage->md)->atype != _DATATYPE_FLOAT)
+    {
+        BOOST_LOG_TRIVIAL(error) << "DM Channel type mismatch!";        
+        exit(-1);
+    
+    }
+
+    return dmImage->array.F;
+
+}
+
+template <> uint8_t* DMChannel::getBufferPtr<uint8_t>()
+{
+    if((dmImage->md)->atype != _DATATYPE_UINT8)
+    {
+        BOOST_LOG_TRIVIAL(error) << "DM Channel type mismatch!";        
+        exit(-1);
+    
+    }
+            
+    return dmImage->array.UI8;
+
+}
