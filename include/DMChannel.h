@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
+#include <boost/log/trivial.hpp>
 
 #include <ImageStruct.h>
 #include <ImageStreamIO.h>
@@ -16,16 +17,15 @@ class DMChannel
 {
     private:
         IMAGE* dmImage;
-        char name[80];
 
     public:
-        DMChannel(const char *name);
-        template <class T> getBufferPtr();
+        DMChannel(const char name[80]);
+        template <class T> T *getBufferPtr();
         // void *getBufferPtr();
         void incrementAllSemaphores();
-        void incrementSemaphore();
+        void incrementSemaphore(int index);
         ~DMChannel(); //free dmImage
 
 
-}
+};
 #endif
