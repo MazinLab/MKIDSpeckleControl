@@ -1,9 +1,13 @@
 #include <iostream>
+#include <opencv2/opencv.hpp>
 
 #include "DMChannel.h"
 
 #ifndef SPECKLETODM_H
 #define SPECKLETODM_H
+
+typedef float Pixel; //needed for DM map lambda function
+
 /*
  * Simple wrapper for speckles on the DM. 
  */
@@ -12,7 +16,7 @@ typedef struct
     double kx;
     double ky;
     double amp;
-    double phase
+    double phase;
 
 } dmspeck;
 
@@ -24,26 +28,43 @@ typedef struct
 class SpeckleToDM
 {
     private:
-        std::vector<dmspeck> probeSpeckles;
-        std::vector<dmspeck> nullingSpeckles;
+        std::vector<dmspeck> probeSpeckles; //not used
+        std::vector<dmspeck> nullingSpeckles; //not used
         cv::Mat probeMap;
         cv::Mat nullMap;
-        DMChannel dmChannel;
+        cv::Mat fullMapShm; //wrapper around shm image of DM channel
+
+        DMChannel *dmChannel;
+        int dmXSize;
+        int dmYSize;
+
+        boost::property_tree::ptree cfgParams;
+
+        //Methods:
+        cv::Mat generateMapFromSpeckle(const cv::Point2d kvecs, double amp, double phase);
 
     public:
         
         /*
          * Constructor. Instantiates DMChannel for CACAO communication with 
-         * dmChannel.
+         * DM channel.
          * @param dmChan Name of dmChannel shared memory buffer to use
          * @param ptree boost property tree containing global config params
          */
-        SpeckleToDM(const char *dmChan, boost::property_tree::ptree &ptree);
+        SpeckleToDM(const char dmChanName[80], boost::property_tree::ptree &ptree);
+        SpeckleToDM(const char dmChanName[80]);
 
         /*
          * Add a probe speckle to DM. Only difference between probe and nulling
          * speckle is that probe will get cleared when clearProbeSpeckles() is 
          * called. DM map will only be changed when updateDM() is called
+         * @param kvecs cv::Point containing kx and ky 
+         * @param amp DM amplitude
+         * @param phase DM phase
+         */
+        void addProbeSpeckle(cv::Point2d kvecs, double amp, double phase);
+
+        /* Overloads above function. 
          * @param kx k-vector x
          * @param ky k-vector y
          * @param amp DM amplitude
@@ -55,6 +76,13 @@ class SpeckleToDM
          * Add a nulling speckle to DM. Only difference between probe and nulling
          * speckle is that probe will get cleared when clearProbeSpeckles() is 
          * called. DM map will only be changed when updateDM() is called.
+         * @param kvecs cv::Point containing kx and ky 
+         * @param amp DM amplitude
+         * @param phase DM phase
+         */
+        void addNullingSpeckle(cv::Point2d kvecs, double amp, double phase);
+
+        /* Overloads above function. 
          * @param kx k-vector x
          * @param ky k-vector y
          * @param amp DM amplitude
@@ -69,6 +97,12 @@ class SpeckleToDM
         void clearProbeSpeckles();
 
         /*
+         * Clears probe speckles. DM map will only change when 
+         * updateDM() is called.
+         */
+        void clearNullingSpeckles();
+
+        /*
          * Updates the DM with all changes to the map since last update. (i.e.
          * DM map will be consistent with the lists probeSpeckles and nullingSpeckles)
          */
@@ -81,5 +115,9 @@ class SpeckleToDM
          */
         void updateCalParams(int placeholder);
 
-}
+        // Getters:
+        int getXSize();
+        int getYSize();
+
+};
 #endif
