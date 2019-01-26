@@ -56,6 +56,7 @@ class DMChannel
         // Getters:
         int getXSize();
         int getYSize();
+        std::string getName();
 
         /*
          * Destructor. Closes DM channel.

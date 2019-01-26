@@ -69,10 +69,12 @@ template <> uint8_t* DMChannel::getBufferPtr<uint8_t>()
 
 int DMChannel::getXSize(){ return (dmImage->md)->size[0];}
 int DMChannel::getYSize(){ return (dmImage->md)->size[1];}
+std::string DMChannel::getName(){ return (std::string)dmImage->name;}
 
 DMChannel::~DMChannel()
 {
     ImageStreamIO_closeIm(dmImage);
+    BOOST_LOG_TRIVIAL(info) << "DM Channel " << dmImage->name << " closed";
 
 }
 
