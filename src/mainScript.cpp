@@ -18,7 +18,9 @@ int main()
     //speckInterface.updateDM();
     
     //DMChannel chan;
-    //chan = DMChannel("dm00disp00"); //this segfaults for some reason!
+    //chan = DMChannel("dm00disp00"); 
+    //chan.getXSize();//this segfaults for some reason!
+
     //DMChannel chan("dm00disp00");
     //chan.getXSize();
 
