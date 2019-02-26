@@ -5,14 +5,9 @@
 #include <semaphore.h>
 #include <stdlib.h>
 #include <errno.h>
-#include <boost/interprocess/shared_memory_object.hpp>
-#include <boost/interprocess/mapped_region.hpp>
-#include <boost/interprocess/sync/named_semaphore.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/info_parser.hpp>
-
-#define DONEIMGSEM "/speckNullDoneImg"
-#define TAKEIMGSEM "/speckNullTakeImg"
+#include <mkidshm.h>
 
 #ifndef IMAGEGRABBER_H
 #define IMAGEGRABBER_H
@@ -33,22 +28,12 @@ class ImageGrabber
         cv::Mat flatWeightsCtrl; //Image of flat weights in control region
         cv::Mat darkSub; //Image of dark counts (in cps)
         cv::Mat darkSubCtrl; //Image of dark counts for control region
-        boost::interprocess::shared_memory_object shmImgBuffer; //Shared memory object for raw image
-        boost::interprocess::mapped_region imgBufferRegion; //Memory mapped region object for raw image
-        boost::interprocess::shared_memory_object shmTs; //Shared memory object for start timestamp
-        boost::interprocess::mapped_region tsMemRegion; //Memory mapped region object for start timestamp
-        boost::interprocess::shared_memory_object shmIntTime; //Shared memory object for integration time
-        boost::interprocess::mapped_region intTimeMemRegion; //Memory mapped region object for integration time
-        boost::interprocess::named_semaphore *doneImgSemPtr; //Pointer to "done image" semaphore
-        boost::interprocess::named_semaphore *takeImgSemPtr; //Pointer to "take image" semaphore
 
         boost::property_tree::ptree cfgParams; //Object containing configuration options
         
         //sem_t *doneImgSem;
         //sem_t *takeImgSem;
-        uint16_t *imgArr; //Shared memory buffer containing raw MKID image
-        uint64_t *tsPtr; //Shared memory buffer containing start timestamp for image
-        uint64_t *intTimePtr; //Shared memory buffer containing integration time (in half ms)
+        MKID_IMAGE shmImage; //Shared memory buffer containing raw MKID image
         char *badPixArr; //Buffer containing bad pixel mask
         char *flatCalArr; //Buffer containing flat cal image
         char *darkSubArr; //Buffer containing dark image
