@@ -75,9 +75,13 @@ void ImageGrabber::processFullImage()
 
 void ImageGrabber::startIntegrating(uint64_t startts)
 {
-    *tsPtr = startts;
-    *intTimePtr = (uint64_t)(cfgParams.get<double>("ImgParams.integrationTime")*2);
-    (*takeImgSemPtr).post();
+    MKIDShmImage_startIntegration(&shmImage, startts, cfgParams.get<int>("ImgParams.integrationTime"));
+
+}
+
+void ImageGrabber::startIntegrating(uint64_t startts, uint64_t integrationTime)
+{
+    MKIDShmImage_startIntegration(&shmImage, startts, integrationTime);
 
 }
 

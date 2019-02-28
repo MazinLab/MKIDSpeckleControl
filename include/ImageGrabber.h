@@ -79,7 +79,7 @@ class ImageGrabber
         * Sends signal to packetmaster (or simulation) to start taking an image;
         * i.e. increments *takeImgSemPtr. If interfacing w/ PacketMaster, image will consist of photons
         * tagged w/ timestamps between startts and startts + intTime, where intTime is specified in cfgParams.
-        * @param startts timestamp in seconds since Jan 1 00:00 of current year. Placed in shmTs shared memory space.
+        * @param startts timestamp in half-milliseconds since Jan 1 00:00 of current year. Placed in shmTs shared memory space.
         */
         void startIntegrating(uint64_t startts);
 
