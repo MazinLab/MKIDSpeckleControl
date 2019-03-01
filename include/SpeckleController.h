@@ -8,6 +8,8 @@
 #include <boost/log/trivial.hpp>
 //#include "simInterfaceTools.h"
 #include "imageTools.h"
+#include "dmTools.h"
+#include "dmspeck.h"
 
 #ifndef SPECKLECONTROLLER_H
 #define SPECKLECONTROLLER_H
@@ -26,7 +28,7 @@
  **/
 class SpeckleController
 {
-    private:
+    protected:
         boost::property_tree::ptree mParams; //container used to store configuration parameters
 
         double mPhaseList[NPHASES]; //List of probe phases
@@ -38,6 +40,8 @@ class SpeckleController
         cv::Point2d mCoords;
         cv::Point2d mKvecs; //speckle k-vectors (spatial angular frequencies)
         
+        int mCurProbeInd;
+        dmspeck mLastSpeckle;
 
         //METHODS
 
@@ -48,7 +52,7 @@ class SpeckleController
         **/
         std::tuple<double, double> measureSpeckleIntensityAndSigma(cv::Mat &image);
 
-        double measureIntensityCorrection(cv::Mat &badPixMask);
+        double measureIntensityCorrection();
 
     public:
         /**
@@ -57,11 +61,11 @@ class SpeckleController
         * @param pt Speckle coordinates on the array
         * @param ptree Property tree of config parameters
         **/
-        SpeckleController(cv::Point2d &pt, boost::property_tree::ptree &ptree)
+        SpeckleController(cv::Point2d pt, boost::property_tree::ptree &ptree);
 
-        virtual void update(cv::Mat &image);
+        virtual void update(cv::Mat &image) = 0;
 
-        virtual std::tuple<dmspeck, bool> getNextSpeckle()
+        virtual dmspeck getNextSpeckle() = 0;
 
         void updateBadPixMask(cv::Mat &mask);
 

@@ -12,15 +12,13 @@
 #include "params.h"
 #include <boost/property_tree/ptree.hpp>
 
-typedef double Pixel;
-
 /**
 * Calculates speckle k-vectors (spatial frequencies) from coordinates. PSF location is provided by the 
 * config params.
 * @param coords Speckle coordinates on array
 * @param cfgParams Configuration parameters. Relevant ones are lambda/D and PSF location on the array
 **/
-cv::Point2d calculateKVecs(const cv::Point2d &coords, boost::property_tree::ptree &cfgParams);
+cv::Point2d calculateKvecs(const cv::Point2d &coords, boost::property_tree::ptree &cfgParams);
 
 
 /**

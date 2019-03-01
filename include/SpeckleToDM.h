@@ -2,23 +2,12 @@
 #include <opencv2/opencv.hpp>
 
 #include "DMChannel.h"
+#include "dmspeck.h"
 
 #ifndef SPECKLETODM_H
 #define SPECKLETODM_H
 
 typedef float Pixel; //needed for DM map lambda function
-
-/*
- * Simple wrapper for speckles on the DM. 
- */
-typedef struct
-{
-    double kx;
-    double ky;
-    double amp;
-    double phase;
-
-} dmspeck;
 
 /*
  * High level interface to DM - can add/remove speckles

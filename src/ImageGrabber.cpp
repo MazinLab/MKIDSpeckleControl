@@ -5,7 +5,12 @@ ImageGrabber::ImageGrabber(boost::property_tree::ptree &ptree)
     cfgParams = ptree;
     BOOST_LOG_TRIVIAL(debug) << "Opening Image Buffer...";
     
-    MKIDShm_open(&shmImage, cfgParams.get("ImgParams.shmName"));
+    MKIDShmImage_open(&shmImage, cfgParams.get<std::string>("ImgParams.shmName").c_str());
+    if(shmImage.md->nWvlBins != 1){
+        BOOST_LOG_TRIVIAL(error) << "Multiple wavelengths not supported";
+        exit(-1);
+
+    }
 
     xCenter = cfgParams.get<int>("ImgParams.xCenter");
     yCenter = cfgParams.get<int>("ImgParams.yCenter");
@@ -13,7 +18,7 @@ ImageGrabber::ImageGrabber(boost::property_tree::ptree &ptree)
 
     if(cfgParams.get<bool>("ImgParams.useBadPixMask"))
     {
-        badPixArr = new char[2*IMXSIZE*IMYSIZE];
+        badPixArr = new char[2*cfgParams.get<int>("ImgParams.nCols")*cfgParams.get<int>("ImgParams.nRows")];
         loadBadPixMask();
 
     }
@@ -21,21 +26,21 @@ ImageGrabber::ImageGrabber(boost::property_tree::ptree &ptree)
     //initialize bad pixel mask to 0
     else
     {
-        badPixMask = cv::Mat(IMYSIZE, IMXSIZE, CV_16UC1, 0);
+        badPixMask = cv::Mat(cfgParams.get<int>("ImgParams.nRows"), cfgParams.get<int>("ImgParams.nCols"), CV_16UC1, 0);
         badPixMaskCtrl = cv::Mat(badPixMask, cv::Range(yCtrlStart, yCtrlEnd), cv::Range(xCtrlStart, xCtrlEnd));
 
     }
 
     if(cfgParams.get<bool>("ImgParams.useFlatCal"))
     {
-        flatCalArr = new char[8*IMXSIZE*IMYSIZE]; //pack flat cal into 64 bit double array
+        flatCalArr = new char[8*cfgParams.get<int>("ImgParams.nCols")*cfgParams.get<int>("ImgParams.nRows")]; //pack flat cal into 64 bit double array
         loadFlatCal();
 
     }
     
     if(cfgParams.get<bool>("ImgParams.useDarkSub"))
     {
-        darkSubArr = new char[2*IMXSIZE*IMYSIZE]; //pack dark into ushort array
+        darkSubArr = new char[2*cfgParams.get<int>("ImgParams.nCols")*cfgParams.get<int>("ImgParams.nRows")]; //pack dark into ushort array
         loadDarkSub();
 
     }
@@ -47,8 +52,8 @@ ImageGrabber::ImageGrabber()
 
 void ImageGrabber::readNextImage()
 {
-    MKIDShmImage_wait(&shmImage, 0)
-    rawImageShm = cv::Mat(cv::Size(IMXSIZE, IMYSIZE), CV_32UC1, shmImage.image);
+    MKIDShmImage_wait(&shmImage, 0);
+    rawImageShm = cv::Mat(cv::Size(cfgParams.get<int>("ImgParams.nCols"), cfgParams.get<int>("ImgParams.nRows")), CV_32S, shmImage.image);
     copyControlRegionFromShm();
     copyFullImageFromShm();
 
@@ -81,6 +86,13 @@ void ImageGrabber::startIntegrating(uint64_t startts)
 
 void ImageGrabber::startIntegrating(uint64_t startts, uint64_t integrationTime)
 {
+    MKIDShmImage_startIntegration(&shmImage, startts, integrationTime);
+
+}
+
+void ImageGrabber::startIntegrating(uint64_t startts, uint64_t integrationTime, int wvlStart, int wvlStop)
+{
+    MKIDShmImage_setWvlRange(&shmImage, wvlStart, wvlStop);
     MKIDShmImage_startIntegration(&shmImage, startts, integrationTime);
 
 }
@@ -160,8 +172,8 @@ void ImageGrabber::loadBadPixMask()
     std::string badPixFn = cfgParams.get<std::string>("ImgParams.badPixMaskFile");
     std::ifstream badPixFile(badPixFn.c_str(), std::ifstream::in|std::ifstream::binary);
     if(!badPixFile.good()) BOOST_LOG_TRIVIAL(warning) << "Could not find bad pixel mask";
-    badPixFile.read(badPixArr, 2*IMXSIZE*IMYSIZE);
-    badPixMask = cv::Mat(IMYSIZE, IMXSIZE, CV_16UC1, badPixArr);
+    badPixFile.read(badPixArr, 2*cfgParams.get<int>("ImgParams.nCols")*cfgParams.get<int>("ImgParams.nRows"));
+    badPixMask = cv::Mat(cfgParams.get<int>("ImgParams.nRows"), cfgParams.get<int>("ImgParams.nCols"), CV_16UC1, badPixArr);
     badPixMaskCtrl = cv::Mat(badPixMask, cv::Range(yCtrlStart, yCtrlEnd), cv::Range(xCtrlStart, xCtrlEnd));
 
 }
@@ -171,8 +183,8 @@ void ImageGrabber::loadFlatCal()
     std::string flatCalFn = cfgParams.get<std::string>("ImgParams.flatCalFile");
     std::ifstream flatCalFile(flatCalFn.c_str(), std::ifstream::in|std::ifstream::binary);
     if(!flatCalFile.good()) BOOST_LOG_TRIVIAL(warning) << "Could not find flat cal";
-    flatCalFile.read(flatCalArr, 8*IMXSIZE*IMYSIZE);
-    flatWeights = cv::Mat(IMYSIZE, IMXSIZE, CV_64FC1, flatCalArr);
+    flatCalFile.read(flatCalArr, 8*cfgParams.get<int>("ImgParams.nCols")*cfgParams.get<int>("ImgParams.nRows"));
+    flatWeights = cv::Mat(cfgParams.get<int>("ImgParams.nRows"), cfgParams.get<int>("ImgParams.nCols"), CV_64FC1, flatCalArr);
     flatWeightsCtrl = cv::Mat(flatWeights, cv::Range(yCtrlStart, yCtrlEnd), cv::Range(xCtrlStart, xCtrlEnd));
     //cv::imshow("flat", flatWeights);
     //cv::waitKey(0);
@@ -185,8 +197,8 @@ void ImageGrabber::loadDarkSub()
     std::string darkSubFn = cfgParams.get<std::string>("ImgParams.darkSubFile");
     std::ifstream darkSubFile(darkSubFn.c_str(), std::ifstream::in|std::ifstream::binary);
     if(!darkSubFile.good()) BOOST_LOG_TRIVIAL(warning) << "Could not find dark sub";
-    darkSubFile.read(darkSubArr, 2*IMXSIZE*IMYSIZE);
-    darkSub = cv::Mat(IMYSIZE, IMXSIZE, CV_16UC1, darkSubArr);
+    darkSubFile.read(darkSubArr, 2*cfgParams.get<int>("ImgParams.nCols")*cfgParams.get<int>("ImgParams.nRows"));
+    darkSub = cv::Mat(cfgParams.get<int>("ImgParams.nRows"), cfgParams.get<int>("ImgParams.nCols"), CV_16UC1, darkSubArr);
     darkSubCtrl = cv::Mat(darkSub, cv::Range(yCtrlStart, yCtrlEnd), cv::Range(xCtrlStart, xCtrlEnd));
     darkSubCtrl.convertTo(darkSubCtrl, CV_64FC1);
     darkSub.convertTo(darkSub, CV_64FC1);

@@ -5,8 +5,8 @@
 #include <semaphore.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <boost/log/trivial.hpp>
 #include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/info_parser.hpp>
 #include <mkidshm.h>
 
 #ifndef IMAGEGRABBER_H
@@ -82,6 +82,8 @@ class ImageGrabber
         * @param startts timestamp in half-milliseconds since Jan 1 00:00 of current year. Placed in shmTs shared memory space.
         */
         void startIntegrating(uint64_t startts);
+        void startIntegrating(uint64_t startts, uint64_t integrationTime);
+        void startIntegrating(uint64_t startts, uint64_t integrationTime, int wvlStart, int wvlStop);
 
         /**
         * Returns the most recently taken image of the control region specified in cfgParams.
@@ -184,6 +186,8 @@ class ImageGrabber
         * Subtracts darkSubCtrl from ctrlRegionImage.
         **/
         void applyDarkSubCtrlRegion();
+
+        void close();
 
 };
 #endif

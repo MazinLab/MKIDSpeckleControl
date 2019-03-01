@@ -1,6 +1,6 @@
 #include "dmTools.h"
 
-cv::Point2d calculateKVecs(const cv::Point2d &coords, boost::property_tree::ptree &cfgParams)
+cv::Point2d calculateKvecs(const cv::Point2d &coords, boost::property_tree::ptree &cfgParams)
 {
     cv::Point2d intCoords, kvecs;
     double dmAngle = cfgParams.get<double>("DMCal.angle");

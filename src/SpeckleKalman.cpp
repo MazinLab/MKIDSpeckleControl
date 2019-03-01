@@ -1,9 +1,11 @@
 #include "SpeckleKalman.h"
 
-SpeckleKalman::SpeckleKalman(cv::Point2d &pt, boost::property_tree::ptree &ptree):
+SpeckleKalman::SpeckleKalman(cv::Point2d pt, boost::property_tree::ptree &ptree):
         SpeckleController(pt, ptree){
     mProbeGridWidth = mParams.get<int>("KalmanParams.probeGridWidth");
+    mProbeGridSpacing = mParams.get<double>("KalmanParams.probeGridSpacing");
     mNProbePos = mProbeGridWidth*mProbeGridWidth;
+    mKvecCorrSigma = 0.42*2*mProbeGridSpacing;
 
     mx = cv::Mat::zeros(2*mNProbePos, 1, CV_64F);
     mz = cv::Mat::zeros(2, 1, CV_64F);
@@ -13,13 +15,23 @@ SpeckleKalman::SpeckleKalman(cv::Point2d &pt, boost::property_tree::ptree &ptree
     mP = mParams.get<double>("KalmanParams.initStateVar")*cv::Mat::eye(2*mNProbePos, 2*mNProbePos, CV_64F);
     mQ = mParams.get<double>("KalmanParams.processNoiseVar")*cv::Mat::eye(2*mNProbePos, 2*mNProbePos, CV_64F);
     mR = cv::Mat::zeros(2, 2, CV_64F);
-    BOOST_LOG_TRIVIAL(info) << "Initialized KF matrices";
-
-    correlateProcessNoise();
-    BOOST_LOG_TRIVIAL(debug) << "Initial Process Noise: " << mP;
+    BOOST_LOG_TRIVIAL(info) << "SpeckleKalman: Initialized KF matrices";
 
     initializeProbeGridKvecs();
-    BOOST_LOG_TRIVIAL(debug) << "Probe Grid: " << mProbeGridKvecs;
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: Probe Grid: " << mProbeGridKvecs;
+
+    correlateProcessNoise();
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: Initial Process Noise: " << mP;
+
+
+}
+
+void SpeckleKalman::update(cv::Mat &image){
+    ;}
+
+dmspeck SpeckleKalman::getNextSpeckle(){
+    dmspeck blank;
+    return blank;
 
 }
 
@@ -33,13 +45,14 @@ void SpeckleKalman::correlateProcessNoise()
 
     for(int i = 0; i < mNProbePos; i++){
         for(int j = 0; j < mNProbePos; j++){
-            std::tie(row, col) = getProbeGridIndices(i)
-            ki = mProbeGridKvecs[row, col];
-            std::tie(row, col) = getProbeGridIndices(i)
-            kj = mProbeGridKvecs[row, col];
+            std::tie(row, col) = getProbeGridIndices(i);
+            ki = mProbeGridKvecs.at<cv::Point2d>(row, col);
+            std::tie(row, col) = getProbeGridIndices(j);
+            kj = mProbeGridKvecs.at<cv::Point2d>(row, col);
             kDist = cv::norm(ki - kj);
             
-            realBlock[i, j] = std::sqrt(realBlock[i, i]*realBlock[j, j])*std::exp(-kDist*kDist/(2*mKvecCorrSigma*mKvecCorrSigma));
+            realBlock.at<double>(i, j) = std::sqrt(realBlock.at<double>(i, i)*realBlock.at<double>(j,j))*std::exp(-kDist*kDist/(2*mKvecCorrSigma*mKvecCorrSigma));
+            imagBlock.at<double>(i, j) = std::sqrt(imagBlock.at<double>(i,i)*imagBlock.at<double>(j,j))*std::exp(-kDist*kDist/(2*mKvecCorrSigma*mKvecCorrSigma));
 
         }
 
@@ -56,7 +69,7 @@ void SpeckleKalman::initializeProbeGridKvecs()
         for(int c = 0; c < mProbeGridWidth; c++){
             kvec = cv::Point2d(mKvecs.x + mProbeGridSpacing*(c - mProbeGridWidth/2), 
                     mKvecs.y + mProbeGridSpacing*(r - mProbeGridWidth/2));
-            mProbeGridKvecs[r, c] = kvec;
+            mProbeGridKvecs.at<cv::Point2d>(r, c) = kvec;
 
         }
 
