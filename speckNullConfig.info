@@ -1,0 +1,80 @@
+ImgParams
+{
+    nRows 145
+    nCols 140
+    xCenter 33 ;in pixel coordinates on DARKNESS image
+    yCenter 31
+
+    lambdaOverD 2.81; darkness lyot stop = 2.81; lyot wheel open = 2.65;2.45;2.61
+    integrationTime 50 ;in milliseconds
+
+    xCtrlStart -14 ;-20 ;relative to center, in pixel coordinates
+    xCtrlEnd  25 ;40
+    yCtrlStart 8 ;12
+    yCtrlEnd 40;45
+
+    useWvl true
+    wvlStart 700
+    wvlStop 1200
+
+    useBadPixMask true
+    badPixMaskFile /home/neelay/SpeckleNulling/SpeckleSimulator/calFiles/finalMap_20180524.txt
+    badPixFiltSize 5
+    usFactor 2
+
+    useFlatCal false
+    flatCalFile /mnt/data0/Darkness/20171001/snBinFiles/flatWeights.bin
+    
+    useDarkSub false
+    darkSubFile /mnt/data0/Darkness/20180530/snBinFiles/darkSub.bin
+
+}
+
+DMCal
+{
+    a 0
+    b 0
+    c 1 
+    angle 0 ;radians
+    yFlip 1 ; -1 at palomar
+
+}
+
+CalParams
+{
+    centroidingWindowRadius 5
+
+}
+
+NullingParams
+{
+    maxSpeckles 1 ;maximum number of speckles to probe at once
+    speckleWindow 4
+    exclusionZone 12 ;minimum distance (in pixels) between speckles
+    apertureRadius 2
+    useBoxBlur false
+    useGaussianBlur false
+
+    usFactor 2 ;upsampling to use when detecting speckles
+
+}
+
+KalmanParams
+{
+    probeGridWidth 3
+    probeGridSpacing 3.1415
+
+    processNoiseVar 1 ;value along the diagonal of Q - variance of speckle amplitude per iteration
+    initStateVar 1
+
+    snrThresh 4 ;minimum signal to noise for null
+
+    distThresh 2 ;max distance to tag speckle as the "same" as nulled speckle
+    nullIterWeight 0 ;1 ;state estimate penalty post-nulling. should be <=1
+
+    enforceRedetection false ;speckle must be re-detected every iteration to remain active
+    minProbeIters 4
+
+
+}
+
