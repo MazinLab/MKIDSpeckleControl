@@ -12,6 +12,9 @@ class SpeckleKalman : public SpeckleController
         cv::Mat_<cv::Point2d> mProbeGridKvecs; // k vector at each point 
         cv::Mat mProbeGridCounter; //dims: pgwxpgw - number of times each k has been probed (row,col) ind
         cv::Mat mProbeGridCorr; // correlation between pts at each "Kalman Index". dims: pgw^2*pgw^2
+        cv::Point2d mCurProbePos;
+        double mProbeAmp;
+        dmspeck mNextSpeck;
 
         //Kalman filter matricies
         cv::Mat mP; // Process noise covariance
@@ -32,6 +35,7 @@ class SpeckleKalman : public SpeckleController
         // Basically np.ravel_multi_index; gets the state vector indices (re and imag) of a given probe position
         std::tuple<int, int> getKalmanIndices(int r, int c);
         std::tuple<int, int> getProbeGridIndices(int kalmanInd);
+        void updateKalmanState();
 
     public:
         SpeckleKalman(cv::Point2d pt, boost::property_tree::ptree &ptree);

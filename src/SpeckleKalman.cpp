@@ -6,6 +6,7 @@ SpeckleKalman::SpeckleKalman(cv::Point2d pt, boost::property_tree::ptree &ptree)
     mProbeGridSpacing = mParams.get<double>("KalmanParams.probeGridSpacing");
     mNProbePos = mProbeGridWidth*mProbeGridWidth;
     mKvecCorrSigma = 0.42*2*mProbeGridSpacing;
+    mCurProbePos = cv::Point2d(mProbeGridWidth/2 + 1, mProbeGridWidth/2 + 1);
 
     mx = cv::Mat::zeros(2*mNProbePos, 1, CV_64F);
     mz = cv::Mat::zeros(2, 1, CV_64F);
@@ -27,16 +28,33 @@ SpeckleKalman::SpeckleKalman(cv::Point2d pt, boost::property_tree::ptree &ptree)
 }
 
 void SpeckleKalman::update(cv::Mat &image){
-    ;}
+    std::tie(mPhaseIntensities[mCurPhaseInd], mPhaseSigmas[mCurPhaseInd]) = 
+        measureSpeckleIntensityAndSigma(image);
+     
+    if(mCurPhaseInd == NPHASES-1){
+        updateKalmanState();
+        mCurPhaseInd = 0;
 
-dmspeck SpeckleKalman::getNextSpeckle(){
-    dmspeck blank;
-    return blank;
+    }
+    else{
+        mCurPhaseInd += 1;
+        cv::Point2d curKvecs = mProbeGridKvecs.at<cv::Point2d>(mCurProbePos);
+        mNextSpeck.kx = curKvecs.x;
+        mNextSpeck.ky = curKvecs.y;
+        mNextSpeck.amp = mProbeAmp;
+        mNextSpeck.phase = mPhaseList[mCurPhaseInd];
+        mNextSpeck.isNull = false;
+
+    }
 
 }
 
-void SpeckleKalman::correlateProcessNoise()
-{
+dmspeck SpeckleKalman::getNextSpeckle(){ 
+    return mNextSpeck;
+
+}
+
+void SpeckleKalman::correlateProcessNoise(){
     cv::Mat realBlock = cv::Mat(mP, cv::Range(0, mNProbePos), cv::Range(0, mNProbePos));
     cv::Mat imagBlock = cv::Mat(mP, cv::Range(mNProbePos, 2*mNProbePos), cv::Range(mNProbePos, 2*mNProbePos));
     cv::Point2d ki, kj;

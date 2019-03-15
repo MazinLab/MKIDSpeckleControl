@@ -32,6 +32,8 @@ class SpeckleController
         boost::property_tree::ptree mParams; //container used to store configuration parameters
 
         double mPhaseList[NPHASES]; //List of probe phases
+        double mPhaseIntensities[NPHASES];
+        double mPhaseSigmas[NPHASES];
 
         double mIntensityCorrectionFactor;
         cv::Mat mApertureMask; //Aperture window used to measure speckle intensity
@@ -40,7 +42,7 @@ class SpeckleController
         cv::Point2d mCoords;
         cv::Point2d mKvecs; //speckle k-vectors (spatial angular frequencies)
         
-        int mCurProbeInd;
+        int mCurPhaseInd;
         dmspeck mLastSpeckle;
 
         //METHODS

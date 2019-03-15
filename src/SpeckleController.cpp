@@ -11,7 +11,8 @@ SpeckleController::SpeckleController(cv::Point2d pt, boost::property_tree::ptree
 
     for(int i=0; i<NPHASES; i++)
         mPhaseList[i] = (double)2*M_PI*i/NPHASES;
-
+    
+    mCurPhaseInd = 0;
         
     mApertureMask = cv::Mat::zeros(2*mParams.get<int>("NullingParams.apertureRadius")+1, 2*mParams.get<int>("NullingParams.apertureRadius")+1, CV_64F);
     cv::circle(mApertureMask, cv::Point(mParams.get<int>("NullingParams.apertureRadius"), mParams.get<int>("NullingParams.apertureRadius")), mParams.get<int>("NullingParams.apertureRadius"), 1, -1);
