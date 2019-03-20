@@ -38,7 +38,7 @@ class SpeckleKalman : public SpeckleController
         void updateKalmanState();
 
     public:
-        SpeckleKalman(cv::Point2d pt, boost::property_tree::ptree &ptree);
+        SpeckleKalman(cv::Point2d pt, cv::Mat &image, boost::property_tree::ptree &ptree);
 
         void update(cv::Mat &image);
 

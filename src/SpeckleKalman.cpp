@@ -1,12 +1,13 @@
 #include "SpeckleKalman.h"
 
-SpeckleKalman::SpeckleKalman(cv::Point2d pt, boost::property_tree::ptree &ptree):
-        SpeckleController(pt, ptree){
+SpeckleKalman::SpeckleKalman(cv::Point2d pt, cv::Mat &image, boost::property_tree::ptree &ptree):
+        SpeckleController(pt, image, ptree){
     mProbeGridWidth = mParams.get<int>("KalmanParams.probeGridWidth");
     mProbeGridSpacing = mParams.get<double>("KalmanParams.probeGridSpacing");
     mNProbePos = mProbeGridWidth*mProbeGridWidth;
     mKvecCorrSigma = 0.42*2*mProbeGridSpacing;
     mCurProbePos = cv::Point2d(mProbeGridWidth/2 + 1, mProbeGridWidth/2 + 1);
+    mProbeAmp = calculateDMAmplitude(mKvecs, mInitialIntensity, mParams);
 
     mx = cv::Mat::zeros(2*mNProbePos, 1, CV_64F);
     mz = cv::Mat::zeros(2, 1, CV_64F);
@@ -94,10 +95,6 @@ void SpeckleKalman::initializeProbeGridKvecs()
     }
 
 }
-        
-            
-
-    
 
 std::tuple<int, int> SpeckleKalman::getKalmanIndices(int r, int c)
 {

@@ -1,6 +1,6 @@
 #include "SpeckleController.h"
 
-SpeckleController::SpeckleController(cv::Point2d pt, boost::property_tree::ptree &ptree)
+SpeckleController::SpeckleController(cv::Point2d pt, cv::Mat &image, boost::property_tree::ptree &ptree)
 {
     mParams = ptree;
     
@@ -22,6 +22,8 @@ SpeckleController::SpeckleController(cv::Point2d pt, boost::property_tree::ptree
     mIntensityCorrectionFactor = measureIntensityCorrection();
 
     BOOST_LOG_TRIVIAL(debug) << "Speckle: done initialization";
+
+    std::tie(mInitialIntensity, mInitialSigma) = measureSpeckleIntensityAndSigma(image);
 
 
 

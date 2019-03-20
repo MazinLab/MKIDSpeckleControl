@@ -34,6 +34,8 @@ class SpeckleController
         double mPhaseList[NPHASES]; //List of probe phases
         double mPhaseIntensities[NPHASES];
         double mPhaseSigmas[NPHASES];
+        double mInitialIntensity;
+        double mInitialSigma;
 
         double mIntensityCorrectionFactor;
         cv::Mat mApertureMask; //Aperture window used to measure speckle intensity
@@ -63,7 +65,7 @@ class SpeckleController
         * @param pt Speckle coordinates on the array
         * @param ptree Property tree of config parameters
         **/
-        SpeckleController(cv::Point2d pt, boost::property_tree::ptree &ptree);
+        SpeckleController(cv::Point2d pt, cv::Mat &image, boost::property_tree::ptree &ptree);
 
         virtual void update(cv::Mat &image) = 0;
 
