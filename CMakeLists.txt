@@ -13,3 +13,6 @@ set (CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_executable(mainScript ${SOURCES})
 target_link_libraries(mainScript ${OpenCV_LIBS} -lImageStreamIO -lmkidshm -lboost_log -lboost_system -lrt -lpthread)
 
+file(GLOB SIMSOURCES "sim/*.cpp")
+add_executable(linDMToMKID ${SIMSOURCES})
+target_link_libraries(linDMToMKID ${OpenCV_LIBS} -lImageStreamIO -lmkidshm -lboost_log -lboost_system -lrt -lpthread)

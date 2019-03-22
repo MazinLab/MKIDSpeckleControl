@@ -12,6 +12,8 @@
 #include "params.h"
 #include <boost/property_tree/ptree.hpp>
 
+#ifndef DMTOOLS_H
+#define DMTOOLS_H
 /**
  * Calculates speckle k-vectors (spatial frequencies) from coordinates. PSF location is provided by the 
  * config params.
@@ -46,4 +48,6 @@ double calculateDMAmplitude(const cv::Point2d &kvecs, double intensity, double i
  * @param kvecs Speckle k-vectors
  * @param intensity Speckle intensity
  */
-double calculateDMAmplitude(const cv::Point2i &kvecs, double intensity, boost::property_tree::ptree &cfgParams);
+double calculateDMAmplitude(const cv::Point2d &kvecs, double intensity, boost::property_tree::ptree &cfgParams);
+
+#endif

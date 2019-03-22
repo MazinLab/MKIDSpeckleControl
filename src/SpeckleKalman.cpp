@@ -55,6 +55,9 @@ dmspeck SpeckleKalman::getNextSpeckle(){
 
 }
 
+void SpeckleKalman::updateKalmanState(){
+    ;}
+
 void SpeckleKalman::correlateProcessNoise(){
     cv::Mat realBlock = cv::Mat(mP, cv::Range(0, mNProbePos), cv::Range(0, mNProbePos));
     cv::Mat imagBlock = cv::Mat(mP, cv::Range(mNProbePos, 2*mNProbePos), cv::Range(mNProbePos, 2*mNProbePos));
