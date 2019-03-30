@@ -15,9 +15,9 @@
 int main(){
     char dmShmImName[80] = "dm03disp09";
     char mkidShmName[80] = "DMToMKIDSim0";
-    int fpNRows = 50;
-    int fpNCols = 50;
-    float nLDPerPix = 1;
+    int fpNRows = 150;
+    int fpNCols = 150;
+    float nLDPerPix = 3;
     int nIntegrations = 1;
     int dmSemInd = 0;
 
@@ -42,8 +42,7 @@ int main(){
     cv::Mat fpImMat(fpNRows, fpNCols, CV_32S, fpShmIm.image);
     
     while(true){
-        if(!takingImage){
-            sem_wait(fpShmIm.takeImageSem);
+        if(sem_trywait(fpShmIm.takeImageSem)==0){
             BOOST_LOG_TRIVIAL(debug) << "Starting Image";
             fpImMat.setTo(0);
             takingImage = true;
@@ -51,11 +50,9 @@ int main(){
 
         }
 
-
-        BOOST_LOG_TRIVIAL(debug) << "Waiting for DM";
-        ImageStreamIO_semwait(&dmShmIm, dmSemInd);
-
         if(takingImage){
+            BOOST_LOG_TRIVIAL(debug) << "Waiting for DM";
+            ImageStreamIO_semwait(&dmShmIm, dmSemInd);
             fpImMat += mkid.convertDMToFP(dmImMat);
             intCounter++;
             if(intCounter==nIntegrations){
@@ -64,6 +61,11 @@ int main(){
                 takingImage = false;
 
             }
+
+        }
+
+        else{
+            ImageStreamIO_semtrywait(&dmShmIm, dmSemInd);
 
         }
             
