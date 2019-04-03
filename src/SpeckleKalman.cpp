@@ -6,7 +6,7 @@ SpeckleKalman::SpeckleKalman(cv::Point2d pt, cv::Mat &image, boost::property_tre
     mProbeGridSpacing = mParams.get<double>("KalmanParams.probeGridSpacing");
     mNProbePos = mProbeGridWidth*mProbeGridWidth;
     mKvecCorrSigma = 0.42*2*mProbeGridSpacing;
-    mCurProbePos = cv::Point2d(mProbeGridWidth/2 + 1, mProbeGridWidth/2 + 1);
+    mCurProbePos = cv::Point2i(mProbeGridWidth/2 + 1, mProbeGridWidth/2 + 1);
     mProbeAmp = calculateDMAmplitude(mKvecs, mInitialIntensity, mParams);
 
     mx = cv::Mat::zeros(2*mNProbePos, 1, CV_64F);
@@ -34,6 +34,7 @@ void SpeckleKalman::update(cv::Mat &image){
      
     if(mCurPhaseInd == NPHASES-1){
         updateKalmanState();
+        updateNullingSpeckle();
         mCurPhaseInd = 0;
 
     }
@@ -56,7 +57,30 @@ dmspeck SpeckleKalman::getNextSpeckle(){
 }
 
 void SpeckleKalman::updateKalmanState(){
-    ;}
+    int reInd, imInd;
+    std::tie(reInd, imInd) = getKalmanIndices(mCurProbePos);
+    mH.setTo(0);
+    mH.at<double>(0, reInd) = 4*mProbeAmp/(mDMCalFactor*mDMCalFactor);
+    mH.at<double>(1, imInd) = 4*mProbeAmp/(mDMCalFactor*mDMCalFactor);
+    mz.at<double>(0) = mPhaseIntensities[0] - mPhaseIntensities[2];
+    mz.at<double>(1) = mPhaseIntensities[1] - mPhaseIntensities[3];
+    mR.at<double>(0,0) = std::pow(mPhaseSigmas[0], 2) + std::pow(mPhaseSigmas[2], 2);
+    mR.at<double>(1,1) = std::pow(mPhaseSigmas[1], 2) + std::pow(mPhaseSigmas[3], 2);
+
+    mx = mA*mx;
+    mP = mA*mP*mA.t() + mQ;
+    cv::Mat S = mR + mH*mP*mH.t();
+    mK = mP*mH.t()*S.inv();
+    mx = mx + mK*(mz - mH*mx);
+    mP = (cv::Mat::eye(mP.rows, mP.cols, CV_64F) - mK*mH)*mP;
+
+}
+
+void SpeckleKalman::updateNullingSpeckle(){;
+     
+    
+}
+    
 
 void SpeckleKalman::correlateProcessNoise(){
     cv::Mat realBlock = cv::Mat(mP, cv::Range(0, mNProbePos), cv::Range(0, mNProbePos));
@@ -99,9 +123,15 @@ void SpeckleKalman::initializeProbeGridKvecs()
 
 }
 
-std::tuple<int, int> SpeckleKalman::getKalmanIndices(int r, int c)
-{
+std::tuple<int, int> SpeckleKalman::getKalmanIndices(int r, int c){
     int realInd = r*mProbeGridWidth + c;
+    int imagInd = realInd + mNProbePos;
+    return std::make_tuple(realInd, imagInd);
+
+}
+
+std::tuple<int, int> SpeckleKalman::getKalmanIndices(cv::Point2i &probePos){
+    int realInd = probePos.y*mProbeGridWidth + probePos.x;
     int imagInd = realInd + mNProbePos;
     return std::make_tuple(realInd, imagInd);
 

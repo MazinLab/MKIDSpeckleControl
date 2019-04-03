@@ -39,6 +39,10 @@ class MKIDImageSim{
 
                 }); //convert phase to complex E-field
 
+            cv::Mat circAperture(dmE.rows, dmE.cols, CV_32FC2, cv::Scalar(0, 0));
+            cv::circle(circAperture, cv::Point2d((double)dmE.cols/2, (double)dmE.rows/2), dmE.rows/2, cv::Scalar(1, 1), -1);
+            dmE = dmE.mul(circAperture);
+
             ppE.setTo(0);
             cv::Mat ppeTmp = ppE.rowRange(ppE.rows/2-dmE.rows/2, 
                     ppE.rows/2+dmE.rows/2).colRange(ppE.cols/2-dmE.cols/2, ppE.cols/2+dmE.cols/2);
