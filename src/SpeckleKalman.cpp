@@ -76,8 +76,22 @@ void SpeckleKalman::updateKalmanState(){
 
 }
 
-void SpeckleKalman::updateNullingSpeckle(){;
-     
+void SpeckleKalman::updateNullingSpeckle(){
+    cv::Mat amplitude = cv::Mat::zeros(mNProbePos, mNProbePos, CV_64F);
+    cv::Mat phase = cv::Mat::zeros(mNProbePos, mNProbePos, CV_64F);
+
+    cv::Mat real(mx, cv::Range(0, mNProbePos));
+    cv::Mat imag(mx, cv::Range(mNProbePos, 2*mNProbePos));
+    real = real.reshape(1, mProbeGridWidth);
+    imag = imag.reshape(1, mProbeGridWidth);
+    
+    cv::cartToPolar(real, imag, amplitude, phase);
+
+    cv::Mat weights = cv::Mat::ones(mNProbePos, mNProbePos, CV_64F);
+    cv::GaussianBlur(weights, weights, cv::Size(0,0), 2*M_PI*0.42);
+    weights = weights/cv::sum(weights)[0];
+    cv::divide(amplitude, weights, weights);
+    
     
 }
     

@@ -66,6 +66,7 @@ KalmanParams
 
     processNoiseVar 1 ;value along the diagonal of Q - variance of speckle amplitude per iteration
     initStateVar 1
+    useConstantR true ;if true get R matrix from sqrt(I_initial)
 
     snrThresh 4 ;minimum signal to noise for null
 
