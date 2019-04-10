@@ -15,8 +15,8 @@
 int main(){
     char dmShmImName[80] = "dm03disp09";
     char mkidShmName[80] = "DMToMKIDSim0";
-    int fpNRows = 150;
-    int fpNCols = 150;
+    int fpNRows = 1400;
+    int fpNCols = 1460;
     float nLDPerPix = 3;
     int nIntegrations = 1;
     int dmSemInd = 0;

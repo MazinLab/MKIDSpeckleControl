@@ -10,7 +10,7 @@ DMChannel::DMChannel(const char name[80])
     else
     {
         BOOST_LOG_TRIVIAL(fatal) << "DM Channel " << name << " open failed. Exiting.";        
-        exit(-1);
+        throw;
 
     }
 
@@ -33,7 +33,7 @@ template <> float* DMChannel::getBufferPtr<float>()
     if((dmImage->md)->datatype != _DATATYPE_FLOAT)
     {
         BOOST_LOG_TRIVIAL(error) << "DM Channel type mismatch!";        
-        exit(-1);
+        throw;
     
     }
 
@@ -46,7 +46,7 @@ template <> double* DMChannel::getBufferPtr<double>()
     if((dmImage->md)->datatype != _DATATYPE_DOUBLE)
     {
         BOOST_LOG_TRIVIAL(error) << "DM Channel type mismatch!";        
-        exit(-1);
+        throw;
     
     }
 
@@ -59,7 +59,7 @@ template <> uint8_t* DMChannel::getBufferPtr<uint8_t>()
     if((dmImage->md)->datatype != _DATATYPE_UINT8)
     {
         BOOST_LOG_TRIVIAL(error) << "DM Channel type mismatch!";        
-        exit(-1);
+        throw;
     
     }
             

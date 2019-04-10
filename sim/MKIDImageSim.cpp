@@ -1,5 +1,10 @@
 #include <opencv2/opencv.hpp>
 
+//logging
+#include <boost/log/core.hpp>
+#include <boost/log/expressions.hpp>
+#include <boost/log/trivial.hpp>
+
 class MKIDImageSim{
     int fpRows;
     int fpCols;
@@ -22,9 +27,14 @@ class MKIDImageSim{
         cv::Mat convertDMToFP(const cv::Mat &dmImShm){
             int ppRows = (int)dmImShm.rows*nLDPerPix;
             int ppCols = (int)dmImShm.cols*nLDPerPix;
+            if((ppRows < fpRows) || (ppCols < fpCols)){
+                BOOST_LOG_TRIVIAL(error) << "FP larger than PP not implemented";
+                throw;
+
+            }
             cv::Mat ppE(ppRows, ppCols, CV_32FC2);
-            cv::Mat fpE(fpRows, fpCols, CV_32FC2); //complex float
-            cv::Mat fpIm(fpRows, fpCols, CV_32F); //intensities
+            cv::Mat fpE(ppRows, ppCols, CV_32FC2); //complex float
+            cv::Mat fpIm(ppRows, ppCols, CV_32F); //intensities
             cv::Mat dmE(dmImShm.rows, dmImShm.cols, CV_32FC2); 
 
             //cv::Mat dmIm((int)dmImShm.rows*nLDPerPix, (int)dmImShm.cols*nLDPerPix, CV_32F);
@@ -69,9 +79,11 @@ class MKIDImageSim{
             cv::split(fpE, eField);
             cv::magnitude(eField[0], eField[1], fpIm);
 
-            fpIm = fpIm*1000;
-            cv::Mat fpImOut(fpRows, fpCols, CV_32S);
+            fpIm = fpIm*100;
+            cv::Mat fpImOut(ppRows, ppCols, CV_32S);
             fpIm.convertTo(fpImOut, CV_32S);
+            fpImOut = cv::Mat(fpImOut, cv::Range(ppRows/2 - fpRows/2, ppRows/2 + ppRows/2), 
+                    cv::Range(ppCols/2 - fpCols/2, ppCols/2 + fpCols/2));
 
             return fpImOut;
             
