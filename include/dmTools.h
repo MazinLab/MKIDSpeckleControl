@@ -4,9 +4,7 @@
 
 #include <opencv2/opencv.hpp>
 #define _USE_MATH_DEFINES
-#include <Eigen/Dense>
-#include <Eigen/Sparse>
-#include <opencv2/core/eigen.hpp>
+//#include <opencv2/core/eigen.hpp>
 #include <cmath>
 #include <iostream>
 #include "params.h"
