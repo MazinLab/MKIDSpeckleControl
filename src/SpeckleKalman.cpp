@@ -76,9 +76,13 @@ void SpeckleKalman::updateKalmanState(){
 
 }
 
+//TODO: SNR calc/threshold
 void SpeckleKalman::updateNullingSpeckle(){
     cv::Mat amplitude = cv::Mat::zeros(mNProbePos, mNProbePos, CV_64F);
     cv::Mat phase = cv::Mat::zeros(mNProbePos, mNProbePos, CV_64F);
+
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: Amplitude: " << amplitude;
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: Phase: " << phase;
 
     cv::Mat real(mx, cv::Range(0, mNProbePos));
     cv::Mat imag(mx, cv::Range(mNProbePos, 2*mNProbePos));
@@ -89,8 +93,25 @@ void SpeckleKalman::updateNullingSpeckle(){
 
     cv::Mat weights = cv::Mat::ones(mNProbePos, mNProbePos, CV_64F);
     cv::GaussianBlur(weights, weights, cv::Size(0,0), 2*M_PI*0.42);
-    weights = weights/cv::sum(weights)[0];
     cv::divide(amplitude, weights, weights);
+    weights = weights/cv::sum(weights)[0];    
+
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: weights " << weights;
+
+    cv::Point2d nullingK;
+    double nullingAmp;
+    double nullingPhase;
+    mProbeGridKvecs.forEach([this, &weights, &amplitude, &phase, &nullingK, &nullingAmp, &nullingPhase]
+                (cv::Point2d &value, const int *position) -> void{
+            nullingK += weights.at<double>(position[0], position[1])*value;
+            nullingAmp += weights.at<double>(position[0], position[1])*amplitude.at<double>(position[0], position[1]);
+            nullingPhase += weights.at<double>(position[0], position[1])*phase.at<double>(position[0], position[1]); 
+
+            });
+
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: Nulling k: " << nullingK;
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: Nulling amplitude: " << nullingAmp;
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: Nulling phase: " << nullingPhase;
     
     
 }

@@ -30,7 +30,7 @@ template <class T> T* DMChannel::getBufferPtr(){;}
 
 template <> float* DMChannel::getBufferPtr<float>()
 {
-    if((dmImage->md)->atype != _DATATYPE_FLOAT)
+    if((dmImage->md)->datatype != _DATATYPE_FLOAT)
     {
         BOOST_LOG_TRIVIAL(error) << "DM Channel type mismatch!";        
         exit(-1);
@@ -43,7 +43,7 @@ template <> float* DMChannel::getBufferPtr<float>()
 
 template <> double* DMChannel::getBufferPtr<double>()
 {
-    if((dmImage->md)->atype != _DATATYPE_DOUBLE)
+    if((dmImage->md)->datatype != _DATATYPE_DOUBLE)
     {
         BOOST_LOG_TRIVIAL(error) << "DM Channel type mismatch!";        
         exit(-1);
@@ -56,7 +56,7 @@ template <> double* DMChannel::getBufferPtr<double>()
 
 template <> uint8_t* DMChannel::getBufferPtr<uint8_t>()
 {
-    if((dmImage->md)->atype != _DATATYPE_UINT8)
+    if((dmImage->md)->datatype != _DATATYPE_UINT8)
     {
         BOOST_LOG_TRIVIAL(error) << "DM Channel type mismatch!";        
         exit(-1);
