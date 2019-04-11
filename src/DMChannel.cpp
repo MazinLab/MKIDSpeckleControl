@@ -20,6 +20,8 @@ DMChannel::DMChannel(){;} //placeholder
 
 void DMChannel::postAllSemaphores()
 {
+    //dmImage->md->write = 0;
+    dmImage->md->cnt0++;
     ImageStreamIO_sempost(dmImage, -1);
 
 }

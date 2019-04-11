@@ -13,10 +13,10 @@
 
 
 int main(){
-    char dmShmImName[80] = "dm03disp09";
+    char dmShmImName[80] = "dm04disp08";
     char mkidShmName[80] = "DMToMKIDSim0";
-    int fpNRows = 1400;
-    int fpNCols = 1460;
+    int fpNRows;
+    int fpNCols;
     float nLDPerPix = 3;
     int nIntegrations = 1;
     int dmSemInd = 0;
@@ -30,7 +30,6 @@ int main(){
     IMAGE dmShmIm;
     MKID_IMAGE fpShmIm;
 
-    MKIDImageSim mkid(fpNRows, fpNCols, nLDPerPix);
 
     ImageStreamIO_openIm(&dmShmIm, dmShmImName);
     int dmNRows = dmShmIm.md->size[1];
@@ -39,7 +38,11 @@ int main(){
 
     
     MKIDShmImage_open(&fpShmIm, mkidShmName);
+    fpNRows = fpShmIm.md->nRows;
+    fpNCols = fpShmIm.md->nCols;
     cv::Mat fpImMat(fpNRows, fpNCols, CV_32S, fpShmIm.image);
+
+    MKIDImageSim mkid(fpNRows, fpNCols, nLDPerPix);
     
     while(true){
         if(sem_trywait(fpShmIm.takeImageSem)==0){

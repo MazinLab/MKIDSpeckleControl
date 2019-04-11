@@ -21,7 +21,7 @@ int main()
     //DMChannel chan("dm03disp03");
     //chan.getBufferPtr<float>();
 
-    SpeckleToDM speckInterface("dm03disp09");
+    SpeckleToDM speckInterface("dm04disp00");
     speckInterface.addProbeSpeckle(cv::Point2d(20,20), 1, 0);
     speckInterface.updateDM();
     
