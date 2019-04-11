@@ -1,9 +1,12 @@
 cmake_minimum_required(VERSION 2.8)
 project(MKIDFocalPlaneControl)
 
-include_directories(include)
 find_package(OpenCV 3.3 REQUIRED)
 find_package(Boost REQUIRED)
+find_package(PythonInterp REQUIRED)
+find_package(PythonLibs REQUIRED)
+include_directories(include ${PYTHON_INCLUDE_DIRS})
+link_directories(${BOOST_LIBRARY_DIR})
 
 file(GLOB SOURCES "src/*.cpp")
 
@@ -16,3 +19,9 @@ target_link_libraries(mainScript ${OpenCV_LIBS} -lImageStreamIO -lmkidshm -lboos
 file(GLOB SIMSOURCES "sim/*.cpp")
 add_executable(linDMToMKID ${SIMSOURCES})
 target_link_libraries(linDMToMKID ${OpenCV_LIBS} -lImageStreamIO -lmkidshm -lboost_log -lboost_system -lrt -lpthread)
+
+file(GLOB SPECKTODMPY "python/PySpeckleToDM.cpp" "src/SpeckleToDM.cpp" "src/DMChannel.cpp")
+add_library(speckletodm SHARED ${SPECKTODMPY})
+set_target_properties(speckletodm PROPERTIES PREFIX "")
+set(LIBRARY_OUTPUT_PATH "./python")
+target_link_libraries(speckletodm ${OpenCV_LIBS} -lboost_log -lboost_python -lboost_system ${PYTHON_LIBRARIES} -lImageStreamIO -lmkidshm  -lrt -lpthread)

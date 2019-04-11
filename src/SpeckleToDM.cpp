@@ -33,11 +33,27 @@ void SpeckleToDM::addProbeSpeckle(cv::Point2d kvecs, double amp, double phase)
 
 }
 
+void SpeckleToDM::addProbeSpeckle(double kx, double ky, double amp, double phase)
+{
+    probeMap += generateMapFromSpeckle(cv::Point2d(kx, ky), amp, phase);
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleToDM " << dmChannel->getName() << ": Adding probe speckle with k: " 
+        << cv::Point2d(kx, ky) << ", amplitude: " << amp << ", phase: " << phase;
+
+}
+
 void SpeckleToDM::addNullingSpeckle(cv::Point2d kvecs, double amp, double phase)
 {
     nullMap += generateMapFromSpeckle(kvecs, amp, phase);
     BOOST_LOG_TRIVIAL(debug) << "SpeckleToDM " << dmChannel->getName() << ": Adding nulling speckle with k: " 
         << kvecs << ", amplitude: " << amp << ", phase: " << phase;
+
+}
+
+void SpeckleToDM::addNullingSpeckle(double kx, double ky, double amp, double phase)
+{
+    nullMap += generateMapFromSpeckle(cv::Point2d(kx, ky), amp, phase);
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleToDM " << dmChannel->getName() << ": Adding nulling speckle with k: " 
+        << cv::Point2d(kx, ky) << ", amplitude: " << amp << ", phase: " << phase;
 
 }
 
