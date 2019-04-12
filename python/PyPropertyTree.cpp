@@ -5,11 +5,6 @@
 
 using namespace boost::python;
 
-void read_info_wrapper(const std::string &filename, boost::property_tree::ptree &tree){
-    boost::property_tree::info_parser::read_info(filename, tree);}
-
-std::string ptree_get_string(const boost::property_tree::ptree &tree, std::string &key){
-    return tree.get<std::string>(key);}
 
 class PTreeWrapper{
     boost::property_tree::ptree myTree;
@@ -40,6 +35,31 @@ class PTreeWrapper{
 
         }
 
+        void add(const std::string &key, const bool &value){
+            myTree.add(key, value);
+
+        }
+
+        void put(const std::string &key, const std::string &value){
+            myTree.put(key, value);
+
+        }
+
+        void put(const std::string &key, const double &value){
+            myTree.put(key, value);
+
+        }
+
+        void put(const std::string &key, const int &value){
+            myTree.put(key, value);
+
+        }
+
+        void put(const std::string &key, const bool &value){
+            myTree.put(key, value);
+
+        }
+
         void write(const std::string &filename){
             std::ofstream out;
             out.open(filename, std::ofstream::out);
@@ -60,6 +80,11 @@ BOOST_PYTHON_MODULE(propertytree){
         .def("add", static_cast<void (PTreeWrapper::*)(const std::string &, const std::string &)>(&PTreeWrapper::add))
         .def("add", static_cast<void (PTreeWrapper::*)(const std::string &, const double &)>(&PTreeWrapper::add))
         .def("add", static_cast<void (PTreeWrapper::*)(const std::string &, const int &)>(&PTreeWrapper::add))
+        .def("add", static_cast<void (PTreeWrapper::*)(const std::string &, const bool &)>(&PTreeWrapper::add))
+        .def("put", static_cast<void (PTreeWrapper::*)(const std::string &, const std::string &)>(&PTreeWrapper::put))
+        .def("put", static_cast<void (PTreeWrapper::*)(const std::string &, const double &)>(&PTreeWrapper::put))
+        .def("put", static_cast<void (PTreeWrapper::*)(const std::string &, const int &)>(&PTreeWrapper::put))
+        .def("put", static_cast<void (PTreeWrapper::*)(const std::string &, const bool &)>(&PTreeWrapper::put))
         .def("write", &PTreeWrapper::write);
 
 }
