@@ -7,4 +7,5 @@ Dependencies:
  - Eigen
  - boost
  - CACAO
- - c++11
+ - C++11
+ - python

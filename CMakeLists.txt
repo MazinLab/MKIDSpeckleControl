@@ -20,8 +20,14 @@ file(GLOB SIMSOURCES "sim/*.cpp")
 add_executable(linDMToMKID ${SIMSOURCES})
 target_link_libraries(linDMToMKID ${OpenCV_LIBS} -lImageStreamIO -lmkidshm -lboost_log -lboost_system -lrt -lpthread)
 
+# python extensions
+set(LIBRARY_OUTPUT_PATH "./python")
 file(GLOB SPECKTODMPY "python/PySpeckleToDM.cpp" "src/SpeckleToDM.cpp" "src/DMChannel.cpp")
 add_library(speckletodm SHARED ${SPECKTODMPY})
 set_target_properties(speckletodm PROPERTIES PREFIX "")
-set(LIBRARY_OUTPUT_PATH "./python")
 target_link_libraries(speckletodm ${OpenCV_LIBS} -lboost_log -lboost_python -lboost_system ${PYTHON_LIBRARIES} -lImageStreamIO -lmkidshm  -lrt -lpthread)
+
+file(GLOB PROPERTYTREEPY "python/PyPropertyTree.cpp")
+add_library(propertytree SHARED ${PROPERTYTREEPY})
+set_target_properties(propertytree PROPERTIES PREFIX "")
+target_link_libraries(propertytree -lboost_log -lboost_python -lboost_system ${PYTHON_LIBRARIES})

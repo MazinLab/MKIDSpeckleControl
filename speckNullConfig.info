@@ -62,7 +62,7 @@ NullingParams
 KalmanParams
 {
     probeGridWidth 3
-    probeGridSpacing 3.1415
+    probeGridSpacing 3.1415926
 
     processNoiseVar 1 ;value along the diagonal of Q - variance of speckle amplitude per iteration
     initStateVar 1
