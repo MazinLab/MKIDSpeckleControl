@@ -1,24 +1,9 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/info_parser.hpp>
 #include <boost/python.hpp>
+#include <fstream>
 
 using namespace boost::python;
-
-//int (boost::property_tree::ptree::*get)(const boost::property_tree::ptree::path_type) = &boost::property_tree::ptree::get<int>;
-//std::string (boost::property_tree::ptree::*get) (const boost::property_tree::ptree::path_type) = &boost::property_tree::ptree::get<std::string>;
-//BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(get_overloads_int, boost::property_tree::ptree::get<int>, 1, 3);
-//BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(get_overloads_float, boost::property_tree::ptree::get<float>, 1, 3);
-//BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(get_overloads_double, boost::property_tree::ptree::get<double>, 1, 3);
-//BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(get_overloads_string, boost::property_tree::ptree::get<std::string>, 1, 3);
-
-//BOOST_PYTHON_MODULE(propertytree){
-//        class_<boost::property_tree::ptree>("PTree")
-//            .def("get", &boost::property_tree::ptree::get<int>, get_overloads_int());
-//       
-//
-//}
-
-//BOOST_PYTHON_FUNCTION_OVERLOADS(read_info_overloads, boost::property_tree::info_parser::read_info, 2, 2)
 
 void read_info_wrapper(const std::string &filename, boost::property_tree::ptree &tree){
     boost::property_tree::info_parser::read_info(filename, tree);}
@@ -29,31 +14,53 @@ std::string ptree_get_string(const boost::property_tree::ptree &tree, std::strin
 class PTreeWrapper{
     boost::property_tree::ptree myTree;
     
-    void read_info(std::string &filename){
-        boost::property_tree::info_parser::read_info(filename, myTree);
+    public:
+        void read_info(const std::string &filename){
+            boost::property_tree::info_parser::read_info(filename, myTree);
 
-    }
+        }
 
-    std::string get(std::string &key){
-        return myTree.get<std::string>(key);
+        std::string get(const std::string &key){
+            return myTree.get<std::string>(key);
 
-    }
+        }
+
+        void add(const std::string &key, const std::string &value){
+            myTree.add(key, value);
+
+        }
+
+        void add(const std::string &key, const double &value){
+            myTree.add(key, value);
+
+        }
+
+        void add(const std::string &key, const int &value){
+            myTree.add(key, value);
+
+        }
+
+        void write(const std::string &filename){
+            std::ofstream out;
+            out.open(filename, std::ofstream::out);
+            boost::property_tree::write_info(out, myTree);
+            out.close();
+
+        }
+            
+
 
 };
 
 
-
 BOOST_PYTHON_MODULE(propertytree){
-        class_<boost::property_tree::ptree>("PTree")
-            //.def("get", static_cast<std::string (boost::property_tree::ptree::*)(const boost::property_tree::ptree::path_type&) const>(&boost::property_tree::ptree::get<std::string>));
-            .def("get", static_cast<std::string (boost::property_tree::ptree::*)(const boost::property_tree::ptree::path_type&) const>(&boost::property_tree::ptree::get<std::string>));
-            //.def("get", ((std::string (boost::property_tree::ptree*)(const boost::property_tree::ptree::path_type&) const)(&boost::property_tree::ptree::get<std::string>)));
-            //.def("get", static_cast<int (boost::property_tree::ptree::*)(const boost::property_tree::ptree::path_type&) const>(&boost::property_tree::ptree::get<int>))
-            //.def("get", static_cast<double (boost::property_tree::ptree::*)(const boost::property_tree::ptree::path_type&) const>(&boost::property_tree::ptree::get<double>));
-
-        //def("read_info", static_cast<void (*)(const std::string &, boost::property_tree::ptree &, const std::locale &loc)>(&boost::property_tree::info_parser::read_info));
-        def("read_info", &read_info_wrapper);
-        def("get", &ptree_get_string);
+    class_<PTreeWrapper>("PTree")
+        .def("read_info", &PTreeWrapper::read_info)
+        .def("get", &PTreeWrapper::get)
+        .def("add", static_cast<void (PTreeWrapper::*)(const std::string &, const std::string &)>(&PTreeWrapper::add))
+        .def("add", static_cast<void (PTreeWrapper::*)(const std::string &, const double &)>(&PTreeWrapper::add))
+        .def("add", static_cast<void (PTreeWrapper::*)(const std::string &, const int &)>(&PTreeWrapper::add))
+        .def("write", &PTreeWrapper::write);
 
 }
 
