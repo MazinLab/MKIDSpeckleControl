@@ -21,9 +21,9 @@ int main()
     //DMChannel chan("dm03disp03");
     //chan.getBufferPtr<float>();
 
-    //SpeckleToDM speckInterface("dm04disp00");
+    SpeckleToDM speckInterface("dm04disp00");
     //speckInterface.addProbeSpeckle(cv::Point2d(20,20), 1, 0);
-    //speckInterface.updateDM();
+    speckInterface.updateDM();
     //
     //boost::property_tree::ptree cfgParams;
     //read_info("speckNullConfig.info", cfgParams);

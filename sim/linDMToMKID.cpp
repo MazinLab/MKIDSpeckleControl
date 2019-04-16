@@ -13,8 +13,8 @@
 
 
 int main(){
-    char dmShmImName[80] = "dm04disp08";
-    char mkidShmName[80] = "DMToMKIDSim0";
+    char dmShmImName[80] = "dm04disp00";
+    char mkidShmName[80] = "DMCalTest0";
     int fpNRows;
     int fpNCols;
     float nLDPerPix = 3;
@@ -50,12 +50,13 @@ int main(){
             fpImMat.setTo(0);
             takingImage = true;
             intCounter = 0;
+            //MKIDShmImage_setValid(&fpShmIm);
+            fpShmIm.md->valid = 1;
 
         }
 
         if(takingImage){
             BOOST_LOG_TRIVIAL(debug) << "Waiting for DM";
-            ImageStreamIO_semwait(&dmShmIm, dmSemInd);
             fpImMat += mkid.convertDMToFP(dmImMat);
             intCounter++;
             if(intCounter==nIntegrations){
@@ -64,6 +65,9 @@ int main(){
                 takingImage = false;
 
             }
+
+            else
+                ImageStreamIO_semwait(&dmShmIm, dmSemInd);
 
         }
 

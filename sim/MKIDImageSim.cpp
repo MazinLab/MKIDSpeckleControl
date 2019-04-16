@@ -82,8 +82,9 @@ class MKIDImageSim{
             fpIm = fpIm*100;
             cv::Mat fpImOut(ppRows, ppCols, CV_32S);
             fpIm.convertTo(fpImOut, CV_32S);
-            fpImOut = cv::Mat(fpImOut, cv::Range(ppRows/2 - fpRows/2, ppRows/2 + ppRows/2), 
+            fpImOut = cv::Mat(fpImOut, cv::Range(ppRows/2 - fpRows/2, ppRows/2 + fpRows/2), 
                     cv::Range(ppCols/2 - fpCols/2, ppCols/2 + fpCols/2));
+            //std::cout << fpImOut.rows << " " << fpImOut.cols
 
             return fpImOut;
             
