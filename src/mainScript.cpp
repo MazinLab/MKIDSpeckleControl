@@ -31,9 +31,10 @@ int main()
     //SpeckleKalman speck(cv::Point2d(10, 10), cfgParams);
 
     // CASE 1
-    //DMChannel chan;
-    //chan = DMChannel("dm04disp00");
-    //chan.getXSize();//this segfaults for some reason!
+    DMChannel chan;
+    chan = DMChannel("dm04disp00");
+    std::cout << chan.getXSize() << std::endl;
+    chan.getXSize();//this segfaults for some reason!
     
     // CASE 2
     //DMChannel chan("dm04disp00");

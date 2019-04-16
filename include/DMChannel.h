@@ -21,7 +21,9 @@
 class DMChannel
 {
     private:
-        IMAGE* dmImage;
+        IMAGE dmImage;
+        void initializeDMShm(const char name[80]);
+        bool isOpen;
 
     public:
         
@@ -32,7 +34,10 @@ class DMChannel
          * path is specified by SHAREDMEMDIR in ImageStruct.h
          */
         DMChannel(const char name[80]);
+        DMChannel(const DMChannel &chan);
         DMChannel();
+
+        DMChannel& operator=(const DMChannel &rhs);
 
         /*
          * Returns pointer to data stored in DM channel. T must be
@@ -54,13 +59,14 @@ class DMChannel
         void postSemaphore(int index);
 
         // Getters:
-        int getXSize();
-        int getYSize();
-        std::string getName();
+        int getXSize() const;
+        int getYSize() const;
+        std::string getName() const;
 
         /*
          * Destructor. Closes DM channel.
          */
+        void close();
         ~DMChannel(); //free dmImage
 
 

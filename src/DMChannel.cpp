@@ -2,27 +2,60 @@
 
 DMChannel::DMChannel(const char name[80])
 {
+    isOpen = false;
+    initializeDMShm(name);
+
+}
+
+DMChannel::DMChannel(){
+    isOpen = false;
+
+}
+
+DMChannel::DMChannel(const DMChannel &chan){
+    isOpen = false;
+    initializeDMShm(chan.getName().c_str());
+
+}
+void DMChannel::initializeDMShm(const char name[80]){
     int retVal;
-    dmImage = new IMAGE;
-    retVal = ImageStreamIO_openIm(dmImage, name);
+    retVal = ImageStreamIO_openIm(&dmImage, name);
     if(retVal==0)
         BOOST_LOG_TRIVIAL(info) << "DM Channel " << name << " opened successfully";
     else
     {
-        BOOST_LOG_TRIVIAL(fatal) << "DM Channel " << name << " open failed. Exiting.";        
+        BOOST_LOG_TRIVIAL(error) << "DM Channel " << name << " open failed. Exiting.";        
         throw;
 
     }
 
+    isOpen = true;
+
 }
 
-DMChannel::DMChannel(){;} //placeholder
+
+
+
+
+DMChannel &DMChannel::operator=(const DMChannel &rhs){
+    if(this != &rhs){
+        if(isOpen)
+            close();
+
+        initializeDMShm(rhs.getName().c_str());
+
+
+    }
+
+    return *this;
+
+}
 
 void DMChannel::postAllSemaphores()
 {
     //dmImage->md->write = 0;
-    dmImage->md->cnt0++;
-    ImageStreamIO_sempost(dmImage, -1);
+    dmImage.md->cnt0++;
+    ImageStreamIO_sempost(&dmImage, -1);
 
 }
 
@@ -32,51 +65,58 @@ template <class T> T* DMChannel::getBufferPtr(){;}
 
 template <> float* DMChannel::getBufferPtr<float>()
 {
-    if((dmImage->md)->datatype != _DATATYPE_FLOAT)
+    if((dmImage.md)->datatype != _DATATYPE_FLOAT)
     {
         BOOST_LOG_TRIVIAL(error) << "DM Channel type mismatch!";        
         throw;
     
     }
 
-    return dmImage->array.F;
+    return dmImage.array.F;
 
 }
 
 template <> double* DMChannel::getBufferPtr<double>()
 {
-    if((dmImage->md)->datatype != _DATATYPE_DOUBLE)
+    if((dmImage.md)->datatype != _DATATYPE_DOUBLE)
     {
         BOOST_LOG_TRIVIAL(error) << "DM Channel type mismatch!";        
         throw;
     
     }
 
-    return dmImage->array.D;
+    return dmImage.array.D;
 
 }
 
 template <> uint8_t* DMChannel::getBufferPtr<uint8_t>()
 {
-    if((dmImage->md)->datatype != _DATATYPE_UINT8)
+    if((dmImage.md)->datatype != _DATATYPE_UINT8)
     {
         BOOST_LOG_TRIVIAL(error) << "DM Channel type mismatch!";        
         throw;
     
     }
             
-    return dmImage->array.UI8;
+    return dmImage.array.UI8;
 
 }
 
-int DMChannel::getXSize(){ return (dmImage->md)->size[0];}
-int DMChannel::getYSize(){ return (dmImage->md)->size[1];}
-std::string DMChannel::getName(){ return (std::string)dmImage->name;}
+int DMChannel::getXSize() const{ return (dmImage.md)->size[0];}
+int DMChannel::getYSize() const{ return (dmImage.md)->size[1];}
+std::string DMChannel::getName() const{ return (std::string)dmImage.name;}
+
+void DMChannel::close(){
+    ImageStreamIO_closeIm(&dmImage);
+    isOpen = false;
+    BOOST_LOG_TRIVIAL(info) << "DM Channel " << dmImage.name << " closed";
+
+}
+
 
 DMChannel::~DMChannel()
 {
-    ImageStreamIO_closeIm(dmImage);
-    BOOST_LOG_TRIVIAL(info) << "DM Channel " << dmImage->name << " closed";
+    close();
 
 }
 
