@@ -17,6 +17,21 @@ DMChannel::DMChannel(const DMChannel &chan){
     initializeDMShm(chan.getName().c_str());
 
 }
+
+DMChannel &DMChannel::operator=(const DMChannel &rhs){
+    if(this != &rhs){
+        if(isOpen)
+            close();
+
+        initializeDMShm(rhs.getName().c_str());
+
+
+    }
+
+    return *this;
+
+}
+
 void DMChannel::initializeDMShm(const char name[80]){
     int retVal;
     retVal = ImageStreamIO_openIm(&dmImage, name);
@@ -33,23 +48,6 @@ void DMChannel::initializeDMShm(const char name[80]){
 
 }
 
-
-
-
-
-DMChannel &DMChannel::operator=(const DMChannel &rhs){
-    if(this != &rhs){
-        if(isOpen)
-            close();
-
-        initializeDMShm(rhs.getName().c_str());
-
-
-    }
-
-    return *this;
-
-}
 
 void DMChannel::postAllSemaphores()
 {

@@ -22,8 +22,9 @@ class DMChannel
 {
     private:
         IMAGE dmImage;
-        void initializeDMShm(const char name[80]);
         bool isOpen;
+
+        void initializeDMShm(const char name[80]);
 
     public:
         
@@ -63,10 +64,11 @@ class DMChannel
         int getYSize() const;
         std::string getName() const;
 
+        void close();
+
         /*
          * Destructor. Closes DM channel.
          */
-        void close();
         ~DMChannel(); //free dmImage
 
 
