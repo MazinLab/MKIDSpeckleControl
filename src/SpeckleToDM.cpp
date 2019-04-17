@@ -10,6 +10,8 @@ SpeckleToDM::SpeckleToDM(const char dmChanName[80], boost::property_tree::ptree 
     
     probeMap = cv::Mat(dmYSize, dmXSize, CV_32F);
     nullMap = cv::Mat(dmYSize, dmXSize, CV_32F);
+    probeMap.setTo(0);
+    nullMap.setTo(0);
 
 }
 
@@ -22,6 +24,8 @@ SpeckleToDM::SpeckleToDM(const char dmChanName[80])
     
     probeMap = cv::Mat(dmYSize, dmXSize, CV_32F);
     nullMap = cv::Mat(dmYSize, dmXSize, CV_32F);
+    probeMap.setTo(0);
+    nullMap.setTo(0);
 
 }
 

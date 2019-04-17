@@ -19,7 +19,7 @@ int main(){
     int fpNCols;
     float nLDPerPix = 3;
     int nIntegrations = 1;
-    int dmSemInd = 0;
+    int dmSemInd = 5;
 
     bool takingImage = false;
     int intCounter = 0;
@@ -43,9 +43,17 @@ int main(){
     cv::Mat fpImMat(fpNRows, fpNCols, CV_32S, fpShmIm.image);
 
     MKIDImageSim mkid(fpNRows, fpNCols, nLDPerPix);
+
+    int semctr = 0;
+
+    while(MKIDShmImage_checkIfDone(&fpShmIm, 0)==0){semctr++;}
+
+    while(sem_trywait(fpShmIm.takeImageSem)==0){semctr++;}
+
+    std::cout << "semctr: " << semctr << std::endl;
     
     while(true){
-        if(sem_trywait(fpShmIm.takeImageSem)==0){
+        if(sem_wait(fpShmIm.takeImageSem)==0){
             BOOST_LOG_TRIVIAL(debug) << "Starting Image";
             fpImMat.setTo(0);
             takingImage = true;
@@ -56,7 +64,7 @@ int main(){
         }
 
         if(takingImage){
-            BOOST_LOG_TRIVIAL(debug) << "Waiting for DM";
+            BOOST_LOG_TRIVIAL(debug) << "Grabbing data from DM...";
             fpImMat += mkid.convertDMToFP(dmImMat);
             intCounter++;
             if(intCounter==nIntegrations){
@@ -66,15 +74,14 @@ int main(){
 
             }
 
-            else
+            else{
                 ImageStreamIO_semwait(&dmShmIm, dmSemInd);
+                BOOST_LOG_TRIVIAL(debug) << "Waiting for DM";
+
+            }
 
         }
 
-        else{
-            ImageStreamIO_semtrywait(&dmShmIm, dmSemInd);
-
-        }
             
 
     }
