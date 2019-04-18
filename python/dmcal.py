@@ -2,14 +2,16 @@ import speckletodm
 import propertytree
 import mkidreadout.readout.sharedmem as shm
 from mkidcore.corelog import getLogger, create_log
+from mkidcore.objects import Beammap
 
 import numpy as np
 import matplotlib.pyplot as plt
 import os, sys
+import scipy.ndimage as sciim
 
 class Calibrator(object):
 
-    def __init__(self, dmChanName, sharedImageName, useWvl=False, wvlStart=700, wvlStop=1400):
+    def __init__(self, dmChanName, sharedImageName, useWvl=False, wvlStart=700, wvlStop=1400, beammap=None):
         self.dm = speckletodm.SpeckleToDM(dmChanName)
         self.shmImage = shm.ImageCube(sharedImageName)
         self.shmImage.useWvl = useWvl
@@ -17,9 +19,20 @@ class Calibrator(object):
             self.shmImage.wvlStart = wvlStart
             self.shmImage.wvlStop = wvlStop
 
-    def run(self, start, end, amplitude, nPoints=10, integrationTime=5):
+        if beammap:
+            self.goodPixMask = ~beammap.failmask
+        else:
+            self.goodPixMask = np.ones(self.shmImage.shape)
+
+    def run(self, start, end, amplitude, nPoints=10, integrationTime=5, lOverDEst=3, speckWin=None):
         self.kvecs = np.array([np.linspace(start, end, nPoints), np.linspace(start, end, nPoints)]).T
         self.speckLocs = np.zeros((nPoints*2, 2, 2))
+        self.speckIntensities = np.zeros((nPoints*2, 2))
+
+        if speckWin is None:
+            speckWin = int(np.ceil(lOverDEst))
+
+        intensityCorrectionImage = sciim.gaussian_filter(self.goodPixMask, lOverDEst*0.42)
 
         for i in range(nPoints):
             self.dm.addProbeSpeckle(self.kvecs[i,0], self.kvecs[i,1], amplitude, 0)
@@ -32,12 +45,23 @@ class Calibrator(object):
                 calgui = CalspotGUI(image)
                 try:
                     self.speckLocs[i*2:i*2+2, :, :] = calgui.speckLocs
-                except RuntimeError:
+                except RuntimeError as err:
+                    print err
                     continue
 
                 break
 
             self.dm.clearProbeSpeckles()
+
+            #image = image/intensityCorrectionImage
+            for j in range(4):
+                x = self.speckLocs[i*2 + j/2, j%2, 0]
+                y = self.speckLocs[i*2 + j/2, j%2, 1]
+                if ~np.isnan(x) and ~np.isnan(y):
+                    self.speckIntensities[i*2 + j/2, j%2] = np.sum(image[int(x - np.floor(speckWin/2.)) : int(x + np.ceil(speckWin/2.)), 
+                                             int(y - np.floor(speckWin/2.)) : int(y + np.ceil(speckWin/2.))])/(intensityCorrectionImage[int(x), int(y)]*integrationTime)
+
+
 
     def calculateCenter(self):
         self.center = np.nanmean(self.speckLocs, axis=(0,1))
@@ -61,7 +85,7 @@ class CalspotGUI(object):
     def __init__(self, image):
         self._speckLocs = np.zeros((2, 2, 2)) # nPairs x 2 specks/pair x 2 coords/speck
         self._speckLocs.fill(np.nan)
-        self.fig = plt.figure()
+        self.fig = plt.figure(figsize=(10,10))
         self.ax = self.fig.add_subplot(111)
         self.ax.imshow(image)
 
@@ -74,7 +98,7 @@ class CalspotGUI(object):
         plt.show()
 
     def onClick(self, event):
-        self._speckLocs[self.speckNum/2, self.speckNum%2, :] = np.array([event.xdata, event.ydata])
+        self._speckLocs[self.speckNum/2, self.speckNum%2, :] = np.array([event.ydata, event.xdata])
         print 'Speckle pair: ', self.speckNum/2
         print 'Speckle pair coords: ', self._speckLocs[self.speckNum/2]
         self.speckNum += 1
@@ -100,7 +124,7 @@ if __name__=='__main__':
     cal = Calibrator('dm04disp00', 'DMCalTest0')
     #create_log(__name__)
     create_log('mkidreadout')
-    cal.run(20, 60, 1, 5, 30)
+    cal.run(20, 60, 1, 5, 1)
     cal.calculateCenter()
     cal.calculateLOverD()
     print 'center:', cal.center
