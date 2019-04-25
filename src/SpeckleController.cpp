@@ -37,7 +37,7 @@ void SpeckleController::updateBadPixMask(cv::Mat &mask)
 }
 
 
-std::tuple<double, double> SpeckleController::measureSpeckleIntensityAndSigma(cv::Mat &image)
+std::tuple<double, double> SpeckleController::measureSpeckleIntensityAndSigma(const cv::Mat &image)
 {
     double measIntensity, measSigmaI;
     cv::Mat speckleIm = cv::Mat(image, cv::Range((int)mCoords.y-mParams.get<int>("NullingParams.apertureRadius"), 
@@ -53,7 +53,7 @@ std::tuple<double, double> SpeckleController::measureSpeckleIntensityAndSigma(cv
 }
 
 
-double SpeckleController::measureIntensityCorrection()
+double SpeckleController::measureIntensityCorrection() const
 {
     cv::Mat goodPixMask = (~mBadPixMask)&1;
     cv::Mat apertureGoodPixMask = cv::Mat(goodPixMask, cv::Range((int)mCoords.y-mParams.get<int>("NullingParams.apertureRadius"), 
@@ -67,7 +67,7 @@ double SpeckleController::measureIntensityCorrection()
 }
 
 
-cv::Point2d SpeckleController::getCoordinates() {return mCoords;}
+cv::Point2d SpeckleController::getCoordinates() const {return mCoords;}
 
-cv::Point2d SpeckleController::getKvecs() {return mKvecs;}
+cv::Point2d SpeckleController::getKvecs() const {return mKvecs;}
 

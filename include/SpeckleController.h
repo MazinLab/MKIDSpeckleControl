@@ -1,6 +1,7 @@
 #include <opencv2/opencv.hpp>
 #include <iostream>
 #include <params.h>
+#include <assert.h>
 #define _USE_MATH_DEFINES
 #include <cmath>
 #include <random>
@@ -54,9 +55,9 @@ class SpeckleController
         * sigma and sets measSpeckIntensity and measSigma
         * @param image Image to use for intensity measurement
         **/
-        std::tuple<double, double> measureSpeckleIntensityAndSigma(cv::Mat &image);
+        std::tuple<double, double> measureSpeckleIntensityAndSigma(const cv::Mat &image);
 
-        double measureIntensityCorrection();
+        double measureIntensityCorrection() const;
 
     public:
         /**
@@ -76,9 +77,9 @@ class SpeckleController
         /**
         * Return speckle location in pixel coordinates on the array.
         **/
-        cv::Point2d getCoordinates();
+        cv::Point2d getCoordinates() const;
 
-        cv::Point2d getKvecs();
+        cv::Point2d getKvecs() const;
 
 
 };

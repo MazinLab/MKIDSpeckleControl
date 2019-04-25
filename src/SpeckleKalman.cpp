@@ -28,7 +28,7 @@ SpeckleKalman::SpeckleKalman(cv::Point2d pt, cv::Mat &image, boost::property_tre
 
 }
 
-void SpeckleKalman::update(cv::Mat &image){
+void SpeckleKalman::update(const cv::Mat &image){
     std::tie(mPhaseIntensities[mCurPhaseInd], mPhaseSigmas[mCurPhaseInd]) = 
         measureSpeckleIntensityAndSigma(image);
      
@@ -51,7 +51,7 @@ void SpeckleKalman::update(cv::Mat &image){
 
 }
 
-dmspeck SpeckleKalman::getNextSpeckle(){ 
+dmspeck SpeckleKalman::getNextSpeckle() const{ 
     return mNextSpeck;
 
 }
@@ -76,10 +76,9 @@ void SpeckleKalman::updateKalmanState(){
 
 }
 
-//TODO: SNR calc/threshold
 void SpeckleKalman::updateNullingSpeckle(){
-    cv::Mat amplitude = cv::Mat::zeros(mNProbePos, mNProbePos, CV_64F);
-    cv::Mat phase = cv::Mat::zeros(mNProbePos, mNProbePos, CV_64F);
+    cv::Mat amplitude = cv::Mat::zeros(mProbeGridWidth, mProbeGridWidth, CV_64F);
+    cv::Mat phase = cv::Mat::zeros(mProbeGridWidth, mProbeGridWidth, CV_64F);
 
     BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: Amplitude: " << amplitude;
     BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: Phase: " << phase;
@@ -89,8 +88,14 @@ void SpeckleKalman::updateNullingSpeckle(){
     real = real.reshape(1, mProbeGridWidth);
     imag = imag.reshape(1, mProbeGridWidth);
     
+    cv::Mat variance = mP.diag();
+    variance = cv::Mat(variance, cv::Range(0, mNProbePos)) + cv::Mat(variance, cv::Range(mNProbePos, 2*mNProbePos));
+    variance = variance.reshape(1, mProbeGridWidth);
+    assert(variance.cols == mProbeGridWidth);
+    
     cv::cartToPolar(real, imag, amplitude, phase);
 
+    // weights_ij is proportional to amplitude_ij/(overlap of probe grid w/ gaussian)
     cv::Mat weights = cv::Mat::ones(mNProbePos, mNProbePos, CV_64F);
     cv::GaussianBlur(weights, weights, cv::Size(0,0), 2*M_PI*0.42);
     cv::divide(amplitude, weights, weights);
@@ -101,6 +106,7 @@ void SpeckleKalman::updateNullingSpeckle(){
     cv::Point2d nullingK;
     double nullingAmp;
     double nullingPhase;
+    double nullingVar;
     mProbeGridKvecs.forEach([this, &weights, &amplitude, &phase, &nullingK, &nullingAmp, &nullingPhase]
                 (cv::Point2d &value, const int *position) -> void{
             nullingK += weights.at<double>(position[0], position[1])*value;
@@ -109,9 +115,26 @@ void SpeckleKalman::updateNullingSpeckle(){
 
             });
 
+    nullingVar = cv::sum(variance.mul(weights))[0]; //this could also be done inside lambda function
+
+    double snr = nullingAmp/std::sqrt(nullingVar);
+
     BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: Nulling k: " << nullingK;
     BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: Nulling amplitude: " << nullingAmp;
     BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: Nulling phase: " << nullingPhase;
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: Nulling variance: " << nullingVar;
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: Nulling snr: " << snr;
+
+    mNextSpeck.kx = nullingK.x;
+    mNextSpeck.ky = nullingK.y;
+    mNextSpeck.phase = nullingPhase;
+    mNextSpeck.isNull = true;
+
+    if(snr >= mParams.get<double>("KalmanParams.snrThresh"))
+        mNextSpeck.amp = nullingAmp;
+
+    else
+        mNextSpeck.amp = 0;
     
     
 }
