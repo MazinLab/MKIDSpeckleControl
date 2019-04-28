@@ -44,6 +44,8 @@ class ImageGrabber
         int yCtrlStart;
         int yCtrlEnd; //Control region boundaries, in pixel coordinates relative to center PSF
 
+        void initialize();
+
     public:
         /**
         * Constructor. Initializes (opens) shared memory spaces, semaphores, and cal arrays.
@@ -53,10 +55,8 @@ class ImageGrabber
         */
         ImageGrabber(boost::property_tree::ptree &ptree);
         
-        /**
-        * Default constructor. Placeholder, do not use
-        */
-        ImageGrabber();
+
+        ImageGrabber& operator=(const ImageGrabber &rhs);
         
         /**
         * Reads in the next image from shared memory (provided by PacketMaster in normal operation).
@@ -188,6 +188,8 @@ class ImageGrabber
         void applyDarkSubCtrlRegion();
 
         void close();
+
+        boost::property_tree::ptree &getCfgParams() const;
 
 };
 #endif

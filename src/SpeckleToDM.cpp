@@ -1,12 +1,10 @@
 #include "SpeckleToDM.h"
 
-SpeckleToDM::SpeckleToDM(const char dmChanName[80], boost::property_tree::ptree &ptree)
-{
+SpeckleToDM::SpeckleToDM(const char dmChanName[80], boost::property_tree::ptree &ptree) : dmChannel(dmChanName){
     cfgParams = ptree;
-    dmChannel = new DMChannel(dmChanName);
-    dmXSize = (*dmChannel).getXSize();
-    dmYSize = (*dmChannel).getYSize();
-    fullMapShm = cv::Mat(dmYSize, dmXSize, CV_32F, (*dmChannel).getBufferPtr<float>());
+    dmXSize = dmChannel.getXSize();
+    dmYSize = dmChannel.getYSize();
+    fullMapShm = cv::Mat(dmYSize, dmXSize, CV_32F, dmChannel.getBufferPtr<float>());
     
     probeMap = cv::Mat(dmYSize, dmXSize, CV_32F);
     nullMap = cv::Mat(dmYSize, dmXSize, CV_32F);
@@ -15,12 +13,10 @@ SpeckleToDM::SpeckleToDM(const char dmChanName[80], boost::property_tree::ptree 
 
 }
 
-SpeckleToDM::SpeckleToDM(const char dmChanName[80])
-{
-    dmChannel = new DMChannel(dmChanName);
-    dmXSize = (*dmChannel).getXSize();
-    dmYSize = (*dmChannel).getYSize();
-    fullMapShm = cv::Mat(dmYSize, dmXSize, CV_32F, (*dmChannel).getBufferPtr<float>());
+SpeckleToDM::SpeckleToDM(const char dmChanName[80]) : dmChannel(dmChanName){
+    dmXSize = dmChannel.getXSize();
+    dmYSize = dmChannel.getYSize();
+    fullMapShm = cv::Mat(dmYSize, dmXSize, CV_32F, dmChannel.getBufferPtr<float>());
     
     probeMap = cv::Mat(dmYSize, dmXSize, CV_32F);
     nullMap = cv::Mat(dmYSize, dmXSize, CV_32F);
@@ -28,11 +24,12 @@ SpeckleToDM::SpeckleToDM(const char dmChanName[80])
     nullMap.setTo(0);
 
 }
+
 
 void SpeckleToDM::addProbeSpeckle(cv::Point2d kvecs, double amp, double phase)
 {
     probeMap += generateMapFromSpeckle(kvecs, amp, phase);
-    BOOST_LOG_TRIVIAL(debug) << "SpeckleToDM " << dmChannel->getName() << ": Adding probe speckle with k: " 
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleToDM " << dmChannel.getName() << ": Adding probe speckle with k: " 
         << kvecs << ", amplitude: " << amp << ", phase: " << phase;
 
 }
@@ -40,7 +37,7 @@ void SpeckleToDM::addProbeSpeckle(cv::Point2d kvecs, double amp, double phase)
 void SpeckleToDM::addProbeSpeckle(double kx, double ky, double amp, double phase)
 {
     probeMap += generateMapFromSpeckle(cv::Point2d(kx, ky), amp, phase);
-    BOOST_LOG_TRIVIAL(debug) << "SpeckleToDM " << dmChannel->getName() << ": Adding probe speckle with k: " 
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleToDM " << dmChannel.getName() << ": Adding probe speckle with k: " 
         << cv::Point2d(kx, ky) << ", amplitude: " << amp << ", phase: " << phase;
 
 }
@@ -48,7 +45,7 @@ void SpeckleToDM::addProbeSpeckle(double kx, double ky, double amp, double phase
 void SpeckleToDM::addNullingSpeckle(cv::Point2d kvecs, double amp, double phase)
 {
     nullMap += generateMapFromSpeckle(kvecs, amp, phase);
-    BOOST_LOG_TRIVIAL(debug) << "SpeckleToDM " << dmChannel->getName() << ": Adding nulling speckle with k: " 
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleToDM " << dmChannel.getName() << ": Adding nulling speckle with k: " 
         << kvecs << ", amplitude: " << amp << ", phase: " << phase;
 
 }
@@ -56,7 +53,7 @@ void SpeckleToDM::addNullingSpeckle(cv::Point2d kvecs, double amp, double phase)
 void SpeckleToDM::addNullingSpeckle(double kx, double ky, double amp, double phase)
 {
     nullMap += generateMapFromSpeckle(cv::Point2d(kx, ky), amp, phase);
-    BOOST_LOG_TRIVIAL(debug) << "SpeckleToDM " << dmChannel->getName() << ": Adding nulling speckle with k: " 
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleToDM " << dmChannel.getName() << ": Adding nulling speckle with k: " 
         << cv::Point2d(kx, ky) << ", amplitude: " << amp << ", phase: " << phase;
 
 }
@@ -64,22 +61,22 @@ void SpeckleToDM::addNullingSpeckle(double kx, double ky, double amp, double pha
 void SpeckleToDM::clearProbeSpeckles()
 {
     probeMap.setTo(0);
-    BOOST_LOG_TRIVIAL(debug) << "SpeckleToDM " << dmChannel->getName() << ": Clearing probe speckles";
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleToDM " << dmChannel.getName() << ": Clearing probe speckles";
 
 }
 
 void SpeckleToDM::clearNullingSpeckles()
 {
     nullMap.setTo(0);
-    BOOST_LOG_TRIVIAL(debug) << "SpeckleToDM " << dmChannel->getName() << ": Clearing nulling speckles";
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleToDM " << dmChannel.getName() << ": Clearing nulling speckles";
 
 }
 
 void SpeckleToDM::updateDM()
 {
     cv::add(probeMap, nullMap, fullMapShm);
-    (*dmChannel).postAllSemaphores();
-    BOOST_LOG_TRIVIAL(debug) << "SpeckleToDM " << dmChannel->getName() << ": Updating DM with new speckles";
+    dmChannel.postAllSemaphores();
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleToDM " << dmChannel.getName() << ": Updating DM with new speckles";
 
 }
 

@@ -1,5 +1,7 @@
 ImgParams
 {
+    name DMSimTest0
+
     nRows 145
     nCols 140
     xCenter 33 ;in pixel coordinates on DARKNESS image
@@ -30,8 +32,9 @@ ImgParams
 
 }
 
-DMCal
+DMParams
 {
+    channel dm04disp07 ;name of CACAO DM Image
     a 0
     b 0
     c 1 
@@ -57,6 +60,8 @@ NullingParams
 
     usFactor 2 ;upsampling to use when detecting speckles
 
+    enforceRedetection false ;speckle must be re-detected every iteration to remain active
+
 }
 
 KalmanParams
@@ -73,7 +78,6 @@ KalmanParams
     distThresh 2 ;max distance to tag speckle as the "same" as nulled speckle
     nullIterWeight 0 ;1 ;state estimate penalty post-nulling. should be <=1
 
-    enforceRedetection false ;speckle must be re-detected every iteration to remain active
     minProbeIters 4
 
 

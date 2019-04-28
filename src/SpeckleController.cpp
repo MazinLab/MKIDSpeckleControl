@@ -29,7 +29,7 @@ SpeckleController::SpeckleController(cv::Point2d pt, cv::Mat &image, boost::prop
 
 }
 
-void SpeckleController::updateBadPixMask(cv::Mat &mask)
+void SpeckleController::updateBadPixMask(const cv::Mat &mask)
 {
     mBadPixMask = mask;
     mIntensityCorrectionFactor = measureIntensityCorrection();

@@ -68,11 +68,11 @@ class SpeckleController
         **/
         SpeckleController(cv::Point2d pt, cv::Mat &image, boost::property_tree::ptree &ptree);
 
-        virtual void update(cv::Mat &image) = 0;
+        virtual void update(const cv::Mat &image) = 0;
 
-        virtual dmspeck getNextSpeckle() = 0;
+        virtual dmspeck getNextSpeckle() const = 0;
 
-        void updateBadPixMask(cv::Mat &mask);
+        void updateBadPixMask(const cv::Mat &mask);
 
         /**
         * Return speckle location in pixel coordinates on the array.

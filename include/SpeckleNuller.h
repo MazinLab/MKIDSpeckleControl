@@ -27,6 +27,9 @@ struct ImgPt
 
 };
 
+typedef SpeckleKalman SpeckleCtrlClass;
+
+
 /**
 * Implements the speckle nulling loop. Has methods for detecting, probing, and
 * nulling speckles. Contains instances of ImageGrabber and P3KCom, as well as 
@@ -37,8 +40,8 @@ class SpeckleNuller
     private: 
         cv::Mat mImage; //Last MKID image obtained from PacketMaster
         cv::Mat mBadPixMask; //Bad pixel mask of image. Should be updated when ctrl region changes
-        std::vector<SpeckleController> mSpecklesList, mNullSpecklesList; //List of Speckle (objects) being nulled
-        std::vector<dmspeck> mDMSpeckList; //List of speckles to put on DM
+        std::vector<SpeckleCtrlClass> mSpecklesList, mNullSpecklesList; //List of Speckle (objects) being nulled
+        std::vector<dmspeck> mNextDMSpecks; //List of speckles to put on DM
         boost::property_tree::ptree mParams; //Container for configuration params
         SpeckleToDM mDM;
 
@@ -85,9 +88,9 @@ class SpeckleNuller
         * Updates the current image (of ctrl region)
         * @param image New image of ctrl region
         **/
-        void updateImage(cv::Mat &newImage);
+        void updateImage(const cv::Mat &newImage);
 
-        void updateBadPixMask(cv::Mat &newMask);
+        void updateBadPixMask(const cv::Mat &newMask);
 
         void updateSpeckles();
 

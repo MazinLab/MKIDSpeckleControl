@@ -1,14 +1,17 @@
 #include "ImageGrabber.h"
 
-ImageGrabber::ImageGrabber(boost::property_tree::ptree &ptree)
-{
-    cfgParams = ptree;
+ImageGrabber::ImageGrabber(boost::property_tree::ptree &ptree) : cfgParams(ptree){
+    initialize();
+
+}
+
+void ImageGrabber::initialize(){
     BOOST_LOG_TRIVIAL(debug) << "Opening Image Buffer...";
     
     MKIDShmImage_open(&shmImage, cfgParams.get<std::string>("ImgParams.shmName").c_str());
     if(shmImage.md->nWvlBins != 1){
         BOOST_LOG_TRIVIAL(error) << "Multiple wavelengths not supported";
-        exit(-1);
+        throw;
 
     }
 
@@ -47,8 +50,29 @@ ImageGrabber::ImageGrabber(boost::property_tree::ptree &ptree)
 
 }
 
-ImageGrabber::ImageGrabber()
-{}
+ImageGrabber::ImageGrabber(const ImageGrabber &other){
+    close();
+    boost::property_tree::ptree ptree = other.getCfgParams();
+    cfgParams = ptree;
+    initialize();
+
+
+}
+
+ImageGrabber &ImageGrabber::operator=(const ImageGrabber &rhs){
+    if(this != &rhs){
+        close();
+        boost::property_tree::ptree ptree = rhs.getCfgParams();
+        cfgParams = ptree;
+        initialize();
+
+
+    }
+
+    return *this;
+
+}
+
 
 void ImageGrabber::readNextImage()
 {
@@ -274,5 +298,13 @@ void ImageGrabber::displayImage(bool makePlot)
 void ImageGrabber::close()
 {
     MKIDShmImage_close(&shmImage);
+    free(badPixArr);
+    free(flatCalArr);
+    free(darkSubArr);
+
+}
+
+ImageGrabber::~ImageGrabber(){
+    close();
 
 }
