@@ -1,6 +1,6 @@
 #include "ImageGrabber.h"
 
-ImageGrabber::ImageGrabber(boost::property_tree::ptree &ptree) : mParams(ptree){
+ImageGrabber::ImageGrabber(boost::property_tree::ptree &ptree) : mParams(ptree), mIntegrationTime(-1){
     initialize();
 
 }
@@ -16,6 +16,9 @@ void ImageGrabber::initialize(){
     }
 
     mRawImageShm = cv::Mat(mShmImage.md->nRows, mShmImage.md->nCols, CV_32S, mShmImage.image);
+
+    MKIDShmImage_setWvlRange(&mShmImage, mParams.get("wvlStart", 700), mParams.get("wvlStop", 1400));
+    mShmImage.md->useWvl = mParams.get("useWvl", 0);
 
     mXCenter = mParams.get<int>("xCenter");
     mYCenter = mParams.get<int>("yCenter");
@@ -95,16 +98,10 @@ void ImageGrabber::processFullImage()
 
 }
 
-void ImageGrabber::startIntegrating(uint64_t startts)
-{
-    MKIDShmImage_startIntegration(&mShmImage, startts, mParams.get<int>("integrationTime"));
-    mUpToDate = false;
-
-}
-
 void ImageGrabber::startIntegrating(uint64_t startts, uint64_t integrationTime)
 {
     MKIDShmImage_startIntegration(&mShmImage, startts, integrationTime);
+    mIntegrationTime = integrationTime;
     mUpToDate = false;
 
 }
@@ -113,6 +110,7 @@ void ImageGrabber::startIntegrating(uint64_t startts, uint64_t integrationTime, 
 {
     MKIDShmImage_setWvlRange(&mShmImage, wvlStart, wvlStop);
     MKIDShmImage_startIntegration(&mShmImage, startts, integrationTime);
+    mIntegrationTime = integrationTime;
     mUpToDate = false;
 
 }

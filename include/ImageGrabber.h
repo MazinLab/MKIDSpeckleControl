@@ -62,6 +62,43 @@ class ImageGrabber
         void loadFlatCal();
         void loadDarkSub();
 
+        /**
+        * Applies bad pixel mask to control region. Currently a simple median filter on surrounding pixels.
+        **/
+        void badPixFiltCtrlRegion();
+
+        /**
+        * Applies gaussian blur w/ width lambda/D, normalized by blur of good pixel mask. Should have
+        * better performance than simple bad pixel filter
+        */
+        //void gaussianBadPixFilt();
+        
+        /**
+        * Applies flat calibration to full image. 
+        * Element-wise multiplies mCtrlRegionImage by mFlatWeightsCtrl
+        **/
+        void applyFlatCal();
+
+        /**
+        * Applies flat calibration to control region. 
+        * Element-wise multiplies mCtrlRegionImage by mFlatWeightsCtrl
+        **/
+        void applyFlatCalCtrlRegion();
+        
+        /**
+        * Applies dark subtraction to full image.
+        * Subtracts mDarkSubCtrl from mCtrlRegionImage.
+        **/
+        void applyDarkSub();
+
+        /**
+        * Applies dark subtraction to control region.
+        * Subtracts mDarkSubCtrl from mCtrlRegionImage.
+        **/
+        void applyDarkSubCtrlRegion();
+
+        void close();
+
     public:
         /**
         * Constructor. Initializes (opens) shared memory spaces, semaphores, and cal arrays.
@@ -118,8 +155,8 @@ class ImageGrabber
 
         const cv::Mat& getBadPixMask() const;
         const cv::Mat& getBadPixMaskCtrl() const;
-
         boost::property_tree::ptree getCfgParams() const;
+        int getIntegrationTime() const;
 
         /**
         * Plots the image (or whatever you modify it to do!)
@@ -135,48 +172,7 @@ class ImageGrabber
         **/
         void changeCenter(int xCent, int yCent);
 
-    private:
-        /**
-        
-        
-        /**
-        * Applies bad pixel mask to control region. Currently a simple median filter on surrounding pixels.
-        **/
-        void badPixFiltCtrlRegion();
 
-        /**
-        * Applies gaussian blur w/ width lambda/D, normalized by blur of good pixel mask. Should have
-        * better performance than simple bad pixel filter
-        */
-        //void gaussianBadPixFilt();
-        
-        /**
-        * Applies flat calibration to full image. 
-        * Element-wise multiplies mCtrlRegionImage by mFlatWeightsCtrl
-        **/
-        void applyFlatCal();
-
-        /**
-        * Applies flat calibration to control region. 
-        * Element-wise multiplies mCtrlRegionImage by mFlatWeightsCtrl
-        **/
-        void applyFlatCalCtrlRegion();
-        
-        /**
-        * Applies dark subtraction to full image.
-        * Subtracts mDarkSubCtrl from mCtrlRegionImage.
-        **/
-        void applyDarkSub();
-
-        /**
-        * Applies dark subtraction to control region.
-        * Subtracts mDarkSubCtrl from mCtrlRegionImage.
-        **/
-        void applyDarkSubCtrlRegion();
-
-        void close();
-
-        boost::property_tree::ptree &getCfgParams() const;
 
         ~ImageGrabber();
 
