@@ -36,3 +36,8 @@ file(GLOB SPECKLENULLERPY "python/PySpeckleNuller.cpp")
 add_library(specklenuller SHARED ${SPECKLENULLERPY})
 set_target_properties(specklenuller PROPERTIES PREFIX "")
 target_link_libraries(specklenuller ${OpenCV_LIBS} -lboost_log -lboost_python -lboost_system ${PYTHON_LIBRARIES} -lImageStreamIO -lmkidshm  -lrt -lpthread)
+
+file(GLOB SPECKPY "python/SpeckPy.cpp" ${SOURCES})
+add_library(speckpy SHARED ${SPECKPY})
+set_target_properties(speckpy PROPERTIES PREFIX "")
+target_link_libraries(speckpy ${OpenCV_LIBS} -lboost_log -lboost_python -lboost_system ${PYTHON_LIBRARIES} -lImageStreamIO -lmkidshm  -lrt -lpthread)
