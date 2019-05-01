@@ -66,7 +66,7 @@ class SpeckleController
         * @param pt Speckle coordinates on the array
         * @param ptree Property tree of config parameters
         **/
-        SpeckleController(cv::Point2d pt, cv::Mat &image, boost::property_tree::ptree &ptree);
+        SpeckleController(cv::Point2d pt, boost::property_tree::ptree &ptree);
 
         virtual void update(const cv::Mat &image) = 0;
 

@@ -31,3 +31,8 @@ file(GLOB PROPERTYTREEPY "python/PyPropertyTree.cpp")
 add_library(propertytree SHARED ${PROPERTYTREEPY})
 set_target_properties(propertytree PROPERTIES PREFIX "")
 target_link_libraries(propertytree -lboost_log -lboost_python -lboost_system ${PYTHON_LIBRARIES})
+
+file(GLOB SPECKLENULLERPY "python/PySpeckleNuller.cpp")
+add_library(specklenuller SHARED ${SPECKLENULLERPY})
+set_target_properties(specklenuller PROPERTIES PREFIX "")
+target_link_libraries(specklenuller ${OpenCV_LIBS} -lboost_log -lboost_python -lboost_system ${PYTHON_LIBRARIES} -lImageStreamIO -lmkidshm  -lrt -lpthread)

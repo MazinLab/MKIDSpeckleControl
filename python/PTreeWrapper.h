@@ -15,8 +15,8 @@ class PTreeWrapper{
 
         }
 
-        boost::property_tree::ptree* getCXXObject(){
-            return &myTree;
+        boost::property_tree::ptree getCXXObject(){
+            return myTree;
 
         }
 

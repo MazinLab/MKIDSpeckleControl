@@ -45,7 +45,7 @@ class ImageGrabber
 
         bool mUpToDate;
 
-        int mIntegrationTime;
+        double mIntegrationTime;
 
         void initialize();
 
@@ -97,6 +97,16 @@ class ImageGrabber
         **/
         void applyDarkSubCtrlRegion();
 
+        /**
+        * Runs image processing steps specified in config file on mCtrlRegionImage.
+        **/
+        void processCtrlRegion();
+
+        /**
+        * Runs image processing steps specified in config file on fullImage.
+        **/
+        void processFullImage();
+
         void close();
 
     public:
@@ -119,25 +129,17 @@ class ImageGrabber
         **/
         void readNextImage();
 
-        /**
-        * Runs image processing steps specified in config file on mCtrlRegionImage.
-        **/
-        void processCtrlRegion();
-
-        /**
-        * Runs image processing steps specified in config file on fullImage.
-        **/
-        void processFullImage();
 
         /**
         * Sends signal to packetmaster (or simulation) to start taking an image;
         * i.e. increments *takeImgSemPtr. If interfacing w/ PacketMaster, image will consist of photons
         * tagged w/ timestamps between startts and startts + intTime, where intTime is specified in mParams.
         * @param startts timestamp in half-milliseconds since Jan 1 00:00 of current year. Placed in shmTs shared memory space.
+        * @param integrationTime integration time in milliseconds
         */
-        void startIntegrating(uint64_t startts);
-        void startIntegrating(uint64_t startts, uint64_t integrationTime);
-        void startIntegrating(uint64_t startts, uint64_t integrationTime, int wvlStart, int wvlStop);
+        //void startIntegrating(uint64_t startts);
+        void startIntegrating(uint64_t startts, double integrationTime);
+        void startIntegrating(uint64_t startts, double integrationTime, int wvlStart, int wvlStop);
 
         /**
         * Returns the most recently taken image of the control region specified in mParams.

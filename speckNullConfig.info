@@ -8,7 +8,6 @@ ImgParams
     yCenter 31
 
     lambdaOverD 2.81; darkness lyot stop = 2.81; lyot wheel open = 2.65;2.45;2.61
-    integrationTime 50 ;in milliseconds
 
     xCtrlStart -14 ;-20 ;relative to center, in pixel coordinates
     xCtrlEnd  25 ;40
@@ -51,6 +50,8 @@ CalParams
 
 NullingParams
 {
+    integrationTime 50 ;in milliseconds
+
     maxSpeckles 1 ;maximum number of speckles to probe at once
     speckleWindow 4
     exclusionZone 12 ;minimum distance (in pixels) between speckles

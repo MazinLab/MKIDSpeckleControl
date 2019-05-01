@@ -9,7 +9,4 @@
 //NULLING PARAMS
 #define NPHASES 4
 
-//P3K PARAMS
-#define DM_SIZE 66
-#define N_DM_ACTS 3388
 

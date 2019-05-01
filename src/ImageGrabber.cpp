@@ -98,18 +98,18 @@ void ImageGrabber::processFullImage()
 
 }
 
-void ImageGrabber::startIntegrating(uint64_t startts, uint64_t integrationTime)
+void ImageGrabber::startIntegrating(uint64_t startts, double integrationTime)
 {
-    MKIDShmImage_startIntegration(&mShmImage, startts, integrationTime);
+    MKIDShmImage_startIntegration(&mShmImage, startts, (uint64_t)integrationTime*2);
     mIntegrationTime = integrationTime;
     mUpToDate = false;
 
 }
 
-void ImageGrabber::startIntegrating(uint64_t startts, uint64_t integrationTime, int wvlStart, int wvlStop)
+void ImageGrabber::startIntegrating(uint64_t startts, double integrationTime, int wvlStart, int wvlStop)
 {
     MKIDShmImage_setWvlRange(&mShmImage, wvlStart, wvlStop);
-    MKIDShmImage_startIntegration(&mShmImage, startts, integrationTime);
+    MKIDShmImage_startIntegration(&mShmImage, startts, (uint64_t)integrationTime*2);
     mIntegrationTime = integrationTime;
     mUpToDate = false;
 

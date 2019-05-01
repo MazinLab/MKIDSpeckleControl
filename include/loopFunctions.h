@@ -11,6 +11,10 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/info_parser.hpp>
 
+namespace loopfunctions{
+
 void runLoop(int nIters, boost::property_tree::ptree &cfgParams);
 
 void runLoop(int nIters, const std::string cfgFilename);
+
+}

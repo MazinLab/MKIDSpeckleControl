@@ -1,19 +1,14 @@
 #include "SpeckleController.h"
 
-SpeckleController::SpeckleController(cv::Point2d pt, cv::Mat &image, boost::property_tree::ptree &ptree)
-{
-    mParams = ptree;
-    
-    mCoords = pt;
+SpeckleController::SpeckleController(cv::Point2d pt, boost::property_tree::ptree &ptree):
+        mParams(ptree), mCoords(pt), mCurPhaseInd(-1){
     mKvecs = calculateKvecs(mCoords, mParams);
 
     BOOST_LOG_TRIVIAL(debug) << "Speckle at " << mCoords << ": kvecs: " << mKvecs;
 
     for(int i=0; i<NPHASES; i++)
         mPhaseList[i] = (double)2*M_PI*i/NPHASES;
-    
-    mCurPhaseInd = 0;
-        
+     
     mApertureMask = cv::Mat::zeros(2*mParams.get<int>("NullingParams.apertureRadius")+1, 2*mParams.get<int>("NullingParams.apertureRadius")+1, CV_64F);
     cv::circle(mApertureMask, cv::Point(mParams.get<int>("NullingParams.apertureRadius"), mParams.get<int>("NullingParams.apertureRadius")), mParams.get<int>("NullingParams.apertureRadius"), 1, -1);
 
@@ -22,9 +17,6 @@ SpeckleController::SpeckleController(cv::Point2d pt, cv::Mat &image, boost::prop
     mIntensityCorrectionFactor = measureIntensityCorrection();
 
     BOOST_LOG_TRIVIAL(debug) << "Speckle: done initialization";
-
-    std::tie(mInitialIntensity, mInitialSigma) = measureSpeckleIntensityAndSigma(image);
-
 
 
 }

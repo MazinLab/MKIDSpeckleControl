@@ -39,9 +39,10 @@ class SpeckleKalman : public SpeckleController
         std::tuple<int, int> getProbeGridIndices(int kalmanInd);
         void updateKalmanState();
         void updateNullingSpeckle();
+        void nonProbeMeasurmentUpdate(double intensity, double sigma);
 
     public:
-        SpeckleKalman(cv::Point2d pt, cv::Mat &image, boost::property_tree::ptree &ptree);
+        SpeckleKalman(cv::Point2d pt, boost::property_tree::ptree &ptree);
 
         void update(const cv::Mat &image);
 

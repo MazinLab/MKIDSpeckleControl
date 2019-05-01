@@ -1,13 +1,12 @@
 #include "SpeckleKalman.h"
 
-SpeckleKalman::SpeckleKalman(cv::Point2d pt, cv::Mat &image, boost::property_tree::ptree &ptree):
-        SpeckleController(pt, image, ptree){
+SpeckleKalman::SpeckleKalman(cv::Point2d pt, boost::property_tree::ptree &ptree):
+        SpeckleController(pt, ptree){
     mProbeGridWidth = mParams.get<int>("KalmanParams.probeGridWidth");
     mProbeGridSpacing = mParams.get<double>("KalmanParams.probeGridSpacing");
     mNProbePos = mProbeGridWidth*mProbeGridWidth;
     mKvecCorrSigma = 0.42*2*mProbeGridSpacing;
     mCurProbePos = cv::Point2i(mProbeGridWidth/2 + 1, mProbeGridWidth/2 + 1);
-    mProbeAmp = calculateDMAmplitude(mKvecs, mInitialIntensity, mParams);
 
     mx = cv::Mat::zeros(2*mNProbePos, 1, CV_64F);
     mz = cv::Mat::zeros(2, 1, CV_64F);
@@ -29,23 +28,33 @@ SpeckleKalman::SpeckleKalman(cv::Point2d pt, cv::Mat &image, boost::property_tre
 }
 
 void SpeckleKalman::update(const cv::Mat &image){
-    std::tie(mPhaseIntensities[mCurPhaseInd], mPhaseSigmas[mCurPhaseInd]) = 
-        measureSpeckleIntensityAndSigma(image);
-     
-    if(mCurPhaseInd == NPHASES-1){
-        updateKalmanState();
-        updateNullingSpeckle();
-        mCurPhaseInd = 0;
+    if(mCurPhaseInd == -1){
+        double intensity, sigma;
+        std::tie(intensity, sigma) = measureSpeckleIntensityAndSigma(image);
+        nonProbeMeasurmentUpdate(intensity, sigma);
 
     }
+
     else{
-        mCurPhaseInd += 1;
-        cv::Point2d curKvecs = mProbeGridKvecs.at<cv::Point2d>(mCurProbePos);
-        mNextSpeck.kx = curKvecs.x;
-        mNextSpeck.ky = curKvecs.y;
-        mNextSpeck.amp = mProbeAmp;
-        mNextSpeck.phase = mPhaseList[mCurPhaseInd];
-        mNextSpeck.isNull = false;
+        std::tie(mPhaseIntensities[mCurPhaseInd], mPhaseSigmas[mCurPhaseInd]) = 
+                measureSpeckleIntensityAndSigma(image);
+         
+        if(mCurPhaseInd == NPHASES-1){
+            updateKalmanState();
+            updateNullingSpeckle();
+            mCurPhaseInd = -1;
+
+        }
+        else{
+            cv::Point2d curKvecs = mProbeGridKvecs.at<cv::Point2d>(mCurProbePos);
+            mNextSpeck.kx = curKvecs.x;
+            mNextSpeck.ky = curKvecs.y;
+            mNextSpeck.amp = mProbeAmp;
+            mNextSpeck.phase = mPhaseList[mCurPhaseInd];
+            mNextSpeck.isNull = false;
+            mCurPhaseInd += 1;
+
+        }
 
     }
 
@@ -55,6 +64,14 @@ dmspeck SpeckleKalman::getNextSpeckle() const{
     return mNextSpeck;
 
 }
+
+void SpeckleKalman::nonProbeMeasurmentUpdate(double intensity, double sigma){
+    mInitialIntensity = intensity;
+    mInitialSigma = sigma;
+    mProbeAmp = calculateDMAmplitude(mKvecs, mInitialIntensity, mParams);
+
+}
+    
 
 void SpeckleKalman::updateKalmanState(){
     int reInd, imInd;

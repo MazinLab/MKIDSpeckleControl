@@ -8,7 +8,7 @@ bool cmpImgPt(ImgPt lhs, ImgPt rhs)
 }
 
 SpeckleNuller::SpeckleNuller(boost::property_tree::ptree &ptree) : 
-        mDM(ptree.get<std::string>("DMParams.channel").c_str()){
+        mDM(ptree.get<std::string>("DMParams.channel").c_str()), mIters(0){
     mParams = ptree;
     int ctrlRegionXSize = mParams.get<int>("ImgParams.xCtrlEnd") - mParams.get<int>("ImgParams.xCtrlStart");
     int ctrlRegionYSize = mParams.get<int>("ImgParams.yCtrlEnd") - mParams.get<int>("ImgParams.yCtrlStart");
@@ -17,8 +17,12 @@ SpeckleNuller::SpeckleNuller(boost::property_tree::ptree &ptree) :
 
 }
 
-void SpeckleNuller::updateImage(const cv::Mat &newImage){
+void SpeckleNuller::update(const cv::Mat &newImage){
     mImage = newImage;
+    if(mIters%4 == 0)
+        findNewSpeckles();
+    updateSpeckles();
+    
 
 }
 
@@ -225,7 +229,7 @@ void SpeckleNuller::createSpeckleObjects(std::vector<ImgPt> &imgPts){
     cv::Point2d coordinates;
     for(it = imgPts.begin(); it < imgPts.end(); it++){
         coordinates = (*it).coordinates;
-        SpeckleCtrlClass speck(coordinates, mImage, mParams);
+        SpeckleCtrlClass speck(coordinates, mParams);
         mSpecklesList.push_back(speck);
 
     }

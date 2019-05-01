@@ -38,12 +38,13 @@ typedef SpeckleKalman SpeckleCtrlClass;
 class SpeckleNuller
 {
     private: 
-        cv::Mat mImage; //Last MKID image obtained from PacketMaster
+        cv::Mat mImage; //Last MKID image obtained from PacketMaster (control region)
         cv::Mat mBadPixMask; //Bad pixel mask of image. Should be updated when ctrl region changes
         std::vector<SpeckleCtrlClass> mSpecklesList, mNullSpecklesList; //List of Speckle (objects) being nulled
         std::vector<dmspeck> mNextDMSpecks; //List of speckles to put on DM
         boost::property_tree::ptree mParams; //Container for configuration params
         SpeckleToDM mDM;
+        int mIters;
 
         /**
          * Detects and centroids speckles in current image.
@@ -76,19 +77,19 @@ class SpeckleNuller
          */
         void createSpeckleObjects(std::vector<ImgPt> &imgPts);
 
+        void findNewSpeckles();
+
     public:
         /**
         * Constructor. Initializes ImageGrabber and P3KCom objects.
         **/
         SpeckleNuller(boost::property_tree::ptree &ptree);
-
-        void findNewSpeckles();
  
         /**
         * Updates the current image (of ctrl region)
         * @param image New image of ctrl region
         **/
-        void updateImage(const cv::Mat &newImage);
+        void update(const cv::Mat &newImage);
 
         void updateBadPixMask(const cv::Mat &newMask);
 
