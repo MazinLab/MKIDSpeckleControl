@@ -3,11 +3,11 @@
 cv::Point2d calculateKvecs(const cv::Point2d &coords, boost::property_tree::ptree &cfgParams)
 {
     cv::Point2d intCoords, kvecs;
-    double dmAngle = cfgParams.get<double>("DMCal.angle");
+    double dmAngle = cfgParams.get<double>("DMParams.angle");
     intCoords.x = (double)(coords.x + cfgParams.get<int>("ImgParams.xCtrlStart"));
     intCoords.y = (double)(coords.y + cfgParams.get<int>("ImgParams.yCtrlStart"));
     kvecs.x = 2.0*M_PI*(std::cos(-dmAngle)*intCoords.x - std::sin(-dmAngle)*intCoords.y)/cfgParams.get<double>("ImgParams.lambdaOverD");
-    kvecs.y = cfgParams.get<double>("DMCal.yFlip")*2.0*M_PI*(std::sin(-dmAngle)*intCoords.x + std::cos(-dmAngle)*intCoords.y)/cfgParams.get<double>("ImgParams.lambdaOverD");
+    kvecs.y = cfgParams.get<double>("DMParams.yFlip")*2.0*M_PI*(std::sin(-dmAngle)*intCoords.x + std::cos(-dmAngle)*intCoords.y)/cfgParams.get<double>("ImgParams.lambdaOverD");
     return kvecs;
 
 }
@@ -27,7 +27,7 @@ cv::Point2d calculateKvecs(const cv::Point2d &coords, const cv::Point2d &ctrlReg
 double calculateDMAmplitude(const cv::Point2d &kvecs, double intensity, boost::property_tree::ptree &cfgParams)
 {
     double k = cv::norm(kvecs);
-    return std::sqrt(1000*intensity/cfgParams.get<double>("ImgParams.integrationTime")*(cfgParams.get<double>("DMCal.a")*k*k + cfgParams.get<double>("DMCal.b")*k + cfgParams.get<double>("DMCal.c")));
+    return std::sqrt(1000*intensity/cfgParams.get<double>("NullingParams.integrationTime")*(cfgParams.get<double>("DMParams.a")*k*k + cfgParams.get<double>("DMParams.b")*k + cfgParams.get<double>("DMParams.c")));
 
 }
 

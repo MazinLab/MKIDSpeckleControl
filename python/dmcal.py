@@ -1,5 +1,4 @@
-import speckletodm
-import propertytree
+import speckpy
 import mkidreadout.readout.sharedmem as shm
 from mkidcore.corelog import getLogger, create_log
 from mkidcore.objects import Beammap
@@ -12,9 +11,13 @@ import scipy.ndimage as sciim
 class Calibrator(object):
 
     def __init__(self, dmChanName, sharedImageName, useWvl=False, wvlStart=700, wvlStop=1400, beammap=None):
-        self.dm = speckletodm.SpeckleToDM(dmChanName)
+        self.dm = speckpy.SpeckleToDM(dmChanName)
         self.shmImage = shm.ImageCube(sharedImageName)
         self.shmImage.useWvl = useWvl
+        
+        if self.shmImage.useEdgeBins or self.shmImage.nWvlBins > 1:
+            raise Exception('Multiple wavelengths/edge bins not implemented')
+
         if useWvl:
             self.shmImage.wvlStart = wvlStart
             self.shmImage.wvlStop = wvlStop
@@ -26,8 +29,10 @@ class Calibrator(object):
 
     def run(self, start, end, amplitude, nPoints=10, integrationTime=5, lOverDEst=3, speckWin=None):
         self.kvecs = np.array([np.linspace(start, end, nPoints), np.linspace(start, end, nPoints)]).T
-        self.speckLocs = np.zeros((nPoints*2, 2, 2))
-        self.speckIntensities = np.zeros((nPoints*2, 2))
+        self.speckLocs = np.zeros((nPoints*2, 2, 2)) #NSpecklepairs x 2 speckles x [x, y]
+        self.speckIntensities = np.zeros((nPoints*2, 2)) #NSpecklePairs x 2 speckles
+        self.speckIntensities.fill(np.nan)
+        self.amplitude = amplitude
 
         if speckWin is None:
             speckWin = int(np.ceil(lOverDEst))
@@ -55,11 +60,11 @@ class Calibrator(object):
 
             #image = image/intensityCorrectionImage
             for j in range(4):
-                x = self.speckLocs[i*2 + j/2, j%2, 0]
-                y = self.speckLocs[i*2 + j/2, j%2, 1]
+                y = self.speckLocs[i*2 + j/2, j%2, 0]
+                x = self.speckLocs[i*2 + j/2, j%2, 1]
                 if ~np.isnan(x) and ~np.isnan(y):
-                    self.speckIntensities[i*2 + j/2, j%2] = np.sum(image[int(x - np.floor(speckWin/2.)) : int(x + np.ceil(speckWin/2.)), 
-                                             int(y - np.floor(speckWin/2.)) : int(y + np.ceil(speckWin/2.))])/(intensityCorrectionImage[int(x), int(y)]*integrationTime)
+                    self.speckIntensities[i*2 + j/2, j%2] = np.sum(image[int(y - np.floor(speckWin/2.)) : int(y + np.ceil(speckWin/2.)), 
+                                             int(x - np.floor(speckWin/2.)) : int(x + np.ceil(speckWin/2.))])/(intensityCorrectionImage[int(y), int(x)]*integrationTime)
 
 
 
@@ -78,6 +83,33 @@ class Calibrator(object):
         kvecs = np.reshape(kvecs[goodPairMask], (-1, 2))
 
         self.nLDPerPix = np.pi*np.mean(np.sqrt(pairDiffs[:,0]**2 + pairDiffs[:,1]**2)/np.sqrt(kvecs[:,0]**2 + kvecs[:,1]**2))
+
+    def calibrateIntensity(self):
+        kMags = np.zeros((self.kvecs.shape[0]*2))
+        kMags[::2] = np.sqrt(self.kvecs[:, 0]**2 + self.kvecs[:, 1]**2)
+        kMags[1::2] = kMags[::2] #duplicate kvecs b/c we have 2 pairs per kvec
+        intensities = np.mean(self.speckIntensities, axis=1)
+        goodMask = ~np.isnan(intensities)
+        a, b, c = np.polyfit(kMags[goodMask], self.amplitude**2/intensities[goodMask], 2)
+
+        plt.plot(kMags[goodMask], intensities[goodMask], '.')
+        x = np.linspace(kMags[0], kMags[-1])
+        plt.plot(x, self.amplitude**2/(a*x**2 + b*x + c))
+        plt.show()
+
+        self.intensityCal = np.array([a, b, c])
+
+    def writeToConfig(self, cfgFn):
+        params = speckpy.PropertyTree()
+        params.read_info(cfgFn)
+        params.put('ImgParams.xCenter', self.center[1])
+        params.put('ImgParams.yCenter', self.center[0])
+        params.put('DMParams.a', self.intensityCal[0])
+        params.put('DMParams.b', self.intensityCal[1])
+        params.put('DMParams.c', self.intensityCal[2])
+        params.write(cfgFn)
+        
+        
         
 
 class CalspotGUI(object):
@@ -124,8 +156,14 @@ if __name__=='__main__':
     cal = Calibrator('dm04disp00', 'DMCalTest0')
     #create_log(__name__)
     create_log('mkidreadout')
-    cal.run(20, 60, 1, 5, 1)
+    cal.run(20, 60, 1, 3, 1)
     cal.calculateCenter()
     cal.calculateLOverD()
+    cal.calibrateIntensity()
+    cal.writeToConfig('speckNullConfig.info')
     print 'center:', cal.center
-    print 'l/D', cal.nLDPerPix
+    print 'l/D:', cal.nLDPerPix
+    print 'calCoeffs'
+    print '    a:', cal.intensityCal[0]
+    print '    b:', cal.intensityCal[1]
+    print '    c:', cal.intensityCal[2]

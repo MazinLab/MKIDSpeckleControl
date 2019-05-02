@@ -13,7 +13,7 @@
 
 
 int main(){
-    char dmShmImName[80] = "dm04disp00";
+    char dmShmImName[80] = "dm04disp";
     char mkidShmName[80] = "DMCalTest0";
     int fpNRows;
     int fpNCols;

@@ -2,7 +2,7 @@ ImgParams
 {
     name DMSimTest0
 
-    nRows 145
+    nRows 146
     nCols 140
     xCenter 33 ;in pixel coordinates on DARKNESS image
     yCenter 31
@@ -39,12 +39,6 @@ DMParams
     c 1 
     angle 0 ;radians
     yFlip 1 ; -1 at palomar
-
-}
-
-CalParams
-{
-    centroidingWindowRadius 5
 
 }
 

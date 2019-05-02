@@ -157,7 +157,9 @@ class ImageGrabber
 
         const cv::Mat& getBadPixMask() const;
         const cv::Mat& getBadPixMaskCtrl() const;
+
         boost::property_tree::ptree getCfgParams() const;
+
         int getIntegrationTime() const;
 
         /**

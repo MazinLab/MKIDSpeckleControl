@@ -2,9 +2,11 @@
 
 cv::Mat gaussianBadPixUSFilt(cv::Mat image, cv::Mat &badPixMask, int usFactor, double lambdaOverD)
 {
+    assert(image.rows == badPixMask.rows);
+    assert(image.cols == badPixMask.cols);
     //remove bad pixels
     cv::Mat badPixMaskInv = (~badPixMask)&1;
-    badPixMaskInv.convertTo(badPixMaskInv, CV_64FC1);
+    badPixMaskInv.convertTo(badPixMaskInv, image.type());
     image = image.mul(badPixMaskInv);
 
     //upsample

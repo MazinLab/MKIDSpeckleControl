@@ -79,7 +79,7 @@ class MKIDImageSim{
             cv::split(fpE, eField);
             cv::magnitude(eField[0], eField[1], fpIm);
 
-            fpIm = fpIm*100;
+            //fpIm = fpIm*100;
             cv::Mat fpImOut(ppRows, ppCols, CV_32S);
             fpIm.convertTo(fpImOut, CV_32S);
             fpImOut = cv::Mat(fpImOut, cv::Range(ppRows/2 - fpRows/2, ppRows/2 + fpRows/2), 

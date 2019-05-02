@@ -6,22 +6,29 @@ ImageGrabber::ImageGrabber(boost::property_tree::ptree &ptree) : mParams(ptree),
 }
 
 void ImageGrabber::initialize(){
-    BOOST_LOG_TRIVIAL(debug) << "Opening Image Buffer...";
+    BOOST_LOG_TRIVIAL(debug) << "ImageGrabber: opening " << mParams.get<std::string>("name");
     
-    MKIDShmImage_open(&mShmImage, mParams.get<std::string>("name").c_str());
+    int retval = MKIDShmImage_open(&mShmImage, mParams.get<std::string>("name").c_str());
+    if(retval != 0){
+        BOOST_LOG_TRIVIAL(error) << "Error opening " << mParams.get<std::string>("name");
+        throw;
+
+    }
     if(mShmImage.md->nWvlBins != 1){
-        BOOST_LOG_TRIVIAL(error) << "Multiple wavelengths not supported";
+        BOOST_LOG_TRIVIAL(error) << "Multiple wavelengths " << mShmImage.md->nWvlBins << " not supported";
         throw;
 
     }
 
     mRawImageShm = cv::Mat(mShmImage.md->nRows, mShmImage.md->nCols, CV_32S, mShmImage.image);
+    BOOST_LOG_TRIVIAL(trace) << "ImageGrabber: done opening " << mParams.get<std::string>("name");
 
     MKIDShmImage_setWvlRange(&mShmImage, mParams.get("wvlStart", 700), mParams.get("wvlStop", 1400));
     mShmImage.md->useWvl = mParams.get("useWvl", 0);
 
-    mXCenter = mParams.get<int>("xCenter");
-    mYCenter = mParams.get<int>("yCenter");
+    //TODO: consider changing centers to floats
+    mXCenter = (int)mParams.get<double>("xCenter");
+    mYCenter = (int)mParams.get<double>("yCenter");
     setCtrlRegion();
 
     if(mParams.get<bool>("useBadPixMask"))
@@ -34,7 +41,7 @@ void ImageGrabber::initialize(){
     //initialize bad pixel mask to 0
     else
     {
-        mBadPixMask = cv::Mat(mShmImage.md->nRows, mShmImage.md->nCols, CV_16UC1, 0);
+        mBadPixMask = cv::Mat(mShmImage.md->nRows, mShmImage.md->nCols, CV_16UC1, cv::Scalar(0));
         mBadPixMaskCtrl = cv::Mat(mBadPixMask, cv::Range(mYCtrlStart, mYCtrlEnd), cv::Range(mXCtrlStart, mXCtrlEnd));
 
     }
@@ -52,6 +59,8 @@ void ImageGrabber::initialize(){
         loadDarkSub();
 
     }
+
+    BOOST_LOG_TRIVIAL(debug) << "ImageGrabber: done initializing";
 
 }
 
@@ -100,6 +109,7 @@ void ImageGrabber::processFullImage()
 
 void ImageGrabber::startIntegrating(uint64_t startts, double integrationTime)
 {
+    BOOST_LOG_TRIVIAL(debug) << "ImageGrabber: starting integration";
     MKIDShmImage_startIntegration(&mShmImage, startts, (uint64_t)integrationTime*2);
     mIntegrationTime = integrationTime;
     mUpToDate = false;
@@ -108,6 +118,7 @@ void ImageGrabber::startIntegrating(uint64_t startts, double integrationTime)
 
 void ImageGrabber::startIntegrating(uint64_t startts, double integrationTime, int wvlStart, int wvlStop)
 {
+    BOOST_LOG_TRIVIAL(debug) << "ImageGrabber: starting integration";
     MKIDShmImage_setWvlRange(&mShmImage, wvlStart, wvlStop);
     MKIDShmImage_startIntegration(&mShmImage, startts, (uint64_t)integrationTime*2);
     mIntegrationTime = integrationTime;
@@ -117,11 +128,13 @@ void ImageGrabber::startIntegrating(uint64_t startts, double integrationTime, in
 
 cv::Mat &ImageGrabber::getCtrlRegionImage(bool process) 
 {
+    BOOST_LOG_TRIVIAL(trace) << "ImageGrabber: waiting...";
     if(!mUpToDate){
         MKIDShmImage_wait(&mShmImage, 0);
         mUpToDate = true;
 
     }
+    BOOST_LOG_TRIVIAL(trace) << "ImageGrabber: grabbing ctrl region...";
     mCtrlRegionImage = cv::Mat(mRawImageShm, cv::Range(mYCtrlStart, mYCtrlEnd), cv::Range(mXCtrlStart, mXCtrlEnd));
     if(process)
         processCtrlRegion();
@@ -132,6 +145,7 @@ cv::Mat &ImageGrabber::getCtrlRegionImage(bool process)
 
 cv::Mat &ImageGrabber::getImage(bool process)
 {
+    BOOST_LOG_TRIVIAL(trace) << "ImageGrabber: waiting...";
     if(!mUpToDate){
         MKIDShmImage_wait(&mShmImage, 0);
         mUpToDate = true;
@@ -167,6 +181,10 @@ void ImageGrabber::setCtrlRegion()
     mXCtrlEnd = mXCenter + mParams.get<int>("xCtrlEnd");
     mYCtrlStart = mYCenter + mParams.get<int>("yCtrlStart");
     mYCtrlEnd = mYCenter + mParams.get<int>("yCtrlEnd");
+
+    BOOST_LOG_TRIVIAL(debug) << "ImageGrabber: set control region to: start = (" <<
+        mXCtrlStart << ", " << mYCtrlStart << "), end = (" << mXCtrlEnd << ", " << mYCtrlEnd << ")";
+
 
 }
 
@@ -288,8 +306,11 @@ void ImageGrabber::displayImage(bool makePlot)
 void ImageGrabber::close()
 {
     MKIDShmImage_close(&mShmImage);
-    free(mBadPixBuff);
-    free(mFlatCalBuff);
+    if(mParams.get<bool>("useBadPixMask"))
+        free(mBadPixBuff);
+    if(mParams.get<bool>("useFlatCal"))
+        free(mFlatCalBuff);
+    if(mParams.get<bool>("useDarkSub"))
     free(mDarkSubBuff);
 
 }

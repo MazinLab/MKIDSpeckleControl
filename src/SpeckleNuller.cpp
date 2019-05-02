@@ -13,12 +13,12 @@ SpeckleNuller::SpeckleNuller(boost::property_tree::ptree &ptree) :
     int ctrlRegionXSize = mParams.get<int>("ImgParams.xCtrlEnd") - mParams.get<int>("ImgParams.xCtrlStart");
     int ctrlRegionYSize = mParams.get<int>("ImgParams.yCtrlEnd") - mParams.get<int>("ImgParams.yCtrlStart");
     mImage.create(ctrlRegionYSize, ctrlRegionXSize, CV_64FC1);
-    BOOST_LOG_TRIVIAL(debug) << "Creating P3K Object";
 
 }
 
 void SpeckleNuller::update(const cv::Mat &newImage){
-    mImage = newImage;
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: updating...";
+    newImage.convertTo(mImage, CV_64F);
     if(mIters%4 == 0)
         findNewSpeckles();
     updateSpeckles();
@@ -38,15 +38,17 @@ void SpeckleNuller::updateBadPixMask(const cv::Mat &newMask){
 
 
 std::vector<ImgPt> SpeckleNuller::detectSpeckles(){ 
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: detecting new speckles...";
     double usFactor = mParams.get<double>("NullingParams.usFactor");
 
     //first do gaussian us filt on image
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: gaussian filtering...";
     cv::Mat filtImg = gaussianBadPixUSFilt(mImage, mBadPixMask, (int)usFactor, mParams.get<double>("ImgParams.lambdaOverD"));
 
     //scale image parameters by usFactor, since image is upsampled
     int speckleWindow = mParams.get<int>("NullingParams.speckleWindow")*mParams.get<int>("NullingParams.usFactor");
     int apertureRadius = mParams.get<double>("NullingParams.apertureRadius");
-    int kvecOffsSize = (int)mParams.get<double>("NullingParams.kvecOffsSize");
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: params: " << speckleWindow << " " << apertureRadius;
 
     //Find local maxima within mParams.get<int>("NullingParams.speckleWindow") size window
     cv::Mat kernel = cv::Mat::ones(speckleWindow, speckleWindow, CV_8UC1);
@@ -61,9 +63,13 @@ std::vector<ImgPt> SpeckleNuller::detectSpeckles(){
     if(mParams.get<bool>("NullingParams.useGaussianBlur"))
         cv::blur(filtImg.clone(), filtImg, cv::Size2i(speckleWindow, speckleWindow));
 
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: dilating...";
     cv::dilate(filtImg, maxFiltIm, kernel);
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: marking maxima...";
     cv::compare(filtImg, maxFiltIm, isMaximum, cv::CMP_EQ);
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: finding nonzero...";
     cv::findNonZero(isMaximum, maxima); //maxima are coordinates in upsampled filtImg
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: found local maxima";
     
     //Put Points in ImgPt Struct List
     std::vector<cv::Point2i>::iterator it;
@@ -72,9 +78,10 @@ std::vector<ImgPt> SpeckleNuller::detectSpeckles(){
     {
         tempPt.coordinates = cv::Point2d((double)(*it).x/usFactor, (double)(*it).y/usFactor); //coordinates in real image
         tempPt.intensity = filtImg.at<double>(*it);
+        BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: Detected speckle at " << tempPt.coordinates << " intensity: " << tempPt.intensity;
         if(tempPt.intensity != 0)
-            if((tempPt.coordinates.x < (mImage.cols-apertureRadius-kvecOffsSize)) && (tempPt.coordinates.x > (apertureRadius+kvecOffsSize))
-                && (tempPt.coordinates.y < (mImage.rows-apertureRadius-kvecOffsSize)) && (tempPt.coordinates.y > (apertureRadius+kvecOffsSize)))
+            if((tempPt.coordinates.x < (mImage.cols-apertureRadius)) && (tempPt.coordinates.x > (apertureRadius))
+                && (tempPt.coordinates.y < (mImage.rows-apertureRadius)) && (tempPt.coordinates.y > (apertureRadius)))
             maxImgPts.push_back(tempPt);
 
     }
@@ -105,7 +112,7 @@ void SpeckleNuller::exclusionZoneCut(std::vector<ImgPt> &maxImgPts)
         curPt = *curElem;
         curElemRemoved = false;
         //Check to see if curPt is too close to any speckle, but only if we're keeping all currently active speckles
-        if(!mParams.get<bool>("TrackingParams.enforceRedetection"))
+        if(!mParams.get<bool>("NullingParams.enforceRedetection"))
         {
             std::vector<SpeckleCtrlClass>::iterator speckIter;
             for(speckIter = mSpecklesList.begin(); speckIter < mSpecklesList.end(); speckIter++)

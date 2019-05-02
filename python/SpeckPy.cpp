@@ -21,6 +21,7 @@ boost::property_tree::ptree extractPropertyTree(object pytree){
 void run(int nIters, object pyparams){
     boost::property_tree::ptree params = extractPropertyTree(pyparams);
     std::cout << params.get<std::string>("ImgParams.name") << std::endl;
+    loopfunctions::runLoop(nIters, params);
 
 }
 
@@ -36,7 +37,7 @@ BOOST_PYTHON_MODULE(speckpy){
         .def("getXSize", &SpeckleToDM::getXSize)
         .def("getYSize", &SpeckleToDM::getYSize);
 
-    class_<PTreeWrapper>("PTree")
+    class_<PTreeWrapper>("PropertyTree")
         .def("read_info", &PTreeWrapper::read_info)
         .def("get", &PTreeWrapper::get)
         .def("add", static_cast<void (PTreeWrapper::*)(const std::string &, const std::string &)>(&PTreeWrapper::add))

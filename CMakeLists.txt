@@ -13,8 +13,9 @@ file(GLOB SOURCES "src/*.cpp")
 set (CMAKE_CXX_FLAGS "-DBOOST_LOG_DYN_LINK -g -pg -O0 -std=c++11")
 set (CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-add_executable(mainScript ${SOURCES})
-target_link_libraries(mainScript ${OpenCV_LIBS} -lImageStreamIO -lmkidshm -lboost_log -lboost_system -lrt -lpthread)
+file(GLOB TESTSOURCES "test/*.cpp" ${SOURCES})
+add_executable(testScript ${TESTSOURCES})
+target_link_libraries(testScript ${OpenCV_LIBS} -lImageStreamIO -lmkidshm -lboost_log -lboost_system -lrt -lpthread)
 
 file(GLOB SIMSOURCES "sim/*.cpp")
 add_executable(linDMToMKID ${SIMSOURCES})
