@@ -4,7 +4,7 @@ SpeckleController::SpeckleController(cv::Point2d pt, boost::property_tree::ptree
         mParams(ptree), mCoords(pt), mCurPhaseInd(-1){
     mKvecs = calculateKvecs(mCoords, mParams);
 
-    BOOST_LOG_TRIVIAL(debug) << "Speckle at " << mCoords << ": kvecs: " << mKvecs;
+    BOOST_LOG_TRIVIAL(debug) << "Creating new speckle at " << mCoords << ": kvecs: " << mKvecs;
 
     for(int i=0; i<NPHASES; i++)
         mPhaseList[i] = (double)2*M_PI*i/NPHASES;
@@ -29,16 +29,19 @@ void SpeckleController::updateBadPixMask(const cv::Mat &mask)
 }
 
 
-std::tuple<double, double> SpeckleController::measureSpeckleIntensityAndSigma(const cv::Mat &image)
+std::tuple<double, double> SpeckleController::measureSpeckleIntensityAndSigma(const cv::Mat &image, double integrationTime)
 {
     double measIntensity, measSigmaI;
     cv::Mat speckleIm = cv::Mat(image, cv::Range((int)mCoords.y-mParams.get<int>("NullingParams.apertureRadius"), 
         (int)mCoords.y+mParams.get<int>("NullingParams.apertureRadius")+1), cv::Range(mCoords.x-mParams.get<int>("NullingParams.apertureRadius"), 
         mCoords.x+mParams.get<int>("NullingParams.apertureRadius")+1));
     speckleIm = speckleIm.mul(mApertureMask);
-    BOOST_LOG_TRIVIAL(debug) << "Speckle at " << mCoords << ": image: " << speckleIm;
-    measIntensity = (double)cv::sum(speckleIm)[0]/mIntensityCorrectionFactor;
-    measSigmaI = std::sqrt(measIntensity*mIntensityCorrectionFactor)/mIntensityCorrectionFactor;
+    measIntensity = (double)cv::sum(speckleIm)[0]/mIntensityCorrectionFactor*1000/integrationTime;
+    measSigmaI = std::sqrt(measIntensity*mIntensityCorrectionFactor)/mIntensityCorrectionFactor*1000/integrationTime;
+
+    BOOST_LOG_TRIVIAL(debug) << "Speckle at " << mCoords << ": intensity :" << measIntensity;
+    BOOST_LOG_TRIVIAL(debug) << "Speckle at " << mCoords << ": sigma:     " << measSigmaI;
+    BOOST_LOG_TRIVIAL(debug) << "Speckle at " << mCoords << ": image:   \n" << speckleIm;
 
     return std::make_tuple(measIntensity, measSigmaI);
 

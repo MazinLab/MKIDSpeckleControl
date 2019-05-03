@@ -66,6 +66,8 @@ class Calibrator(object):
                     self.speckIntensities[i*2 + j/2, j%2] = np.sum(image[int(y - np.floor(speckWin/2.)) : int(y + np.ceil(speckWin/2.)), 
                                              int(x - np.floor(speckWin/2.)) : int(x + np.ceil(speckWin/2.))])/(intensityCorrectionImage[int(y), int(x)]*integrationTime)
 
+        self.dm.updateDM()
+
 
 
     def calculateCenter(self):
@@ -82,7 +84,7 @@ class Calibrator(object):
         kvecs[1::2,:] = self.kvecs #duplicate kvecs b/c we have 2 pairs per kvec
         kvecs = np.reshape(kvecs[goodPairMask], (-1, 2))
 
-        self.nLDPerPix = np.pi*np.mean(np.sqrt(pairDiffs[:,0]**2 + pairDiffs[:,1]**2)/np.sqrt(kvecs[:,0]**2 + kvecs[:,1]**2))
+        self.nPixPerLD = np.pi*np.mean(np.sqrt(pairDiffs[:,0]**2 + pairDiffs[:,1]**2)/np.sqrt(kvecs[:,0]**2 + kvecs[:,1]**2))
 
     def calibrateIntensity(self):
         kMags = np.zeros((self.kvecs.shape[0]*2))
@@ -104,6 +106,7 @@ class Calibrator(object):
         params.read_info(cfgFn)
         params.put('ImgParams.xCenter', self.center[1])
         params.put('ImgParams.yCenter', self.center[0])
+        params.put('ImgParams.lambdaOverD', self.nPixPerLD)
         params.put('DMParams.a', self.intensityCal[0])
         params.put('DMParams.b', self.intensityCal[1])
         params.put('DMParams.c', self.intensityCal[2])
@@ -156,13 +159,13 @@ if __name__=='__main__':
     cal = Calibrator('dm04disp00', 'DMCalTest0')
     #create_log(__name__)
     create_log('mkidreadout')
-    cal.run(20, 60, 1, 3, 1)
+    cal.run(20, 60, 0.05, 5, 1, speckWin=5)
     cal.calculateCenter()
     cal.calculateLOverD()
     cal.calibrateIntensity()
     cal.writeToConfig('speckNullConfig.info')
     print 'center:', cal.center
-    print 'l/D:', cal.nLDPerPix
+    print 'l/D:', cal.nPixPerLD
     print 'calCoeffs'
     print '    a:', cal.intensityCal[0]
     print '    b:', cal.intensityCal[1]

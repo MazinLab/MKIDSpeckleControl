@@ -55,7 +55,7 @@ class SpeckleController
         * sigma and sets measSpeckIntensity and measSigma
         * @param image Image to use for intensity measurement
         **/
-        std::tuple<double, double> measureSpeckleIntensityAndSigma(const cv::Mat &image);
+        std::tuple<double, double> measureSpeckleIntensityAndSigma(const cv::Mat &image, double integrationTime);
 
         double measureIntensityCorrection() const;
 
@@ -68,7 +68,7 @@ class SpeckleController
         **/
         SpeckleController(cv::Point2d pt, boost::property_tree::ptree &ptree);
 
-        virtual void update(const cv::Mat &image) = 0;
+        virtual void update(const cv::Mat &image, double integrationTime) = 0;
 
         virtual dmspeck getNextSpeckle() const = 0;
 

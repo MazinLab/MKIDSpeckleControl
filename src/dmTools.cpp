@@ -36,3 +36,15 @@ double calculateDMAmplitude(const cv::Point2d &kvecs, double intensity, double i
     return std::sqrt(1000*intensity/integrationTime*(a*k*k + b*k + c));
 
 }
+
+double getDMCalFactor(const cv::Point2d &kvecs, double integrationTime, double a, double b, double c){
+    double k = cv::norm(kvecs);
+    return std::sqrt(1000/integrationTime*(a*k*k + b*k + c));
+
+}
+
+double getDMCalFactorCPS(const cv::Point2d &kvecs, double a, double b, double c){
+    double k = cv::norm(kvecs);
+    return std::sqrt((a*k*k + b*k + c));
+
+}

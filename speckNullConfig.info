@@ -64,9 +64,9 @@ KalmanParams
     probeGridWidth 3
     probeGridSpacing 3.1415926
 
-    processNoiseVar 1 ;value along the diagonal of Q - variance of speckle amplitude per iteration
-    initStateVar 1
-    useConstantR true ;if true get R matrix from sqrt(I_initial)
+    processNoiseVar 0 ;value along the diagonal of Q - variance of speckle amplitude per iteration
+    initStateVar 5
+    useConstantR false ;if true get R matrix from sqrt(I_initial)
 
     snrThresh 4 ;minimum signal to noise for null
 

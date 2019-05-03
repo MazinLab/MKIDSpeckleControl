@@ -27,8 +27,8 @@ void ImageGrabber::initialize(){
     mShmImage.md->useWvl = mParams.get("useWvl", 0);
 
     //TODO: consider changing centers to floats
-    mXCenter = (int)mParams.get<double>("xCenter");
-    mYCenter = (int)mParams.get<double>("yCenter");
+    mXCenter = (int)std::round(mParams.get<double>("xCenter"));
+    mYCenter = (int)std::round(mParams.get<double>("yCenter"));
     setCtrlRegion();
 
     if(mParams.get<bool>("useBadPixMask"))

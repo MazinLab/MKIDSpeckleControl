@@ -7,6 +7,8 @@ class SpeckleKalman : public SpeckleController
     private:
         int mProbeGridWidth;
         int mNProbePos;
+        int mNProbeIters;
+        int mMinProbeIters;
         double mKvecCorrSigma;
         double mProbeGridSpacing;
         cv::Mat_<cv::Point2d> mProbeGridKvecs; // k vector at each point 
@@ -44,7 +46,7 @@ class SpeckleKalman : public SpeckleController
     public:
         SpeckleKalman(cv::Point2d pt, boost::property_tree::ptree &ptree);
 
-        void update(const cv::Mat &image);
+        void update(const cv::Mat &image, double integrationTime);
 
         dmspeck getNextSpeckle() const;
 

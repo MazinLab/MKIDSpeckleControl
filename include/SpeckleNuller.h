@@ -45,6 +45,7 @@ class SpeckleNuller
         boost::property_tree::ptree mParams; //Container for configuration params
         SpeckleToDM mDM;
         int mIters;
+        double mIntegrationTime;
 
         /**
          * Detects and centroids speckles in current image.
@@ -89,7 +90,7 @@ class SpeckleNuller
         * Updates the current image (of ctrl region)
         * @param image New image of ctrl region
         **/
-        void update(const cv::Mat &newImage);
+        void update(const cv::Mat &newImage, double integrationTime);
 
         void updateBadPixMask(const cv::Mat &newMask);
 

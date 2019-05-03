@@ -5,9 +5,9 @@ void loopfunctions::runLoop(int nIters, boost::property_tree::ptree &cfgParams){
     SpeckleNuller nuller(cfgParams);
     nuller.updateBadPixMask(imageGrabber.getBadPixMaskCtrl());
     for(int i=0; i<nIters; i++){
-        imageGrabber.startIntegrating(0, cfgParams.get<double>("NullingParams.integrationTime"));
+        imageGrabber.startIntegrating(0, 2*cfgParams.get<double>("NullingParams.integrationTime"));
         cv::Mat &ctrlRegionImage = imageGrabber.getCtrlRegionImage();
-        nuller.update(ctrlRegionImage);
+        nuller.update(ctrlRegionImage, cfgParams.get<double>("NullingParams.integrationTime"));
         nuller.updateDM();
 
     }

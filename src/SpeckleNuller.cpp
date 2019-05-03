@@ -1,5 +1,4 @@
 #include "SpeckleNuller.h"
-//typedef SpeckleKalman SpeckleCtrlClass;
 
 bool cmpImgPt(ImgPt lhs, ImgPt rhs)
 {
@@ -16,12 +15,14 @@ SpeckleNuller::SpeckleNuller(boost::property_tree::ptree &ptree) :
 
 }
 
-void SpeckleNuller::update(const cv::Mat &newImage){
+void SpeckleNuller::update(const cv::Mat &newImage, double integrationTime){
     BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: updating...";
+    mIntegrationTime = integrationTime;
     newImage.convertTo(mImage, CV_64F);
-    if(mIters%4 == 0)
+    if(mIters%(NPHASES + 1) == 0)
         findNewSpeckles();
     updateSpeckles();
+    mIters++;
     
 
 }
@@ -249,7 +250,7 @@ void SpeckleNuller::updateSpeckles(){
     dmspeck speck;
     
     for(it = mSpecklesList.begin(); it < mSpecklesList.end(); it++){
-        it->update(mImage);
+        it->update(mImage, mIntegrationTime);
         speck = it->getNextSpeckle();
         if(speck.amp == DELETE_SPECKLE){
             mSpecklesList.erase(it);
@@ -282,7 +283,6 @@ void SpeckleNuller::findNewSpeckles(){
 void SpeckleNuller::updateDM(){
     std::vector<dmspeck>::iterator it;
     mDM.clearProbeSpeckles();
-    mDM.clearNullingSpeckles();
 
     for(it = mNextDMSpecks.begin(); it < mNextDMSpecks.end(); it++){
         if(it->isNull)

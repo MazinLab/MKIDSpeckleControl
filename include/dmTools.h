@@ -48,4 +48,8 @@ double calculateDMAmplitude(const cv::Point2d &kvecs, double intensity, double i
  */
 double calculateDMAmplitude(const cv::Point2d &kvecs, double intensity, boost::property_tree::ptree &cfgParams);
 
+double getDMCalFactor(const cv::Point2d &kvecs, double integrationTime, double a, double b, double c);
+
+double getDMCalFactorCPS(const cv::Point2d &kvecs, double a, double b, double c);
+
 #endif

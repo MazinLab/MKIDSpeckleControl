@@ -44,8 +44,8 @@ class MKIDImageSim{
             //dmImShm.copyTo(dmTmp);
             
             dmE.forEach<cv::Vec2f>([this, &dmImShm](cv::Vec2f &value, const int *position) -> void { 
-                    value = cv::Vec2f(std::cos(dmImShm.at<float>(position[0], position[1])/wvl), 
-                            std::sin(dmImShm.at<float>(position[0], position[1])/wvl));
+                    value = cv::Vec2f(std::cos(2*M_PI*dmImShm.at<float>(position[0], position[1])/wvl) - 1, // -1 simulates coronagraph
+                            std::sin(2*M_PI*dmImShm.at<float>(position[0], position[1])/wvl));
 
                 }); //convert phase to complex E-field
 
@@ -78,8 +78,9 @@ class MKIDImageSim{
             cv::Mat eField[2];
             cv::split(fpE, eField);
             cv::magnitude(eField[0], eField[1], fpIm);
+            fpIm = fpIm.mul(fpIm);
 
-            //fpIm = fpIm*100;
+            fpIm = fpIm*100;
             cv::Mat fpImOut(ppRows, ppCols, CV_32S);
             fpIm.convertTo(fpImOut, CV_32S);
             fpImOut = cv::Mat(fpImOut, cv::Range(ppRows/2 - fpRows/2, ppRows/2 + fpRows/2), 
