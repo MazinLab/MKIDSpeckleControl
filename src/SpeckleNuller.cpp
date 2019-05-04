@@ -70,7 +70,7 @@ std::vector<ImgPt> SpeckleNuller::detectSpeckles(){
     cv::compare(filtImg, maxFiltIm, isMaximum, cv::CMP_EQ);
     BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: finding nonzero...";
     cv::findNonZero(isMaximum, maxima); //maxima are coordinates in upsampled filtImg
-    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: found local maxima";
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleNuller: found " << maxima.size() << " local maxima";
     
     //Put Points in ImgPt Struct List
     std::vector<cv::Point2i>::iterator it;
@@ -175,7 +175,7 @@ void SpeckleNuller::updateAndCutActiveSpeckles(std::vector<ImgPt> &maxImgPts){
         speckFound = false;
         for(ptIter = maxImgPts.begin(); ptIter < maxImgPts.end(); ptIter++){
             ptDist = cv::norm((*ptIter).coordinates - (*speckIter).getCoordinates());
-            if(ptDist < mParams.get<double>("TrackingParams.distThresh")){
+            if(ptDist < mParams.get<double>("NullingParams.distThresh")){
                 speckFound = true;
                 //if(mParams.get<bool>("TrackingParams.updateCoords"))
                 //    (*speckIter).setCoordinates((*ptIter).coordinates);
@@ -211,7 +211,7 @@ void SpeckleNuller::updateAndCutNulledSpeckles(std::vector<ImgPt> &maxImgPts){
         speckFound = false;
         for(ptIter = maxImgPts.begin(); ptIter < maxImgPts.end(); ptIter++){
             ptDist = cv::norm((*ptIter).coordinates - (*speckIter).getCoordinates());
-            if(ptDist < mParams.get<double>("TrackingParams.distThresh")){
+            if(ptDist < mParams.get<double>("NullingParams.distThresh")){
                 speckFound = true;
                 //if(mParams.get<bool>("TrackingParams.updateCoords"))
                 //    (*speckIter).setCoordinates((*ptIter).coordinates);

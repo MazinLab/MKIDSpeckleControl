@@ -25,6 +25,21 @@ void run(int nIters, object pyparams){
 
 }
 
+void setTraceLog(){
+    boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::trace);
+
+}
+
+void setDebugLog(){
+    boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::debug);
+
+}
+
+void setInfoLog(){
+    boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::info);
+
+}
+
 BOOST_PYTHON_MODULE(speckpy){
     class_<SpeckleToDM>("SpeckleToDM", init<const char*>())
         .def("addProbeSpeckle", static_cast<void(SpeckleToDM::*)(double, double, double, double)>(&SpeckleToDM::addProbeSpeckle))
@@ -51,5 +66,8 @@ BOOST_PYTHON_MODULE(speckpy){
         .def("write", &PTreeWrapper::write);
 
     def("runLoop", &run);
+    def("setTraceLog", &setTraceLog);
+    def("setDebugLog", &setDebugLog);
+    def("setInfoLog", &setInfoLog);
 
 }

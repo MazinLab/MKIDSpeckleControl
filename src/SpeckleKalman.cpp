@@ -19,13 +19,12 @@ SpeckleKalman::SpeckleKalman(cv::Point2d pt, boost::property_tree::ptree &ptree)
     mP = mParams.get<double>("KalmanParams.initStateVar")*cv::Mat::eye(2*mNProbePos, 2*mNProbePos, CV_64F);
     mQ = mParams.get<double>("KalmanParams.processNoiseVar")*cv::Mat::eye(2*mNProbePos, 2*mNProbePos, CV_64F);
     mR = cv::Mat::zeros(2, 2, CV_64F);
-    BOOST_LOG_TRIVIAL(info) << "SpeckleKalman: Initialized KF matrices";
 
     initializeProbeGridKvecs();
     BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: Probe Grid: " << mProbeGridKvecs;
 
     correlateProcessNoise();
-    BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: Initial State Variance: " << mP;
+    //BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: Initial State Variance: " << mP;
 
     mNProbeIters = 0;
     mMinProbeIters = mParams.get<int>("KalmanParams.minProbeIters");
@@ -48,10 +47,10 @@ void SpeckleKalman::update(const cv::Mat &image, double integrationTime){
                 measureSpeckleIntensityAndSigma(image, integrationTime);
          
    if(mCurPhaseInd == NPHASES-1){
+       mNProbeIters++;
        updateKalmanState();
        updateNullingSpeckle();
        mCurPhaseInd = -1;
-       mNProbeIters++;
 
    }
 
@@ -102,13 +101,17 @@ void SpeckleKalman::updateKalmanState(){
     mx = mx + mK*y;
     mP = (cv::Mat::eye(mP.rows, mP.cols, CV_64F) - mK*mH)*mP;
 
-    BOOST_LOG_TRIVIAL(debug) << "   x: " << mx;
-    BOOST_LOG_TRIVIAL(debug) << " x_m: " << mz/(4*mProbeAmp/(mDMCalFactor*mDMCalFactor));
+    BOOST_LOG_TRIVIAL(debug) << "re(x): \n\t" << 
+        cv::Mat(mx, cv::Range(0, mNProbePos)).reshape(0, mProbeGridWidth);
+    BOOST_LOG_TRIVIAL(debug) << "im(x): \n\t" << 
+        cv::Mat(mx, cv::Range(mNProbePos, 2*mNProbePos)).reshape(0, mProbeGridWidth);
+    BOOST_LOG_TRIVIAL(debug) << " x_m: \n\t" << 
+        mz/(4*mProbeAmp/(mDMCalFactor*mDMCalFactor));
     //BOOST_LOG_TRIVIAL(debug) << "   H: " << mH;
-    BOOST_LOG_TRIVIAL(debug) << "   z: " << mz;
+    BOOST_LOG_TRIVIAL(debug) << "   z: \n\t" << mz;
     //BOOST_LOG_TRIVIAL(debug) << "   y: " << y;
     //BOOST_LOG_TRIVIAL(debug) << "   Ky: " << mK*y;
-    BOOST_LOG_TRIVIAL(debug) << "   R: " << mR;
+    BOOST_LOG_TRIVIAL(debug) << "   R: \n\t" << mR;
     //BOOST_LOG_TRIVIAL(debug) << "   K: " << mK;
     //BOOST_LOG_TRIVIAL(debug) << "   P: " << mP;
 
@@ -138,7 +141,8 @@ void SpeckleKalman::updateNullingSpeckle(){
 
     // weights_ij is proportional to amplitude_ij/(overlap of probe grid w/ gaussian)
     cv::Mat weights = cv::Mat::ones(mProbeGridWidth, mProbeGridWidth, CV_64F);
-    cv::GaussianBlur(weights, weights, cv::Size(0,0), 2*M_PI*0.42);
+    cv::GaussianBlur(weights, weights, cv::Size(mProbeGridWidth, mProbeGridWidth), 4*M_PI*0.42, 0, cv::BORDER_CONSTANT);
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: normweights: " << weights;
     cv::divide(amplitude, weights, weights);
     weights = weights/cv::sum(weights)[0];    
 

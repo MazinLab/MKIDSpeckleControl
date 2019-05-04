@@ -50,10 +50,15 @@ int main(){
 
     while(sem_trywait(fpShmIm.takeImageSem)==0){semctr++;}
 
+    while(sem_trywait(fpShmIm.takeImageSem)==0){semctr++;}
+    while(ImageStreamIO_semtrywait(&dmShmIm, dmSemInd)==0){semctr++;};
+
     std::cout << "semctr: " << semctr << std::endl;
+    semctr = 0;
     
     while(true){
         if(sem_wait(fpShmIm.takeImageSem)==0){
+            while(ImageStreamIO_semtrywait(&dmShmIm, dmSemInd)==0){semctr++;};
             BOOST_LOG_TRIVIAL(debug) << "Starting Image";
             fpImMat.setTo(0);
             takingImage = true;
@@ -74,14 +79,11 @@ int main(){
 
             }
 
-            else{
-                ImageStreamIO_semwait(&dmShmIm, dmSemInd);
-                BOOST_LOG_TRIVIAL(debug) << "Waiting for DM";
-
-            }
 
         }
 
+        ImageStreamIO_semwait(&dmShmIm, dmSemInd);
+        BOOST_LOG_TRIVIAL(debug) << "Waiting for DM";
             
 
     }
