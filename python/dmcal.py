@@ -159,7 +159,7 @@ if __name__=='__main__':
     cal = Calibrator('dm04disp00', 'DMCalTest0')
     #create_log(__name__)
     create_log('mkidreadout')
-    cal.run(20, 60, 0.05, 5, 1, speckWin=5)
+    cal.run(20, 60, 50, 5, 1, speckWin=5)
     cal.calculateCenter()
     cal.calculateLOverD()
     cal.calibrateIntensity()

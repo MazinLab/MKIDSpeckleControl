@@ -103,12 +103,14 @@ void SpeckleKalman::updateKalmanState(){
     mP = (cv::Mat::eye(mP.rows, mP.cols, CV_64F) - mK*mH)*mP;
 
     BOOST_LOG_TRIVIAL(debug) << "   x: " << mx;
-    BOOST_LOG_TRIVIAL(debug) << "   H: " << mH;
+    BOOST_LOG_TRIVIAL(debug) << " x_m: " << mz/(4*mProbeAmp/(mDMCalFactor*mDMCalFactor));
+    //BOOST_LOG_TRIVIAL(debug) << "   H: " << mH;
     BOOST_LOG_TRIVIAL(debug) << "   z: " << mz;
-    BOOST_LOG_TRIVIAL(debug) << "   y: " << y;
+    //BOOST_LOG_TRIVIAL(debug) << "   y: " << y;
+    //BOOST_LOG_TRIVIAL(debug) << "   Ky: " << mK*y;
     BOOST_LOG_TRIVIAL(debug) << "   R: " << mR;
-    BOOST_LOG_TRIVIAL(debug) << "   K: " << mK;
-    BOOST_LOG_TRIVIAL(debug) << "   P: " << mP;
+    //BOOST_LOG_TRIVIAL(debug) << "   K: " << mK;
+    //BOOST_LOG_TRIVIAL(debug) << "   P: " << mP;
 
     std::tie(mCurProbePos.x, mCurProbePos.y) = getProbeGridIndices((int)std::rand()%mNProbePos);
 
@@ -149,12 +151,13 @@ void SpeckleKalman::updateNullingSpeckle(){
     mProbeGridKvecs.forEach([this, &weights, &amplitude, &phase, &nullingK, &nullingAmp, &nullingPhase]
                 (cv::Point2d &value, const int *position) -> void{
             nullingK += weights.at<double>(position[0], position[1])*value;
-            nullingAmp += weights.at<double>(position[0], position[1])*amplitude.at<double>(position[0], position[1]);
+            //nullingAmp += weights.at<double>(position[0], position[1])*amplitude.at<double>(position[0], position[1]);
             nullingPhase += weights.at<double>(position[0], position[1])*phase.at<double>(position[0], position[1]); 
 
             });
 
     nullingVar = cv::sum(variance.mul(weights))[0]; //this could also be done inside lambda function
+    cv::minMaxLoc(amplitude, NULL, &nullingAmp);
 
     double snr = nullingAmp/std::sqrt(nullingVar);
 
@@ -169,8 +172,31 @@ void SpeckleKalman::updateNullingSpeckle(){
     mNextSpeck.phase = nullingPhase + M_PI;
     mNextSpeck.isNull = true;
 
-    if((snr >= mParams.get<double>("KalmanParams.snrThresh")) && (mNProbeIters >= mMinProbeIters))
+    if((snr >= mParams.get<double>("KalmanParams.snrThresh")) && (mNProbeIters >= mMinProbeIters)){
         mNextSpeck.amp = nullingAmp; //nullingAmp;
+
+        //Update state est w/ control
+        cv::Mat B(2*mNProbePos, 2, CV_64F, cv::Scalar(0));
+        cv::Mat realB(B, cv::Range(0, mNProbePos), cv::Range(0,1));
+        cv::Mat imagB(B, cv::Range(mNProbePos, 2*mNProbePos), cv::Range(1,2));
+        int kRow, kCol;
+        double kDist;
+        for(int i=0; i<mNProbePos; i++){
+            std::tie(kRow, kCol) = getProbeGridIndices(i);
+            kDist = cv::norm(cv::Point2d(mNextSpeck.kx, mNextSpeck.ky) - mProbeGridKvecs.at<cv::Point2d>(kRow, kCol));
+            realB.at<double>(i) = std::exp(-kDist*kDist/(4*mKvecCorrSigma*mKvecCorrSigma));
+            imagB.at<double>(i) = std::exp(-kDist*kDist/(4*mKvecCorrSigma*mKvecCorrSigma));
+
+        }
+
+        //BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: B: " << B;
+
+        cv::Mat u(2, 1, CV_64F, cv::Scalar(0));
+        u.at<double>(0) = mNextSpeck.amp*std::cos(mNextSpeck.phase);
+        u.at<double>(1) = mNextSpeck.amp*std::sin(mNextSpeck.phase);
+        mx = mx + B*u;
+        
+    }
 
     else
         mNextSpeck.amp = 0;
@@ -194,8 +220,8 @@ void SpeckleKalman::correlateProcessNoise(){
             kj = mProbeGridKvecs.at<cv::Point2d>(row, col);
             kDist = cv::norm(ki - kj);
             
-            realBlock.at<double>(i, j) = std::sqrt(realBlock.at<double>(i, i)*realBlock.at<double>(j,j))*std::exp(-kDist*kDist/(2*mKvecCorrSigma*mKvecCorrSigma));
-            imagBlock.at<double>(i, j) = std::sqrt(imagBlock.at<double>(i,i)*imagBlock.at<double>(j,j))*std::exp(-kDist*kDist/(2*mKvecCorrSigma*mKvecCorrSigma));
+            realBlock.at<double>(i, j) = std::sqrt(realBlock.at<double>(i, i)*realBlock.at<double>(j,j))*std::exp(-kDist*kDist/(4*mKvecCorrSigma*mKvecCorrSigma));
+            imagBlock.at<double>(i, j) = std::sqrt(imagBlock.at<double>(i,i)*imagBlock.at<double>(j,j))*std::exp(-kDist*kDist/(4*mKvecCorrSigma*mKvecCorrSigma));
 
         }
 

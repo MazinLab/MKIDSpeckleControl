@@ -27,6 +27,8 @@ class SpeckleToDM
         int dmXSize;
         int dmYSize;
 
+        bool usenm;
+
         boost::property_tree::ptree cfgParams;
 
         //Methods:
@@ -38,10 +40,9 @@ class SpeckleToDM
          * Constructor. Instantiates DMChannel for CACAO communication with 
          * DM channel.
          * @param dmChan Name of dmChannel shared memory buffer to use
-         * @param ptree boost property tree containing global config params
          */
-        SpeckleToDM(const char dmChanName[80], boost::property_tree::ptree &ptree);
-        SpeckleToDM(const char dmChanName[80]);
+        //SpeckleToDM(const char dmChanName[80], boost::property_tree::ptree &ptree);
+        SpeckleToDM(const char dmChanName[80], bool _usenm=true);
 
         /*
          * Add a probe speckle to DM. Only difference between probe and nulling

@@ -1,19 +1,6 @@
 #include "SpeckleToDM.h"
 
-SpeckleToDM::SpeckleToDM(const char dmChanName[80], boost::property_tree::ptree &ptree) : dmChannel(dmChanName){
-    cfgParams = ptree;
-    dmXSize = dmChannel.getXSize();
-    dmYSize = dmChannel.getYSize();
-    fullMapShm = cv::Mat(dmYSize, dmXSize, CV_32F, dmChannel.getBufferPtr<float>());
-    
-    probeMap = cv::Mat(dmYSize, dmXSize, CV_32F);
-    nullMap = cv::Mat(dmYSize, dmXSize, CV_32F);
-    probeMap.setTo(0);
-    nullMap.setTo(0);
-
-}
-
-SpeckleToDM::SpeckleToDM(const char dmChanName[80]) : dmChannel(dmChanName){
+SpeckleToDM::SpeckleToDM(const char dmChanName[80], bool _usenm) : dmChannel(dmChanName), usenm(_usenm){
     dmXSize = dmChannel.getXSize();
     dmYSize = dmChannel.getYSize();
     fullMapShm = cv::Mat(dmYSize, dmXSize, CV_32F, dmChannel.getBufferPtr<float>());
@@ -83,6 +70,8 @@ void SpeckleToDM::updateDM()
 
 cv::Mat SpeckleToDM::generateMapFromSpeckle(const cv::Point2d kvecs, double amp, double phase)
 {
+    if(usenm)
+        amp /= 1000; // dm channel is in um stroke
     float phx, phy;
     cv::Mat map = cv::Mat::zeros(dmYSize, dmXSize, CV_32F);
     map.forEach<Pixel>([this, &phx, &phy, amp, phase, &kvecs](Pixel &value, const int *position) -> void
