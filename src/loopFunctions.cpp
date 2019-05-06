@@ -13,3 +13,11 @@ void loopfunctions::runLoop(int nIters, boost::property_tree::ptree &cfgParams){
     }
 
 }
+
+void loopfunctions::runLoop(int nIters, const std::string cfgFilename){
+    boost::property_tree::ptree params;
+    boost::property_tree::read_info(cfgFilename, params);
+
+    runLoop(nIters, params);
+
+}

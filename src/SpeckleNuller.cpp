@@ -252,17 +252,19 @@ void SpeckleNuller::updateSpeckles(){
     for(it = mSpecklesList.begin(); it < mSpecklesList.end(); it++){
         it->update(mImage, mIntegrationTime);
         speck = it->getNextSpeckle();
-        if(speck.amp == DELETE_SPECKLE){
-            mSpecklesList.erase(it);
-            it--;
 
-        }
-
-        else if(speck.amp == 0)
+        if(speck.amp == 0)
             continue;
 
         else
             mNextDMSpecks.push_back(speck);
+
+        if(it->getNProbeIters() >= mParams.get<int>("NullingParams.maxProbeIters")){
+            mSpecklesList.erase(it);
+            it--;
+
+        }
+            
 
     }
         

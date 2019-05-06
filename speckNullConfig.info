@@ -1,6 +1,6 @@
 ImgParams
 {
-    name DMSimTest0
+    name DMCalTest0
 
     nRows 146
     nCols 140
@@ -56,6 +56,8 @@ NullingParams
     usFactor 2 ;upsampling to use when detecting speckles
 
     enforceRedetection false ;speckle must be re-detected every iteration to remain active
+    distThresh 2; max distance between original and re-detected speckle
+    maxProbeIters 3
 
 }
 
@@ -70,7 +72,6 @@ KalmanParams
 
     snrThresh 4 ;minimum signal to noise for null
 
-    distThresh 2 ;max distance to tag speckle as the "same" as nulled speckle
     nullIterWeight 0 ;1 ;state estimate penalty post-nulling. should be <=1
 
     minProbeIters 4

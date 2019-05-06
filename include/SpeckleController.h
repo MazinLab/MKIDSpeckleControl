@@ -38,6 +38,8 @@ class SpeckleController
         double mInitialIntensity;
         double mInitialSigma;
 
+        int mNProbeIters;
+
         double mIntensityCorrectionFactor;
         cv::Mat mApertureMask; //Aperture window used to measure speckle intensity
         cv::Mat mBadPixMask;
@@ -80,6 +82,8 @@ class SpeckleController
         cv::Point2d getCoordinates() const;
 
         cv::Point2d getKvecs() const;
+
+        int getNProbeIters() const;
 
 
 };

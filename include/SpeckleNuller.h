@@ -80,6 +80,8 @@ class SpeckleNuller
 
         void findNewSpeckles();
 
+        void updateSpeckles();
+
     public:
         /**
         * Constructor. Initializes ImageGrabber and P3KCom objects.
@@ -93,8 +95,6 @@ class SpeckleNuller
         void update(const cv::Mat &newImage, double integrationTime);
 
         void updateBadPixMask(const cv::Mat &newMask);
-
-        void updateSpeckles();
 
         void updateDM();
 

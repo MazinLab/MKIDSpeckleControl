@@ -7,7 +7,6 @@ class SpeckleKalman : public SpeckleController
     private:
         int mProbeGridWidth;
         int mNProbePos;
-        int mNProbeIters;
         int mMinProbeIters;
         double mKvecCorrSigma;
         double mProbeGridSpacing;

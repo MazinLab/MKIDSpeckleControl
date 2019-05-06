@@ -66,3 +66,4 @@ cv::Point2d SpeckleController::getCoordinates() const {return mCoords;}
 
 cv::Point2d SpeckleController::getKvecs() const {return mKvecs;}
 
+int SpeckleController::getNProbeIters() const {return mNProbeIters;}
