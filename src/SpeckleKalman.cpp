@@ -114,6 +114,9 @@ void SpeckleKalman::updateKalmanState(){
     BOOST_LOG_TRIVIAL(debug) << "   R: \n\t" << mR;
     //BOOST_LOG_TRIVIAL(debug) << "   K: " << mK;
     //BOOST_LOG_TRIVIAL(debug) << "   P: " << mP;
+    //
+    
+    BOOST_LOG_TRIVIAL(debug) << "N probe iters: " << mNProbeIters;
 
     std::tie(mCurProbePos.x, mCurProbePos.y) = getProbeGridIndices((int)std::rand()%mNProbePos);
 
@@ -138,6 +141,7 @@ void SpeckleKalman::updateNullingSpeckle(){
     cv::cartToPolar(real, imag, amplitude, phase);
     BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: Amplitudes: " << amplitude;
     BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: Phases: " << phase;
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: Variances: " << variance;
 
     // weights_ij is proportional to amplitude_ij/(overlap of probe grid w/ gaussian)
     cv::Mat weights = cv::Mat::ones(mProbeGridWidth, mProbeGridWidth, CV_64F);
@@ -160,8 +164,11 @@ void SpeckleKalman::updateNullingSpeckle(){
 
             });
 
-    nullingVar = cv::sum(variance.mul(weights))[0]; //this could also be done inside lambda function
-    cv::minMaxLoc(amplitude, NULL, &nullingAmp);
+    //nullingVar = cv::sum(variance.mul(weights))[0]; //this could also be done inside lambda function
+    //Use the maximum amplitude as nulling amp, as well as the variance at this value
+    cv::Point2i nullingAmpLoc;
+    cv::minMaxLoc(amplitude, NULL, &nullingAmp, NULL, &nullingAmpLoc); 
+    nullingVar = variance.template at<double>(nullingAmpLoc);
 
     double snr = nullingAmp/std::sqrt(nullingVar);
 

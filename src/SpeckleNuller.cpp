@@ -19,9 +19,9 @@ void SpeckleNuller::update(const cv::Mat &newImage, double integrationTime){
     BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: updating...";
     mIntegrationTime = integrationTime;
     newImage.convertTo(mImage, CV_64F);
+    updateSpeckles();
     if(mIters%(NPHASES + 1) == 0)
         findNewSpeckles();
-    updateSpeckles();
     mIters++;
     
 
@@ -79,7 +79,7 @@ std::vector<ImgPt> SpeckleNuller::detectSpeckles(){
     {
         tempPt.coordinates = cv::Point2d((double)(*it).x/usFactor, (double)(*it).y/usFactor); //coordinates in real image
         tempPt.intensity = filtImg.at<double>(*it);
-        BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: Detected speckle at " << tempPt.coordinates << " intensity: " << tempPt.intensity;
+        //BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: Detected speckle at " << tempPt.coordinates << " intensity: " << tempPt.intensity;
         if(tempPt.intensity != 0)
             if((tempPt.coordinates.x < (mImage.cols-apertureRadius)) && (tempPt.coordinates.x > (apertureRadius))
                 && (tempPt.coordinates.y < (mImage.rows-apertureRadius)) && (tempPt.coordinates.y > (apertureRadius)))
@@ -238,6 +238,7 @@ void SpeckleNuller::createSpeckleObjects(std::vector<ImgPt> &imgPts){
     for(it = imgPts.begin(); it < imgPts.end(); it++){
         coordinates = (*it).coordinates;
         SpeckleCtrlClass speck(coordinates, mParams);
+        speck.update(mImage, mIntegrationTime);
         mSpecklesList.push_back(speck);
 
     }
@@ -253,10 +254,7 @@ void SpeckleNuller::updateSpeckles(){
         it->update(mImage, mIntegrationTime);
         speck = it->getNextSpeckle();
 
-        if(speck.amp == 0)
-            continue;
-
-        else
+        if(speck.amp != 0)
             mNextDMSpecks.push_back(speck);
 
         if(it->getNProbeIters() >= mParams.get<int>("NullingParams.maxProbeIters")){

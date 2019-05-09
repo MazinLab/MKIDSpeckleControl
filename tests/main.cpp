@@ -21,7 +21,7 @@ int main()
     boost::property_tree::ptree cfgParams;
     read_info("python/speckNullConfig.info", cfgParams);
 
-    loopfunctions::runLoop(400, cfgParams);
+    loopfunctions::runLoop(5, cfgParams);
     
 
 
