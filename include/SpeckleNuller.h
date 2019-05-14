@@ -76,7 +76,7 @@ class SpeckleNuller
          * Creates speckle objects from a list of ImgPts; stores these
          * in specklesList.
          */
-        void createSpeckleObjects(std::vector<ImgPt> &imgPts);
+        void createSpeckleObjects(std::vector<ImgPt> &imgPts, bool update=true);
 
         void findNewSpeckles();
 

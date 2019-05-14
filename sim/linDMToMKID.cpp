@@ -47,9 +47,6 @@ int main(){
     int semctr = 0;
 
     while(MKIDShmImage_checkIfDone(&fpShmIm, 0)==0){semctr++;}
-
-    while(sem_trywait(fpShmIm.takeImageSem)==0){semctr++;}
-
     while(sem_trywait(fpShmIm.takeImageSem)==0){semctr++;}
     while(ImageStreamIO_semtrywait(&dmShmIm, dmSemInd)==0){semctr++;};
 
@@ -70,7 +67,7 @@ int main(){
 
         if(takingImage){
             BOOST_LOG_TRIVIAL(debug) << "Grabbing data from DM...";
-            fpImMat += mkid.convertDMToFP(dmImMat);
+            fpImMat += mkid.convertDMToFP(dmImMat, fpShmIm.md->integrationTime/(2*nIntegrations));
             intCounter++;
             if(intCounter==nIntegrations){
                 BOOST_LOG_TRIVIAL(debug) << "Done with image";

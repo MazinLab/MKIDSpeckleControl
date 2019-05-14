@@ -230,7 +230,7 @@ void SpeckleNuller::updateAndCutNulledSpeckles(std::vector<ImgPt> &maxImgPts){
 
 }
             
-void SpeckleNuller::createSpeckleObjects(std::vector<ImgPt> &imgPts){ 
+void SpeckleNuller::createSpeckleObjects(std::vector<ImgPt> &imgPts, bool update){ 
     BOOST_LOG_TRIVIAL(debug) << "SpeckleNuller: creating speckle objects...";
 
     std::vector<ImgPt>::iterator it;
@@ -238,7 +238,12 @@ void SpeckleNuller::createSpeckleObjects(std::vector<ImgPt> &imgPts){
     for(it = imgPts.begin(); it < imgPts.end(); it++){
         coordinates = (*it).coordinates;
         SpeckleCtrlClass speck(coordinates, mParams);
-        speck.update(mImage, mIntegrationTime);
+        if(update){
+            speck.update(mImage, mIntegrationTime);
+            mNextDMSpecks.push_back(speck.getNextSpeckle());
+
+        }
+
         mSpecklesList.push_back(speck);
 
     }

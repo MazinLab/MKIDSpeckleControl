@@ -8,7 +8,7 @@
 class MKIDImageSim{
     int fpRows;
     int fpCols;
-    float nLDPerPix;
+    float nPixPerLD;
     float wvl; //microns
     cv::Mat badPixMask;
     cv::Mat flatCal;
@@ -19,14 +19,16 @@ class MKIDImageSim{
             fpRows = r;
             fpCols = c;
 
-            nLDPerPix = ldPix;
+            nPixPerLD = ldPix;
             wvl = wl;
 
         }
         
-        cv::Mat convertDMToFP(const cv::Mat &dmImShm){
-            int ppRows = (int)dmImShm.rows*nLDPerPix;
-            int ppCols = (int)dmImShm.cols*nLDPerPix;
+        // dmImShm: cv::Mat wrapper around DM shared memory buffer
+        // integrationTime: in ms
+        cv::Mat convertDMToFP(const cv::Mat &dmImShm, int integrationTime){
+            int ppRows = (int)dmImShm.rows*nPixPerLD;
+            int ppCols = (int)dmImShm.cols*nPixPerLD;
             if((ppRows < fpRows) || (ppCols < fpCols)){
                 BOOST_LOG_TRIVIAL(error) << "FP larger than PP not implemented";
                 throw;
@@ -37,7 +39,7 @@ class MKIDImageSim{
             cv::Mat fpIm(ppRows, ppCols, CV_32F); //intensities
             cv::Mat dmE(dmImShm.rows, dmImShm.cols, CV_32FC2); 
 
-            //cv::Mat dmIm((int)dmImShm.rows*nLDPerPix, (int)dmImShm.cols*nLDPerPix, CV_32F);
+            //cv::Mat dmIm((int)dmImShm.rows*nPixPerLD, (int)dmImShm.cols*nPixPerLD, CV_32F);
             //dmIm.setTo(0);
             //cv::Mat dmTmp = dmIm(cv::Range(dmIm.rows/2-dmImShm.rows/2, dmIm.rows/2+dmImShm.rows/2), 
             //            cv::Range(dmIm.cols/2-dmImShm.cols/2, dmIm.cols/2+dmImShm.cols/2));
@@ -89,6 +91,22 @@ class MKIDImageSim{
 
             return fpImOut;
             
+        }
+
+        void addPoissonNoise(cv::Mat &fpIm){
+            std::default_random_engine generator; 
+
+            fpIm.forEach<int>([this, &generator](int &value, const int *position) -> void {
+                    std::poisson_distribution<int> dist(value);
+                    value = dist(generator);
+
+                });
+
+        }
+
+        void applyBadPixMask(cv::Mat &fpIm){
+            ;
+
         }
 
 };
