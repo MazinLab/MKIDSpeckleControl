@@ -10,20 +10,30 @@
 #include "loopFunctions.h"
 #include "SpeckleToDM.h"
 
-using namespace boost::python;
+namespace bp = boost::python;
 
-boost::property_tree::ptree extractPropertyTree(object pytree){
-    PTreeWrapper &pwrapper = extract<PTreeWrapper&>(pytree);
+boost::property_tree::ptree extractPropertyTree(bp::object pytree){
+    PTreeWrapper &pwrapper = bp::extract<PTreeWrapper&>(pytree);
     return pwrapper.getCXXObject();
 
 }
 
-void run(int nIters, object pyparams){
+bp::list run(int nIters, bp::object pyparams, bool returnLC=false){
     boost::property_tree::ptree params = extractPropertyTree(pyparams);
-    std::cout << params.get<std::string>("ImgParams.name") << std::endl;
-    loopfunctions::runLoop(nIters, params);
+    //std::cout << params.get<std::string>("ImgParams.name") << std::endl;
+    std::vector<int> lightCurve = loopfunctions::runLoop(nIters, params, returnLC);
+
+    bp::list lcList;
+
+    for(int counts: lightCurve)
+        lcList.append(counts);
+
+    return lcList; 
 
 }
+
+bp::list runNoLC(int nIters, bp::object pyparams){
+    return run(nIters, pyparams, false);}
 
 void setTraceLog(){
     boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::trace);
@@ -41,7 +51,7 @@ void setInfoLog(){
 }
 
 BOOST_PYTHON_MODULE(speckpy){
-    class_<SpeckleToDM>("SpeckleToDM", init<const char*>())
+    bp::class_<SpeckleToDM>("SpeckleToDM", bp::init<const char*>())
         .def("addProbeSpeckle", static_cast<void(SpeckleToDM::*)(double, double, double, double)>(&SpeckleToDM::addProbeSpeckle))
         .def("addNullingSpeckle", static_cast<void(SpeckleToDM::*)(double, double, double, double)>(&SpeckleToDM::addNullingSpeckle))
         //.def("addProbeSpeckle", &SpeckleToDM::addProbeSpeckle, addProbeSpeckle_overloads())
@@ -52,7 +62,7 @@ BOOST_PYTHON_MODULE(speckpy){
         .def("getXSize", &SpeckleToDM::getXSize)
         .def("getYSize", &SpeckleToDM::getYSize);
 
-    class_<PTreeWrapper>("PropertyTree")
+    bp::class_<PTreeWrapper>("PropertyTree")
         .def("read_info", &PTreeWrapper::read_info)
         .def("get", &PTreeWrapper::get)
         .def("add", static_cast<void (PTreeWrapper::*)(const std::string &, const std::string &)>(&PTreeWrapper::add))
@@ -65,9 +75,10 @@ BOOST_PYTHON_MODULE(speckpy){
         .def("put", static_cast<void (PTreeWrapper::*)(const std::string &, const bool &)>(&PTreeWrapper::put))
         .def("write", &PTreeWrapper::write);
 
-    def("runLoop", &run);
-    def("setTraceLog", &setTraceLog);
-    def("setDebugLog", &setDebugLog);
-    def("setInfoLog", &setInfoLog);
+    bp::def("runLoop", &run);
+    bp::def("runLoop", &runNoLC);
+    bp::def("setTraceLog", &setTraceLog);
+    bp::def("setDebugLog", &setDebugLog);
+    bp::def("setInfoLog", &setInfoLog);
 
 }

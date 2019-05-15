@@ -13,8 +13,8 @@
 
 namespace loopfunctions{
 
-void runLoop(int nIters, boost::property_tree::ptree &cfgParams);
+std::vector<int> runLoop(int nIters, boost::property_tree::ptree &cfgParams, bool returnLC=false);
 
-void runLoop(int nIters, const std::string cfgFilename);
+std::vector<int> runLoop(int nIters, const std::string cfgFilename, bool returnLC=false);
 
 }

@@ -109,7 +109,6 @@ class ImageGrabber
 
         void close();
 
-        int getCtrlRegionCounts();
 
     public:
         /**
@@ -148,6 +147,8 @@ class ImageGrabber
         * @return reference to image of control region (cv::Mat object w/ dtype CV_16UC1)
         */
         cv::Mat& getCtrlRegionImage(bool process=false);
+
+        int getCtrlRegionCounts();
         
         /**
         * Returns most recently taken image. 
