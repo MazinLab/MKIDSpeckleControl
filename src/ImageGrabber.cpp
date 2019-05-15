@@ -276,6 +276,11 @@ void ImageGrabber::applyDarkSubCtrlRegion()
 
 }
 
+int ImageGrabber::getCtrlRegionCounts(){
+    return (int)cv::sum(mCtrlRegionImage)[0];
+
+}
+
 void ImageGrabber::displayImage(bool makePlot)
 {
     //std::cout << "mRawImageShm " << mRawImageShm << std::endl;

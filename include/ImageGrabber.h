@@ -109,6 +109,8 @@ class ImageGrabber
 
         void close();
 
+        int getCtrlRegionCounts();
+
     public:
         /**
         * Constructor. Initializes (opens) shared memory spaces, semaphores, and cal arrays.
