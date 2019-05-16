@@ -9,8 +9,11 @@
 #include <boost/property_tree/ptree.hpp>
 #include <mkidshm.h>
 
+#define DONE_SEM_IND 0
+
 #ifndef IMAGEGRABBER_H
 #define IMAGEGRABBER_H
+
 /*
  * Interfaces with PacketMaster (MKID readout stream parsing code) to acquire images 
  * on-demand at a specified timestamp. Also does basic image processing

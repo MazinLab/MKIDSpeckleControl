@@ -4,7 +4,7 @@ SpeckleController::SpeckleController(cv::Point2d pt, boost::property_tree::ptree
         mParams(ptree), mCoords(pt), mCurPhaseInd(-1){
     mKvecs = calculateKvecs(mCoords, mParams);
 
-    BOOST_LOG_TRIVIAL(debug) << "Creating new speckle at " << mCoords << ": kvecs: " << mKvecs;
+    BOOST_LOG_TRIVIAL(info) << "Creating new speckle at " << mCoords << ": kvecs: " << mKvecs;
 
     for(int i=0; i<NPHASES; i++)
         mPhaseList[i] = (double)2*M_PI*i/NPHASES;
@@ -16,6 +16,7 @@ SpeckleController::SpeckleController(cv::Point2d pt, boost::property_tree::ptree
         mParams.get<int>("ImgParams.xCtrlEnd") - mParams.get<int>("ImgParams.xCtrlStart"), CV_16U);
     mIntensityCorrectionFactor = measureIntensityCorrection();
 
+    mNProbeIters = 0;
     BOOST_LOG_TRIVIAL(debug) << "Speckle: done initialization";
 
 
@@ -25,6 +26,7 @@ void SpeckleController::updateBadPixMask(const cv::Mat &mask)
 {
     mBadPixMask = mask;
     mIntensityCorrectionFactor = measureIntensityCorrection();
+    BOOST_LOG_TRIVIAL(debug) << "Speckle: intensity correction factor: " << mIntensityCorrectionFactor;
 
 }
 
@@ -37,11 +39,11 @@ std::tuple<double, double> SpeckleController::measureSpeckleIntensityAndSigma(co
         mCoords.x+mParams.get<int>("NullingParams.apertureRadius")+1));
     speckleIm = speckleIm.mul(mApertureMask);
     measIntensity = (double)cv::sum(speckleIm)[0]/mIntensityCorrectionFactor*1000/integrationTime;
-    measSigmaI = std::sqrt(measIntensity*mIntensityCorrectionFactor)/mIntensityCorrectionFactor*1000/integrationTime;
+    measSigmaI = std::sqrt(measIntensity*mIntensityCorrectionFactor/mIntensityCorrectionFactor*1000/integrationTime);
 
     BOOST_LOG_TRIVIAL(debug) << "Speckle at " << mCoords << ": intensity :" << measIntensity;
     BOOST_LOG_TRIVIAL(debug) << "Speckle at " << mCoords << ": sigma:     " << measSigmaI;
-    BOOST_LOG_TRIVIAL(debug) << "Speckle at " << mCoords << ": image:   \n" << speckleIm;
+    BOOST_LOG_TRIVIAL(trace) << "Speckle at " << mCoords << ": image:   \n" << speckleIm;
 
     return std::make_tuple(measIntensity, measSigmaI);
 
@@ -67,3 +69,9 @@ cv::Point2d SpeckleController::getCoordinates() const {return mCoords;}
 cv::Point2d SpeckleController::getKvecs() const {return mKvecs;}
 
 int SpeckleController::getNProbeIters() const {return mNProbeIters;}
+
+SpeckleController::~SpeckleController(){
+    //if(mNProbeIters > 0)
+    //    BOOST_LOG_TRIVIAL(info) << "Deleting speckle at " << mCoords;
+
+}

@@ -26,7 +26,6 @@ SpeckleKalman::SpeckleKalman(cv::Point2d pt, boost::property_tree::ptree &ptree)
     correlateProcessNoise();
     //BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: Initial State Variance: " << mP;
 
-    mNProbeIters = 0;
     mMinProbeIters = mParams.get<int>("KalmanParams.minProbeIters");
 
 
@@ -185,6 +184,9 @@ void SpeckleKalman::updateNullingSpeckle(){
 
     if((snr >= mParams.get<double>("KalmanParams.snrThresh")) && (mNProbeIters >= mMinProbeIters)){
         mNextSpeck.amp = nullingAmp; //nullingAmp;
+
+        BOOST_LOG_TRIVIAL(info) << "SpeckleKalman at " << mCoords << ": applying nulling speckle after "
+            << mNProbeIters << " probe iterations. \n\t k: " << nullingK << "amp: " << nullingAmp;
 
         //Update state est w/ control
         cv::Mat B(2*mNProbePos, 2, CV_64F, cv::Scalar(0));

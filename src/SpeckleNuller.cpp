@@ -12,6 +12,7 @@ SpeckleNuller::SpeckleNuller(boost::property_tree::ptree &ptree) :
     int ctrlRegionXSize = mParams.get<int>("ImgParams.xCtrlEnd") - mParams.get<int>("ImgParams.xCtrlStart");
     int ctrlRegionYSize = mParams.get<int>("ImgParams.yCtrlEnd") - mParams.get<int>("ImgParams.yCtrlStart");
     mImage.create(ctrlRegionYSize, ctrlRegionXSize, CV_64FC1);
+    mSpecklesList.reserve(mParams.get<int>("NullingParams.maxSpeckles"));
 
 }
 
@@ -99,7 +100,7 @@ std::vector<ImgPt> SpeckleNuller::detectSpeckles(){
 
 }
 
-void SpeckleNuller::exclusionZoneCut(std::vector<ImgPt> &maxImgPts)
+void SpeckleNuller::exclusionZoneCut(std::vector<ImgPt> &maxImgPts, bool checkCurrentSpeckles)
 {
     std::vector<ImgPt>::iterator curElem, kt;
     ImgPt curPt;
@@ -113,7 +114,7 @@ void SpeckleNuller::exclusionZoneCut(std::vector<ImgPt> &maxImgPts)
         curPt = *curElem;
         curElemRemoved = false;
         //Check to see if curPt is too close to any speckle, but only if we're keeping all currently active speckles
-        if(!mParams.get<bool>("NullingParams.enforceRedetection"))
+        if(checkCurrentSpeckles)
         {
             std::vector<SpeckleCtrlClass>::iterator speckIter;
             for(speckIter = mSpecklesList.begin(); speckIter < mSpecklesList.end(); speckIter++)
@@ -155,11 +156,12 @@ void SpeckleNuller::exclusionZoneCut(std::vector<ImgPt> &maxImgPts)
 
     }
 
-    if(mSpecklesList.size() >= mParams.get<int>("NullingParams.maxSpeckles"))
-        maxImgPts.clear();
+    //if(mSpecklesList.size() >= mParams.get<int>("NullingParams.maxSpeckles"))
+    //    maxImgPts.clear();
+    //
+    //else if(maxImgPts.size() > (mParams.get<int>("NullingParams.maxSpeckles") - mSpecklesList.size()))
+    //    maxImgPts.erase(maxImgPts.begin()+mParams.get<int>("NullingParams.maxSpeckles") - mSpecklesList.size(), maxImgPts.end());
     
-    else if(maxImgPts.size() > (mParams.get<int>("NullingParams.maxSpeckles") - mSpecklesList.size()))
-        maxImgPts.erase(maxImgPts.begin()+mParams.get<int>("NullingParams.maxSpeckles") - mSpecklesList.size(), maxImgPts.end());
 
 
 }
@@ -168,7 +170,6 @@ void SpeckleNuller::updateAndCutActiveSpeckles(std::vector<ImgPt> &maxImgPts){
     std::vector<ImgPt>::iterator ptIter;
     std::vector<SpeckleCtrlClass>::iterator speckIter;
     bool speckFound; // check if nulled speckle has been detected
-    int exclusionZone = mParams.get<int>("NullingParams.exclusionZone");
     double ptDist;
     
     for(speckIter = mSpecklesList.begin(); speckIter < mSpecklesList.end(); speckIter++){
@@ -191,6 +192,8 @@ void SpeckleNuller::updateAndCutActiveSpeckles(std::vector<ImgPt> &maxImgPts){
         }
 
         if(!speckFound){ // delete speckle from mSpecklesList if it wasn't detected this iteration
+            BOOST_LOG_TRIVIAL(info) << "SpeckleNuller: Failed to detect active speckle at " 
+                << speckIter->getCoordinates() << "; deleting.";
             mSpecklesList.erase(speckIter);
             speckIter--;
 
@@ -263,6 +266,8 @@ void SpeckleNuller::updateSpeckles(){
             mNextDMSpecks.push_back(speck);
 
         if(it->getNProbeIters() >= mParams.get<int>("NullingParams.maxProbeIters")){
+            BOOST_LOG_TRIVIAL(info) << "Deleting speckle at " << it->getCoordinates() << " after " 
+                << it->getNProbeIters() << " probe iters.";
             mSpecklesList.erase(it);
             it--;
 
@@ -277,10 +282,22 @@ void SpeckleNuller::findNewSpeckles(){
     std::vector<ImgPt> imgPts;
     imgPts = detectSpeckles();
     
-    if(mParams.get<bool>("NullingParams.enforceRedetection"))
+    if(mParams.get<bool>("NullingParams.enforceRedetection")){
+        exclusionZoneCut(imgPts, false);
+        if(imgPts.size() > mParams.get<int>("NullingParams.maxSpeckles"))
+            imgPts.erase(imgPts.begin() + mParams.get<int>("NullingParams.maxSpeckles"), imgPts.end());
+
         updateAndCutActiveSpeckles(imgPts);
 
-    exclusionZoneCut(imgPts);
+    }
+
+    else{
+        exclusionZoneCut(imgPts, true);
+        if(imgPts.size() > (mParams.get<int>("NullingParams.maxSpeckles") - mSpecklesList.size()))
+            imgPts.erase(imgPts.begin() + mParams.get<int>("NullingParams.maxSpeckles") - mSpecklesList.size(), imgPts.end());
+
+    }
+
     createSpeckleObjects(imgPts);
 
 }

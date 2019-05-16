@@ -85,6 +85,8 @@ class SpeckleController
 
         int getNProbeIters() const;
 
+        ~SpeckleController();
+
 
 };
 #endif

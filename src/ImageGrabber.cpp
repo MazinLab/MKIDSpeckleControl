@@ -130,7 +130,7 @@ cv::Mat &ImageGrabber::getCtrlRegionImage(bool process)
 {
     BOOST_LOG_TRIVIAL(trace) << "ImageGrabber: waiting...";
     if(!mUpToDate){
-        MKIDShmImage_wait(&mShmImage, 0);
+        MKIDShmImage_wait(&mShmImage, DONE_SEM_IND);
         mUpToDate = true;
 
     }
@@ -147,7 +147,7 @@ cv::Mat &ImageGrabber::getImage(bool process)
 {
     BOOST_LOG_TRIVIAL(trace) << "ImageGrabber: waiting...";
     if(!mUpToDate){
-        MKIDShmImage_wait(&mShmImage, 0);
+        MKIDShmImage_wait(&mShmImage, DONE_SEM_IND);
         mUpToDate = true;
 
     }
@@ -201,7 +201,7 @@ void ImageGrabber::changeCenter(int xCent, int yCent)
 
 void ImageGrabber::loadBadPixMask()
 {
-    std::string badPixFn = mParams.get<std::string>("mBadPixMaskFile");
+    std::string badPixFn = mParams.get<std::string>("badPixMaskFile");
     std::ifstream badPixFile(badPixFn.c_str(), std::ifstream::in|std::ifstream::binary);
     if(!badPixFile.good()) BOOST_LOG_TRIVIAL(warning) << "Could not find bad pixel mask";
     badPixFile.read(mBadPixBuff, 2*mShmImage.md->nCols*mShmImage.md->nRows);

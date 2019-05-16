@@ -156,7 +156,7 @@ class CalspotGUI(object):
         return self._speckLocs
 
 if __name__=='__main__':
-    cal = Calibrator('dm04disp00', 'DMCalTest0')
+    cal = Calibrator('dm04disp07', 'DMCalTest0')
     #create_log(__name__)
     create_log('mkidreadout')
     cal.run(20, 60, 50, 5, 1, speckWin=5)

@@ -15,6 +15,7 @@
 int main(){
     char dmShmImName[80] = "dm04disp";
     char mkidShmName[80] = "DMCalTest0";
+    char badPixMask[200] = "/home/neelay/data/20190514/finalMap_20181218_badPixMask.bin";
     int fpNRows;
     int fpNCols;
     float nLDPerPix = 3;
@@ -24,7 +25,7 @@ int main(){
     bool takingImage = false;
     int intCounter = 0;
 
-    boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::debug);
+    boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::trace);
 
     //wrapper around shared memory data
     IMAGE dmShmIm;
@@ -42,7 +43,8 @@ int main(){
     fpNCols = fpShmIm.md->nCols;
     cv::Mat fpImMat(fpNRows, fpNCols, CV_32S, fpShmIm.image);
 
-    MKIDImageSim mkid(fpNRows, fpNCols, nLDPerPix);
+    MKIDImageSim mkid(fpNRows, fpNCols, nLDPerPix, badPixMask);
+    //MKIDImageSim mkid(fpNRows, fpNCols, nLDPerPix);
 
     int semctr = 0;
 
@@ -56,6 +58,7 @@ int main(){
     while(true){
         if(sem_wait(fpShmIm.takeImageSem)==0){
             while(ImageStreamIO_semtrywait(&dmShmIm, dmSemInd)==0){semctr++;};
+            while(sem_trywait(fpShmIm.takeImageSem)==0){semctr++;}
             BOOST_LOG_TRIVIAL(debug) << "Starting Image";
             fpImMat.setTo(0);
             takingImage = true;
@@ -79,8 +82,9 @@ int main(){
 
         }
 
+        BOOST_LOG_TRIVIAL(debug) << "Waiting for DM...";
         ImageStreamIO_semwait(&dmShmIm, dmSemInd);
-        BOOST_LOG_TRIVIAL(debug) << "Waiting for DM";
+        BOOST_LOG_TRIVIAL(debug) << "DM ACK, waiting for image to start";
             
 
     }

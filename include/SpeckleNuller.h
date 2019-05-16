@@ -57,7 +57,7 @@ class SpeckleNuller
          * Cuts out elements of maxImgPts that are within an exclusion zone 
          * of existing speckles or each-other.
          **/
-        void exclusionZoneCut(std::vector<ImgPt> &maxImgPts);
+        void exclusionZoneCut(std::vector<ImgPt> &maxImgPts, bool checkCurrentSpeckles);
 
         /**
          * Checks whether any nulled speckles have been re-detected. If so,

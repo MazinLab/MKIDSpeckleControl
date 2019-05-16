@@ -12,6 +12,8 @@ class MKIDImageSim{
     float wvl; //microns
     cv::Mat badPixMask;
     cv::Mat flatCal;
+    char *badPixBuff;
+    bool useBadPixMask;
 
     public:
 
@@ -21,12 +23,27 @@ class MKIDImageSim{
 
             nPixPerLD = ldPix;
             wvl = wl;
+            badPixBuff = NULL;
+            useBadPixMask = false;
+
+        }
+
+        MKIDImageSim(int r, int c, float ldPix, const std::string badPixFile, float wl=1){
+            fpRows = r;
+            fpCols = c;
+
+            nPixPerLD = ldPix;
+            wvl = wl;
+
+            badPixBuff = new char[sizeof(uint16_t)*fpRows*fpCols];
+            loadBadPixMask(badPixFile);
+            useBadPixMask = true;
 
         }
         
         // dmImShm: cv::Mat wrapper around DM shared memory buffer
         // integrationTime: in ms
-        cv::Mat convertDMToFP(const cv::Mat &dmImShm, int integrationTime){
+        cv::Mat convertDMToFP(const cv::Mat &dmImShm, int integrationTime, bool addNoise=true){
             int ppRows = (int)dmImShm.rows*nPixPerLD;
             int ppCols = (int)dmImShm.cols*nPixPerLD;
             if((ppRows < fpRows) || (ppCols < fpCols)){
@@ -82,12 +99,17 @@ class MKIDImageSim{
             cv::magnitude(eField[0], eField[1], fpIm);
             fpIm = fpIm.mul(fpIm);
 
-            fpIm = fpIm/100;
+            fpIm = fpIm/10; //normalization to make CPS values more appetizing
+            fpIm = fpIm*integrationTime/1000; //int time in ms, convert fpIm from CPS to counts
+            if(addNoise)
+                addPoissonNoise(fpIm);
             cv::Mat fpImOut(ppRows, ppCols, CV_32S);
             fpIm.convertTo(fpImOut, CV_32S);
             fpImOut = cv::Mat(fpImOut, cv::Range(ppRows/2 - fpRows/2, ppRows/2 + fpRows/2), 
                     cv::Range(ppCols/2 - fpCols/2, ppCols/2 + fpCols/2));
             //std::cout << fpImOut.rows << " " << fpImOut.cols
+            if(useBadPixMask)
+                applyBadPixMask(fpImOut);
 
             return fpImOut;
             
@@ -96,16 +118,32 @@ class MKIDImageSim{
         void addPoissonNoise(cv::Mat &fpIm){
             std::default_random_engine generator; 
 
-            fpIm.forEach<int>([this, &generator](int &value, const int *position) -> void {
+            fpIm.forEach<float>([this, &generator](float &value, const int *position) -> void {
                     std::poisson_distribution<int> dist(value);
-                    value = dist(generator);
+                    value = (float)dist(generator);
 
                 });
 
         }
 
         void applyBadPixMask(cv::Mat &fpIm){
-            ;
+            fpIm = fpIm.mul((~badPixMask)&1);
+
+        }
+
+        void loadBadPixMask(const std::string badPixFn){ 
+            std::ifstream badPixFile(badPixFn.c_str(), std::ifstream::in|std::ifstream::binary);
+            if(!badPixFile.good()) BOOST_LOG_TRIVIAL(warning) << "Could not find bad pixel mask";
+            badPixFile.read(badPixBuff, sizeof(uint16_t)*fpRows*fpCols);
+            badPixMask = cv::Mat(fpRows, fpCols, CV_16UC1, badPixBuff);
+            badPixMask.convertTo(badPixMask, CV_32S);
+            BOOST_LOG_TRIVIAL(trace) << "bad pixel mask \n" << badPixMask;
+
+        }
+
+        ~MKIDImageSim(){
+            if(badPixBuff != NULL)
+                delete badPixBuff;
 
         }
 
