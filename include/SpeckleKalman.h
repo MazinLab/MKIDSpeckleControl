@@ -15,6 +15,7 @@ class SpeckleKalman : public SpeckleController
         cv::Mat mProbeGridCorr; // correlation between pts at each "Kalman Index". dims: pgw^2*pgw^2
         cv::Point2i mCurProbePos; // position on kvec probe grid
         double mProbeAmp;
+        double mMinProbeAmp;
         double mDMCalFactor;
         dmspeck mNextSpeck;
 

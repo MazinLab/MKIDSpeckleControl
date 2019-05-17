@@ -20,6 +20,7 @@ SpeckleKalman::SpeckleKalman(cv::Point2d pt, boost::property_tree::ptree &ptree)
     mQ = mParams.get<double>("KalmanParams.processNoiseVar")*cv::Mat::eye(2*mNProbePos, 2*mNProbePos, CV_64F);
     mQc = cv::Mat::zeros(2*mNProbePos, 2*mNProbePos, CV_64F);
     mR = cv::Mat::zeros(2, 2, CV_64F);
+    mMinProbeAmp = 2;
 
     initializeProbeGridKvecs();
     BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: Probe Grid: " << mProbeGridKvecs;
@@ -74,9 +75,16 @@ dmspeck SpeckleKalman::getNextSpeckle() const{
 
 void SpeckleKalman::nonProbeMeasurmentUpdate(double intensity, double sigma){
     BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman at " << mCoords << ": rawIntensity: " << intensity;
-    mInitialIntensity = intensity;
-    mInitialSigma = sigma;
-    mProbeAmp = mDMCalFactor*sqrt(intensity);
+
+    if(mParams.get<bool>("KalmanParams.useEKFUpdate"))
+        ;
+
+    else{
+        mInitialIntensity = intensity;
+        mInitialSigma = sigma;
+        mProbeAmp = std::max(mDMCalFactor*sqrt(intensity), mMinProbeAmp);
+
+    }
 
 }
     
@@ -184,13 +192,13 @@ void SpeckleKalman::updateNullingSpeckle(){
     mNextSpeck.kx = nullingK.x;
     mNextSpeck.ky = nullingK.y;
     mNextSpeck.phase = nullingPhase + M_PI;
-    mNextSpeck.isNull = true;
+    mNextSpeck.isNull = true; 
 
     if((snr >= mParams.get<double>("KalmanParams.snrThresh")) && (mNProbeIters >= mMinProbeIters)){
         mNextSpeck.amp = nullingAmp; //nullingAmp;
 
         BOOST_LOG_TRIVIAL(info) << "SpeckleKalman at " << mCoords << ": applying nulling speckle after "
-            << mNProbeIters << " probe iterations. \n\t k: " << nullingK << "amp: " << nullingAmp;
+            << mNProbeIters << " probe iterations. \n\t k: " << nullingK << " amp: " << nullingAmp;
 
         //Update state est w/ control
         cv::Mat B(2*mNProbePos, 2, CV_64F, cv::Scalar(0));
@@ -222,6 +230,7 @@ void SpeckleKalman::updateNullingSpeckle(){
         u.at<double>(0) = mNextSpeck.amp*std::cos(mNextSpeck.phase);
         u.at<double>(1) = mNextSpeck.amp*std::sin(mNextSpeck.phase);
         mx = mx + B*u;
+        BOOST_LOG_TRIVIAL(info) << "SpeckleKalman at " << mCoords << ": x after null:" << mx;
         
     }
 
