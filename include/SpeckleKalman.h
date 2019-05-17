@@ -22,6 +22,7 @@ class SpeckleKalman : public SpeckleController
         cv::Mat mP; // Process noise covariance
         cv::Mat mK; // Gain matrix
         cv::Mat mQ; // Process noise matrix
+        cv::Mat mQc; // "Effective" process noise from control/cal uncertainty
         cv::Mat mH; // Observation matrix
         cv::Mat mx; // State vector (real/imag part of speckle at each probe position)
         cv::Mat mA; // State transition matrix (should be I)
@@ -30,7 +31,7 @@ class SpeckleKalman : public SpeckleController
         cv::Mat mR; // Measurement noise covariance matrix
 
         // Makes process noise matrix correlated s.t. sig_i*sig_j = Cij*sig_i*sig_j
-        void correlateProcessNoise();
+        void correlateProcessNoise(cv::Mat &noiseMat);
 
         void initializeProbeGridKvecs();
 

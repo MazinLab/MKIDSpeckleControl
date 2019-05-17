@@ -21,7 +21,9 @@ int main()
     boost::property_tree::ptree cfgParams;
     read_info("python/speckNullConfig.info", cfgParams);
 
-    loopfunctions::runLoop(5, cfgParams);
+    //loopfunctions::runLoop(5, cfgParams);
+    DMChannel chan("dm04disp00");
+    chan.save("dm04disp00");
     
 
 

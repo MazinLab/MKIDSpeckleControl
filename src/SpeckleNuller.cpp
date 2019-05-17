@@ -12,6 +12,8 @@ SpeckleNuller::SpeckleNuller(boost::property_tree::ptree &ptree) :
     int ctrlRegionXSize = mParams.get<int>("ImgParams.xCtrlEnd") - mParams.get<int>("ImgParams.xCtrlStart");
     int ctrlRegionYSize = mParams.get<int>("ImgParams.yCtrlEnd") - mParams.get<int>("ImgParams.yCtrlStart");
     mImage.create(ctrlRegionYSize, ctrlRegionXSize, CV_64FC1);
+    mBadPixMask.create(ctrlRegionXSize, ctrlRegionYSize, CV_64F);
+    mBadPixMask.setTo(0);
     mSpecklesList.reserve(mParams.get<int>("NullingParams.maxSpeckles"));
 
 }
@@ -241,6 +243,7 @@ void SpeckleNuller::createSpeckleObjects(std::vector<ImgPt> &imgPts, bool update
     for(it = imgPts.begin(); it < imgPts.end(); it++){
         coordinates = (*it).coordinates;
         SpeckleCtrlClass speck(coordinates, mParams);
+        speck.updateBadPixMask(mBadPixMask);
         if(update){
             speck.update(mImage, mIntegrationTime);
             mNextDMSpecks.push_back(speck.getNextSpeckle());

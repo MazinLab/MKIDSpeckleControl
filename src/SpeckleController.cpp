@@ -14,7 +14,7 @@ SpeckleController::SpeckleController(cv::Point2d pt, boost::property_tree::ptree
 
     mBadPixMask = cv::Mat::zeros(mParams.get<int>("ImgParams.yCtrlEnd") - mParams.get<int>("ImgParams.yCtrlStart"), 
         mParams.get<int>("ImgParams.xCtrlEnd") - mParams.get<int>("ImgParams.xCtrlStart"), CV_16U);
-    mIntensityCorrectionFactor = measureIntensityCorrection();
+    mIntensityCorrectionFactor = 1;
 
     mNProbeIters = 0;
     BOOST_LOG_TRIVIAL(debug) << "Speckle: done initialization";
@@ -59,6 +59,7 @@ double SpeckleController::measureIntensityCorrection() const
     apertureGoodPixMask.convertTo(apertureGoodPixMask, CV_64F);
     cv::Mat gaussKernel = cv::getGaussianKernel(2*mParams.get<int>("NullingParams.apertureRadius")+1, mParams.get<double>("ImgParams.lambdaOverD")*0.42);
     gaussKernel = gaussKernel*gaussKernel.t();
+    BOOST_LOG_TRIVIAL(trace) << "Speckle good pix mask: " <<  apertureGoodPixMask;
     return (double)cv::sum(gaussKernel.mul(apertureGoodPixMask))[0]/cv::sum(gaussKernel)[0];
 
 }

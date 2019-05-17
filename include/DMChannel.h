@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
+#include <fstream>
 #include <boost/log/trivial.hpp>
 #include <boost/property_tree/ptree.hpp>
 
@@ -65,6 +66,8 @@ class DMChannel
         std::string getName() const;
 
         void close();
+
+        void save(const char filename[200]);
 
         /*
          * Destructor. Closes DM channel.

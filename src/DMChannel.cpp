@@ -58,6 +58,7 @@ void DMChannel::postAllSemaphores()
 }
 
 
+
 //TODO: implement the rest of the datatypes
 template <class T> T* DMChannel::getBufferPtr(){;}
 
@@ -111,6 +112,16 @@ void DMChannel::close(){
 
 }
 
+void DMChannel::save(const char filename[200]){
+    float *ptr = getBufferPtr<float>();
+    std::ofstream outFile(filename);
+
+    for(int i = 0; i < getXSize()*getYSize(); i++)
+        outFile << ptr[i] << "\n";
+
+    outFile.close();
+
+}
 
 DMChannel::~DMChannel()
 {

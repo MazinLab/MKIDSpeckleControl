@@ -111,6 +111,7 @@ class MKIDImageSim{
             if(useBadPixMask)
                 applyBadPixMask(fpImOut);
 
+            BOOST_LOG_TRIVIAL(debug) << "integration time: " << integrationTime;
             return fpImOut;
             
         }

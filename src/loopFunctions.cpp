@@ -9,7 +9,7 @@ std::vector<int> loopfunctions::runLoop(int nIters, boost::property_tree::ptree 
     SpeckleNuller nuller(cfgParams);
     nuller.updateBadPixMask(imageGrabber.getBadPixMaskCtrl());
     for(int i=0; i<nIters; i++){
-        imageGrabber.startIntegrating(0, 2*cfgParams.get<double>("NullingParams.integrationTime"));
+        imageGrabber.startIntegrating(0, cfgParams.get<double>("NullingParams.integrationTime"));
         cv::Mat &ctrlRegionImage = imageGrabber.getCtrlRegionImage();
         if(returnLC)
             lightCurve[i] = imageGrabber.getCtrlRegionCounts();

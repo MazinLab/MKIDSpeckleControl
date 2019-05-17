@@ -18,12 +18,13 @@ SpeckleKalman::SpeckleKalman(cv::Point2d pt, boost::property_tree::ptree &ptree)
     mA = cv::Mat::eye(2*mNProbePos, 2*mNProbePos, CV_64F);
     mP = mParams.get<double>("KalmanParams.initStateVar")*cv::Mat::eye(2*mNProbePos, 2*mNProbePos, CV_64F);
     mQ = mParams.get<double>("KalmanParams.processNoiseVar")*cv::Mat::eye(2*mNProbePos, 2*mNProbePos, CV_64F);
+    mQc = cv::Mat::zeros(2*mNProbePos, 2*mNProbePos, CV_64F);
     mR = cv::Mat::zeros(2, 2, CV_64F);
 
     initializeProbeGridKvecs();
     BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: Probe Grid: " << mProbeGridKvecs;
 
-    correlateProcessNoise();
+    correlateProcessNoise(mP);
     //BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: Initial State Variance: " << mP;
 
     mMinProbeIters = mParams.get<int>("KalmanParams.minProbeIters");
@@ -91,9 +92,10 @@ void SpeckleKalman::updateKalmanState(){
     mz.at<double>(1) = mPhaseIntensities[1] - mPhaseIntensities[3];
     mR.at<double>(0,0) = std::pow(mPhaseSigmas[0], 2) + std::pow(mPhaseSigmas[2], 2);
     mR.at<double>(1,1) = std::pow(mPhaseSigmas[1], 2) + std::pow(mPhaseSigmas[3], 2);
+    cv::Mat Q = mQ + mQc;
 
     mx = mA*mx;
-    mP = mA*mP*mA.t() + mQ;
+    mP = mA*mP*mA.t() + Q;
     cv::Mat S = mR + mH*mP*mH.t();
     mK = mP*mH.t()*S.inv();
     cv::Mat y = mz - mH*mx;
@@ -111,9 +113,11 @@ void SpeckleKalman::updateKalmanState(){
     //BOOST_LOG_TRIVIAL(debug) << "   y: " << y;
     //BOOST_LOG_TRIVIAL(debug) << "   Ky: " << mK*y;
     BOOST_LOG_TRIVIAL(debug) << "   R: \n\t" << mR;
+    BOOST_LOG_TRIVIAL(debug) << "   Q: \n\t" << Q;
     //BOOST_LOG_TRIVIAL(debug) << "   K: " << mK;
     //BOOST_LOG_TRIVIAL(debug) << "   P: " << mP;
-    //
+    
+    mQc.setTo(0);
     
     BOOST_LOG_TRIVIAL(debug) << "N probe iters: " << mNProbeIters;
 
@@ -192,15 +196,23 @@ void SpeckleKalman::updateNullingSpeckle(){
         cv::Mat B(2*mNProbePos, 2, CV_64F, cv::Scalar(0));
         cv::Mat realB(B, cv::Range(0, mNProbePos), cv::Range(0,1));
         cv::Mat imagB(B, cv::Range(mNProbePos, 2*mNProbePos), cv::Range(1,2));
+        cv::Mat realQc(mQc, cv::Range(0, mNProbePos), cv::Range(0,1));
+        cv::Mat imagQc(mQc, cv::Range(mNProbePos, 2*mNProbePos), cv::Range(1,2));
         int kRow, kCol;
         double kDist;
+        double posCorr;
         for(int i=0; i<mNProbePos; i++){
             std::tie(kRow, kCol) = getProbeGridIndices(i);
             kDist = cv::norm(cv::Point2d(mNextSpeck.kx, mNextSpeck.ky) - mProbeGridKvecs.at<cv::Point2d>(kRow, kCol));
-            realB.at<double>(i) = std::exp(-kDist*kDist/(4*mKvecCorrSigma*mKvecCorrSigma));
-            imagB.at<double>(i) = std::exp(-kDist*kDist/(4*mKvecCorrSigma*mKvecCorrSigma));
+            realB.at<double>(i) = posCorr; 
+            imagB.at<double>(i) = posCorr; 
+
+            realQc.at<double>(i, i) = 4*mParams.get<double>("KalmanParams.calVar")/(mDMCalFactor*mDMCalFactor)*posCorr;
+            imagQc.at<double>(i, i) = 4*mParams.get<double>("KalmanParams.calVar")/(mDMCalFactor*mDMCalFactor)*posCorr;
 
         }
+
+        correlateProcessNoise(mQc);
 
         //BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: B: " << B;
 
@@ -218,9 +230,9 @@ void SpeckleKalman::updateNullingSpeckle(){
 }
     
 
-void SpeckleKalman::correlateProcessNoise(){
-    cv::Mat realBlock = cv::Mat(mP, cv::Range(0, mNProbePos), cv::Range(0, mNProbePos));
-    cv::Mat imagBlock = cv::Mat(mP, cv::Range(mNProbePos, 2*mNProbePos), cv::Range(mNProbePos, 2*mNProbePos));
+void SpeckleKalman::correlateProcessNoise(cv::Mat &noiseMat){
+    cv::Mat realBlock = cv::Mat(noiseMat, cv::Range(0, mNProbePos), cv::Range(0, mNProbePos));
+    cv::Mat imagBlock = cv::Mat(noiseMat, cv::Range(mNProbePos, 2*mNProbePos), cv::Range(mNProbePos, 2*mNProbePos));
     cv::Point2d ki, kj;
     int row, col;
     double kDist;
