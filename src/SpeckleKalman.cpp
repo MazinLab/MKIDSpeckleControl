@@ -204,8 +204,8 @@ void SpeckleKalman::updateNullingSpeckle(){
         cv::Mat B(2*mNProbePos, 2, CV_64F, cv::Scalar(0));
         cv::Mat realB(B, cv::Range(0, mNProbePos), cv::Range(0,1));
         cv::Mat imagB(B, cv::Range(mNProbePos, 2*mNProbePos), cv::Range(1,2));
-        cv::Mat realQc(mQc, cv::Range(0, mNProbePos), cv::Range(0,1));
-        cv::Mat imagQc(mQc, cv::Range(mNProbePos, 2*mNProbePos), cv::Range(1,2));
+        cv::Mat realQc(mQc, cv::Range(0, mNProbePos), cv::Range(0, mNProbePos));
+        cv::Mat imagQc(mQc, cv::Range(mNProbePos, 2*mNProbePos), cv::Range(mNProbePos, 2*mNProbePos));
         int kRow, kCol;
         double kDist;
         double posCorr;
