@@ -204,6 +204,8 @@ void SpeckleKalman::updateNullingSpeckle(){
         for(int i=0; i<mNProbePos; i++){
             std::tie(kRow, kCol) = getProbeGridIndices(i);
             kDist = cv::norm(cv::Point2d(mNextSpeck.kx, mNextSpeck.ky) - mProbeGridKvecs.at<cv::Point2d>(kRow, kCol));
+            posCorr = std::exp(-kDist*kDist/(4*mKvecCorrSigma*mKvecCorrSigma));
+
             realB.at<double>(i) = posCorr; 
             imagB.at<double>(i) = posCorr; 
 
