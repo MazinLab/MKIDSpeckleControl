@@ -76,8 +76,16 @@ dmspeck SpeckleKalman::getNextSpeckle() const{
 void SpeckleKalman::nonProbeMeasurmentUpdate(double intensity, double sigma){
     BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman at " << mCoords << ": rawIntensity: " << intensity;
 
-    if(mParams.get<bool>("KalmanParams.useEKFUpdate"))
-        ;
+    if(mParams.get<bool>("KalmanParams.useEKFUpdate")){
+        //mx = mA*mx;
+        mP = mA*mP*mA.t() + mQc;
+        cv::Mat S = mR + mH*mP*mH.t();
+        mK = mP*mH.t()*S.inv();
+        cv::Mat y = mz - mH*mx;
+        mx = mx + mK*y;
+        mP = (cv::Mat::eye(mP.rows, mP.cols, CV_64F) - mK*mH)*mP;
+        
+    }
 
     else{
         mInitialIntensity = intensity;
@@ -217,8 +225,8 @@ void SpeckleKalman::updateNullingSpeckle(){
             realB.at<double>(i) = posCorr; 
             imagB.at<double>(i) = posCorr; 
 
-            realQc.at<double>(i, i) = 4*mParams.get<double>("KalmanParams.calVar")/(mDMCalFactor*mDMCalFactor)*posCorr;
-            imagQc.at<double>(i, i) = 4*mParams.get<double>("KalmanParams.calVar")/(mDMCalFactor*mDMCalFactor)*posCorr;
+            realQc.at<double>(i, i) = 4*mx.at<double>(i)*mParams.get<double>("KalmanParams.calVar")/(mDMCalFactor*mDMCalFactor)*posCorr;
+            imagQc.at<double>(i, i) = 4*mx.at<double>(i + mNProbePos)*mParams.get<double>("KalmanParams.calVar")/(mDMCalFactor*mDMCalFactor)*posCorr;
 
         }
 
