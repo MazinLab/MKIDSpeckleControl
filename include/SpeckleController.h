@@ -49,6 +49,7 @@ class SpeckleController
         
         int mCurPhaseInd;
         dmspeck mLastSpeckle;
+        int mLastIntTime;
 
         //METHODS
 

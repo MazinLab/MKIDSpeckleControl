@@ -43,6 +43,7 @@ class SpeckleKalman : public SpeckleController
         void updateKalmanState();
         void updateNullingSpeckle();
         void nonProbeMeasurmentUpdate(double intensity, double sigma);
+        void updateProbeGridIndices();
 
     public:
         SpeckleKalman(cv::Point2d pt, boost::property_tree::ptree &ptree);

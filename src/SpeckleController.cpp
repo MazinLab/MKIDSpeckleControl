@@ -45,6 +45,7 @@ std::tuple<double, double> SpeckleController::measureSpeckleIntensityAndSigma(co
     BOOST_LOG_TRIVIAL(debug) << "Speckle at " << mCoords << ": variance:     " << measVariance;
     BOOST_LOG_TRIVIAL(trace) << "Speckle at " << mCoords << ": image:   \n" << speckleIm;
     BOOST_LOG_TRIVIAL(debug) << "";
+    mLastIntTime = integrationTime;
 
     return std::make_tuple(measIntensity, measVariance);
 
