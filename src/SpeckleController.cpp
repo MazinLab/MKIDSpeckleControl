@@ -33,19 +33,19 @@ void SpeckleController::updateBadPixMask(const cv::Mat &mask)
 
 std::tuple<double, double> SpeckleController::measureSpeckleIntensityAndSigma(const cv::Mat &image, double integrationTime)
 {
-    double measIntensity, measSigmaI;
+    double measIntensity, measVariance;
     cv::Mat speckleIm = cv::Mat(image, cv::Range((int)mCoords.y-mParams.get<int>("NullingParams.apertureRadius"), 
         (int)mCoords.y+mParams.get<int>("NullingParams.apertureRadius")+1), cv::Range(mCoords.x-mParams.get<int>("NullingParams.apertureRadius"), 
         mCoords.x+mParams.get<int>("NullingParams.apertureRadius")+1));
     speckleIm = speckleIm.mul(mApertureMask);
     measIntensity = (double)cv::sum(speckleIm)[0]/mIntensityCorrectionFactor*1000/integrationTime;
-    measSigmaI = std::sqrt(measIntensity*mIntensityCorrectionFactor/mIntensityCorrectionFactor*1000/integrationTime);
+    measVariance = measIntensity*mIntensityCorrectionFactor/mIntensityCorrectionFactor*1000/integrationTime;
 
     BOOST_LOG_TRIVIAL(debug) << "Speckle at " << mCoords << ": intensity :" << measIntensity;
-    BOOST_LOG_TRIVIAL(debug) << "Speckle at " << mCoords << ": sigma:     " << measSigmaI;
+    BOOST_LOG_TRIVIAL(debug) << "Speckle at " << mCoords << ": sigma:     " << measVariance;
     BOOST_LOG_TRIVIAL(trace) << "Speckle at " << mCoords << ": image:   \n" << speckleIm;
 
-    return std::make_tuple(measIntensity, measSigmaI);
+    return std::make_tuple(measIntensity, measVariance);
 
 }
 

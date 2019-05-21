@@ -34,9 +34,9 @@ class SpeckleController
 
         double mPhaseList[NPHASES]; //List of probe phases
         double mPhaseIntensities[NPHASES];
-        double mPhaseSigmas[NPHASES];
+        double mPhaseVars[NPHASES];
         double mInitialIntensity;
-        double mInitialSigma;
+        double mInitialVar;
 
         int mNProbeIters;
 

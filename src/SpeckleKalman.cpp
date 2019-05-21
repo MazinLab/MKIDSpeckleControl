@@ -37,14 +37,14 @@ void SpeckleKalman::update(const cv::Mat &image, double integrationTime){
     BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman at " << mCoords << ": mCurPhaseInd: " << mCurPhaseInd;
     if(mCurPhaseInd == -1){
         BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman at " << mCoords << ": mCurProbePos: " << mCurProbePos;
-        double intensity, sigma;
-        std::tie(intensity, sigma) = measureSpeckleIntensityAndSigma(image, integrationTime);
-        nonProbeMeasurmentUpdate(intensity, sigma);
+        double intensity, variance;
+        std::tie(intensity, variance) = measureSpeckleIntensityAndSigma(image, integrationTime);
+        nonProbeMeasurmentUpdate(intensity, variance);
 
     }
 
     else
-        std::tie(mPhaseIntensities[mCurPhaseInd], mPhaseSigmas[mCurPhaseInd]) = 
+        std::tie(mPhaseIntensities[mCurPhaseInd], mPhaseVars[mCurPhaseInd]) = 
                 measureSpeckleIntensityAndSigma(image, integrationTime);
          
    if(mCurPhaseInd == NPHASES-1){
@@ -73,26 +73,46 @@ dmspeck SpeckleKalman::getNextSpeckle() const{
 
 }
 
-void SpeckleKalman::nonProbeMeasurmentUpdate(double intensity, double sigma){
+void SpeckleKalman::nonProbeMeasurmentUpdate(double intensity, double variance){
     BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman at " << mCoords << ": rawIntensity: " << intensity;
 
-    if(mParams.get<bool>("KalmanParams.useEKFUpdate")){
+    if(mParams.get<bool>("KalmanParams.useEKFUpdate") && (mNProbeIters > 0)){
         //mx = mA*mx;
-        mP = mA*mP*mA.t() + mQc;
-        cv::Mat S = mR + mH*mP*mH.t();
-        mK = mP*mH.t()*S.inv();
-        cv::Mat y = mz - mH*mx;
+        BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman at " << mCoords << ": EKF update";
+        cv::Mat H = 2/mDMCalFactor*mx.t(); //Jacobian of I = h(x) = ||x||^2/(alpha)^2
+        mP = mP + mQc;
+        double S = variance + cv::Mat(H*mP*H.t()).at<double>(0);
+        BOOST_LOG_TRIVIAL(debug) << "HPHt: " << cv::Mat(H*mP*H.t());
+        BOOST_LOG_TRIVIAL(debug) << " S: " << S;
+        mK = mP*H.t()/S;
+        double y = intensity - (double)cv::sum(mx.mul(mx))[0];
         mx = mx + mK*y;
-        mP = (cv::Mat::eye(mP.rows, mP.cols, CV_64F) - mK*mH)*mP;
+        mP = (cv::Mat::eye(mP.rows, mP.cols, CV_64F) - mK*H)*mP;
+
+        BOOST_LOG_TRIVIAL(debug) << "After EKF update: x: \n " << mx;
+
+        cv::Mat amplitude = cv::Mat::zeros(mProbeGridWidth, mProbeGridWidth, CV_64F);
+        cv::Mat phase = cv::Mat::zeros(mProbeGridWidth, mProbeGridWidth, CV_64F);
+
+        cv::Mat real(mx, cv::Range(0, mNProbePos));
+        cv::Mat imag(mx, cv::Range(mNProbePos, 2*mNProbePos));
+        real = real.reshape(1, mProbeGridWidth);
+        imag = imag.reshape(1, mProbeGridWidth);
+        cv::cartToPolar(real, imag, amplitude, phase);
+        double probeAmp;
+        cv::minMaxLoc(amplitude, NULL, &probeAmp, NULL, NULL); 
+
+        mProbeAmp = std::max(probeAmp, mMinProbeAmp);
         
     }
 
     else{
-        mInitialIntensity = intensity;
-        mInitialSigma = sigma;
         mProbeAmp = std::max(mDMCalFactor*sqrt(intensity), mMinProbeAmp);
 
     }
+
+    mInitialIntensity = intensity;
+    mInitialVar = variance;
 
 }
     
@@ -100,14 +120,21 @@ void SpeckleKalman::nonProbeMeasurmentUpdate(double intensity, double sigma){
 void SpeckleKalman::updateKalmanState(){
     BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman at " << mCoords << ": updating state estimate";
     int reInd, imInd;
+    double varEst;
     std::tie(reInd, imInd) = getKalmanIndices(mCurProbePos);
     mH.setTo(0);
     mH.at<double>(0, reInd) = 4*mProbeAmp/(mDMCalFactor*mDMCalFactor);
     mH.at<double>(1, imInd) = 4*mProbeAmp/(mDMCalFactor*mDMCalFactor);
     mz.at<double>(0) = mPhaseIntensities[0] - mPhaseIntensities[2];
     mz.at<double>(1) = mPhaseIntensities[1] - mPhaseIntensities[3];
-    mR.at<double>(0,0) = std::pow(mPhaseSigmas[0], 2) + std::pow(mPhaseSigmas[2], 2);
-    mR.at<double>(1,1) = std::pow(mPhaseSigmas[1], 2) + std::pow(mPhaseSigmas[3], 2);
+
+    // Relatively unbiased estimate of variance for now, might want to improve later
+    varEst = (mPhaseVars[0] + mPhaseVars[1] + mPhaseVars[2] + mPhaseVars[3])/2;
+    mR.at<double>(0,0) = std::max(varEst, 
+            mH.at<double>(0, reInd)*mx.at<double>(reInd)/2 + 
+                mH.at<double>(1, imInd)*mx.at<double>(imInd)/2);
+    mR.at<double>(1,1) = mR.at<double>(0, 0); 
+
     cv::Mat Q = mQ + mQc;
 
     mx = mA*mx;

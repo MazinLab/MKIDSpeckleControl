@@ -268,7 +268,15 @@ void SpeckleNuller::updateSpeckles(){
         if(speck.amp != 0)
             mNextDMSpecks.push_back(speck);
 
-        if(it->getNProbeIters() >= mParams.get<int>("NullingParams.maxProbeIters")){
+        if((speck.amp != 0) && (speck.isNull) && (mParams.get<bool>("NullingParams.deleteAfterNull"))){
+            BOOST_LOG_TRIVIAL(info) << "Deleting nulled speckle at " << it->getCoordinates() << " after " 
+                << it->getNProbeIters() << " probe iters.";
+            mSpecklesList.erase(it);
+            it--;
+
+        }
+
+        else if(it->getNProbeIters() >= mParams.get<int>("NullingParams.maxProbeIters")){
             BOOST_LOG_TRIVIAL(info) << "Deleting speckle at " << it->getCoordinates() << " after " 
                 << it->getNProbeIters() << " probe iters.";
             mSpecklesList.erase(it);
