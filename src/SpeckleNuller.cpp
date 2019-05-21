@@ -42,17 +42,17 @@ void SpeckleNuller::updateBadPixMask(const cv::Mat &newMask){
 
 
 std::vector<ImgPt> SpeckleNuller::detectSpeckles(){ 
-    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: detecting new speckles...";
+    //BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: detecting new speckles...";
     double usFactor = mParams.get<double>("NullingParams.usFactor");
 
     //first do gaussian us filt on image
-    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: gaussian filtering...";
+    //BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: gaussian filtering...";
     cv::Mat filtImg = gaussianBadPixUSFilt(mImage, mBadPixMask, (int)usFactor, mParams.get<double>("ImgParams.lambdaOverD"));
 
     //scale image parameters by usFactor, since image is upsampled
     int speckleWindow = mParams.get<int>("NullingParams.speckleWindow")*mParams.get<int>("NullingParams.usFactor");
     int apertureRadius = mParams.get<double>("NullingParams.apertureRadius");
-    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: params: " << speckleWindow << " " << apertureRadius;
+    //BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: params: " << speckleWindow << " " << apertureRadius;
 
     //Find local maxima within mParams.get<int>("NullingParams.speckleWindow") size window
     cv::Mat kernel = cv::Mat::ones(speckleWindow, speckleWindow, CV_8UC1);
@@ -67,11 +67,11 @@ std::vector<ImgPt> SpeckleNuller::detectSpeckles(){
     if(mParams.get<bool>("NullingParams.useGaussianBlur"))
         cv::blur(filtImg.clone(), filtImg, cv::Size2i(speckleWindow, speckleWindow));
 
-    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: dilating...";
+    //BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: dilating...";
     cv::dilate(filtImg, maxFiltIm, kernel);
-    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: marking maxima...";
+    //BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: marking maxima...";
     cv::compare(filtImg, maxFiltIm, isMaximum, cv::CMP_EQ);
-    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: finding nonzero...";
+    //BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: finding nonzero...";
     cv::findNonZero(isMaximum, maxima); //maxima are coordinates in upsampled filtImg
     BOOST_LOG_TRIVIAL(debug) << "SpeckleNuller: found " << maxima.size() << " local maxima";
     

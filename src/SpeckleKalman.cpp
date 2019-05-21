@@ -86,6 +86,8 @@ void SpeckleKalman::nonProbeMeasurmentUpdate(double intensity, double variance){
         cv::Mat H = 2/(mDMCalFactor*mDMCalFactor)*mx.t(); //Jacobian of I = h(x) = ||x||^2/(alpha)^2
         mP = mP + mQc;
         double S = variance + cv::Mat(H*mP*H.t()).at<double>(0);
+        BOOST_LOG_TRIVIAL(debug) << "H: " << H;
+        BOOST_LOG_TRIVIAL(debug) << "variance: " << variance;
         BOOST_LOG_TRIVIAL(debug) << "HPHt: " << cv::Mat(H*mP*H.t());
         BOOST_LOG_TRIVIAL(debug) << " S: " << S;
         mK = mP*H.t()/S;
@@ -95,7 +97,7 @@ void SpeckleKalman::nonProbeMeasurmentUpdate(double intensity, double variance){
 
         BOOST_LOG_TRIVIAL(debug) << "After EKF update: x: \n " << mx;
         BOOST_LOG_TRIVIAL(debug) << "                 Ky: \n " << mK*y;
-        BOOST_LOG_TRIVIAL(debug) << "                  P: \n " << mP;
+        BOOST_LOG_TRIVIAL(trace) << "                  P: \n " << mP;
 
         cv::Mat amplitude = cv::Mat::zeros(mProbeGridWidth, mProbeGridWidth, CV_64F);
         cv::Mat phase = cv::Mat::zeros(mProbeGridWidth, mProbeGridWidth, CV_64F);
@@ -160,13 +162,13 @@ void SpeckleKalman::updateKalmanState(){
     BOOST_LOG_TRIVIAL(debug) << " x_m: \n\t" << 
         mz/(4*mProbeAmp/(mDMCalFactor*mDMCalFactor));
     //BOOST_LOG_TRIVIAL(debug) << "   H: " << mH;
-    BOOST_LOG_TRIVIAL(debug) << "   z: \n\t" << mz;
+    BOOST_LOG_TRIVIAL(trace) << "   z: \n\t" << mz;
     //BOOST_LOG_TRIVIAL(debug) << "   y: " << y;
     //BOOST_LOG_TRIVIAL(debug) << "   Ky: " << mK*y;
-    BOOST_LOG_TRIVIAL(debug) << "   R: \n\t" << mR;
-    BOOST_LOG_TRIVIAL(debug) << "   Q: \n\t" << Q;
+    BOOST_LOG_TRIVIAL(trace) << "   R: \n\t" << mR;
+    BOOST_LOG_TRIVIAL(trace) << "   Q: \n\t" << Q;
     //BOOST_LOG_TRIVIAL(debug) << "   K: " << mK;
-    BOOST_LOG_TRIVIAL(debug) << "   P: " << mP;
+    BOOST_LOG_TRIVIAL(trace) << "   P: " << mP;
     
     mQc.setTo(0);
     
