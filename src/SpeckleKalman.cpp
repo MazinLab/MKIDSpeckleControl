@@ -313,8 +313,8 @@ void SpeckleKalman::updateNullingSpeckle(){
             realB.at<double>(i) = posCorr; 
             imagB.at<double>(i) = posCorr; 
 
-            realQc.at<double>(i, i) = 4*mNullingGain*std::pow(mx.at<double>(i), 2)*mParams.get<double>("KalmanParams.calVar")/(mDMCalFactor*mDMCalFactor)*posCorr;
-            imagQc.at<double>(i, i) = 4*mNullingGain*std::pow(mx.at<double>(i + mNProbePos), 2)*mParams.get<double>("KalmanParams.calVar")/(mDMCalFactor*mDMCalFactor)*posCorr;
+            realQc.at<double>(i, i) = 4*mNullingGain*std::pow(mx.at<double>(i), 2)*std::pow(mParams.get<double>("KalmanParams.calSigma"), 2)/(mDMCalFactor*mDMCalFactor)*posCorr;
+            imagQc.at<double>(i, i) = 4*mNullingGain*std::pow(mx.at<double>(i + mNProbePos), 2)*std::pow(mParams.get<double>("KalmanParams.calSigma"), 2)/(mDMCalFactor*mDMCalFactor)*posCorr;
 
         }
 

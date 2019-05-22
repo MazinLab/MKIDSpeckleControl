@@ -52,12 +52,12 @@ KalmanParams
 {
     probeGridWidth 3
     probeGridSpacing 3.1415
-    snrThresh 0
+    snrThresh 4
     processNoiseVar 00
     initStateVar 50
     useConstantR false
-    minProbeIters 9
-    calVar 0.008
+    minProbeIters 0
+    calSigma 0.0125
     nullingGain 0.5
     useEKFUpdate false
 }
