@@ -2,10 +2,14 @@
 
 SpeckleKalman::SpeckleKalman(cv::Point2d pt, boost::property_tree::ptree &ptree):
         SpeckleController(pt, ptree){
+    mCVFormatter = cv::Formatter::get();
+    mCVFormatter->set32fPrecision(2);
+    mCVFormatter->set64fPrecision(2);
+
     mProbeGridWidth = mParams.get<int>("KalmanParams.probeGridWidth");
     mProbeGridSpacing = mParams.get<double>("KalmanParams.probeGridSpacing");
     mNProbePos = mProbeGridWidth*mProbeGridWidth;
-    mKvecCorrSigma = 0.42*2*mProbeGridSpacing;
+    mKvecCorrSigma = 0.42*2*M_PI;
     mCurProbePos = cv::Point2i(mProbeGridWidth/2, mProbeGridWidth/2);
     mDMCalFactor = getDMCalFactorCPS(mKvecs, mParams.get<double>("DMParams.a"), mParams.get<double>("DMParams.b"), 
             mParams.get<double>("DMParams.c"));
@@ -31,6 +35,7 @@ SpeckleKalman::SpeckleKalman(cv::Point2d pt, boost::property_tree::ptree &ptree)
     mMinProbeIters = mParams.get<int>("KalmanParams.minProbeIters");
     mProbeGridCounter = cv::Mat(mProbeGridWidth, mProbeGridWidth, CV_64F, cv::Scalar(0));
     mNullingGain = mParams.get<double>("KalmanParams.nullingGain");
+
 
 
 }
@@ -88,10 +93,10 @@ void SpeckleKalman::nonProbeMeasurmentUpdate(double intensity, double variance){
         cv::Mat H = 2/(mDMCalFactor*mDMCalFactor*mNProbePos)*mx.t(); //Jacobian of I = h(x) = ||x||^2/(alpha)^2
         mP = mP + mQc;
         double S = variance + cv::Mat(H*mP*H.t()).at<double>(0);
-        BOOST_LOG_TRIVIAL(debug) << "H: " << H;
+        BOOST_LOG_TRIVIAL(debug) << "H: " << mCVFormatter->format(H);
         BOOST_LOG_TRIVIAL(debug) << "variance: " << variance;
         BOOST_LOG_TRIVIAL(debug) << "measVarEst: " << measVarEst;
-        BOOST_LOG_TRIVIAL(trace) << "HPHt: " << cv::Mat(H*mP*H.t());
+        BOOST_LOG_TRIVIAL(trace) << "HPHt: " << mCVFormatter->format(cv::Mat(H*mP*H.t()));
         BOOST_LOG_TRIVIAL(trace) << " S: " << S;
         //mK = mP*H.t()/S;
         //mK = mP.diag().mul(H.t())/S;
@@ -100,11 +105,11 @@ void SpeckleKalman::nonProbeMeasurmentUpdate(double intensity, double variance){
         mx = mx + mK*y;
         mP = (cv::Mat::eye(mP.rows, mP.cols, CV_64F) - mK*H)*mP;
 
-        BOOST_LOG_TRIVIAL(debug) << "After EKF update: x: \n " << mx;
+        BOOST_LOG_TRIVIAL(debug) << "After EKF update: x: \n " << mCVFormatter->format(mx);
         BOOST_LOG_TRIVIAL(debug) << "                  y: \n " << y;
-        BOOST_LOG_TRIVIAL(debug) << "                  K: \n " << mK;
-        BOOST_LOG_TRIVIAL(debug) << "                 Ky: \n " << mK*y;
-        BOOST_LOG_TRIVIAL(trace) << "                  P: \n " << mP;
+        BOOST_LOG_TRIVIAL(debug) << "                  K: \n " << mCVFormatter->format(mK);
+        BOOST_LOG_TRIVIAL(debug) << "                 Ky: \n " << mCVFormatter->format(mK*y);
+        BOOST_LOG_TRIVIAL(trace) << "                  P: \n " << mCVFormatter->format(mP);
 
         cv::Mat amplitude = cv::Mat::zeros(mProbeGridWidth, mProbeGridWidth, CV_64F);
         cv::Mat phase = cv::Mat::zeros(mProbeGridWidth, mProbeGridWidth, CV_64F);
@@ -181,20 +186,20 @@ void SpeckleKalman::updateKalmanState(){
     mP = (cv::Mat::eye(mP.rows, mP.cols, CV_64F) - mK*mH)*mP;
 
     BOOST_LOG_TRIVIAL(debug) << "mCurProbePos: " << mCurProbePos;
-    BOOST_LOG_TRIVIAL(debug) << "re(x): \n\t" << 
-        cv::Mat(mx, cv::Range(0, mNProbePos)).reshape(0, mProbeGridWidth);
-    BOOST_LOG_TRIVIAL(debug) << "im(x): \n\t" << 
-        cv::Mat(mx, cv::Range(mNProbePos, 2*mNProbePos)).reshape(0, mProbeGridWidth);
-    BOOST_LOG_TRIVIAL(debug) << " x_m: \n\t" << 
-        mz/(4*mProbeAmp/(mDMCalFactor*mDMCalFactor));
+    BOOST_LOG_TRIVIAL(debug) << "re(x): \n" << 
+        mCVFormatter->format(cv::Mat(mx, cv::Range(0, mNProbePos)).reshape(0, mProbeGridWidth));
+    BOOST_LOG_TRIVIAL(debug) << "im(x): \n" << 
+        mCVFormatter->format(cv::Mat(mx, cv::Range(mNProbePos, 2*mNProbePos)).reshape(0, mProbeGridWidth));
+    BOOST_LOG_TRIVIAL(debug) << " x_m: \n" << 
+        mCVFormatter->format(mz/(4*mProbeAmp/(mDMCalFactor*mDMCalFactor)));
     //BOOST_LOG_TRIVIAL(debug) << "   H: " << mH;
-    BOOST_LOG_TRIVIAL(trace) << "   z: \n\t" << mz;
+    BOOST_LOG_TRIVIAL(trace) << "   z: \n" << mCVFormatter->format(mz);
     //BOOST_LOG_TRIVIAL(debug) << "   y: " << y;
     //BOOST_LOG_TRIVIAL(debug) << "   Ky: " << mK*y;
-    BOOST_LOG_TRIVIAL(trace) << "   R: \n\t" << mR;
-    BOOST_LOG_TRIVIAL(trace) << "   Q: \n\t" << Q;
+    BOOST_LOG_TRIVIAL(trace) << "   R: \n" << mCVFormatter->format(mR);
+    BOOST_LOG_TRIVIAL(trace) << "   Q: \n" << mCVFormatter->format(Q);
     //BOOST_LOG_TRIVIAL(debug) << "   K: " << mK;
-    BOOST_LOG_TRIVIAL(trace) << "   P: " << mP;
+    BOOST_LOG_TRIVIAL(trace) << "   P: " << mCVFormatter->format(mP);
     
     mQc.setTo(0);
     
@@ -233,19 +238,19 @@ void SpeckleKalman::updateNullingSpeckle(){
     assert(variance.cols == mProbeGridWidth);
     
     cv::cartToPolar(real, imag, amplitudeGrid, phaseGrid);
-    BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: Amplitudes: " << amplitudeGrid;
-    BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: Phases: " << phaseGrid;
-    BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: Variances: " << variance;
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: Amplitudes: \n" << mCVFormatter->format(amplitudeGrid);
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: Phases: \n" << mCVFormatter->format(phaseGrid);
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: Variances: \n" << mCVFormatter->format(variance);
 
     // weights_ij is proportional to amplitudeGrid_ij/(overlap of probe grid w/ gaussian)
     cv::Mat weights = cv::Mat::ones(mProbeGridWidth, mProbeGridWidth, CV_64F);
     cv::GaussianBlur(weights, weights, cv::Size(mProbeGridWidth, mProbeGridWidth), 4*M_PI*0.42, 0, cv::BORDER_CONSTANT);
-    BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: normweights: " << weights;
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: normweights: \n" << mCVFormatter->format(weights);
     cv::divide(amplitudeGrid, weights, weights);
     weights = weights.mul(weights);
     weights = weights/cv::sum(weights)[0];    
 
-    BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: weights " << weights;
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: weights \n" << mCVFormatter->format(weights);
 
     cv::Point2d nullingK;
     double nullingAmp;
@@ -292,9 +297,9 @@ void SpeckleKalman::updateNullingSpeckle(){
         BOOST_LOG_TRIVIAL(info) << "weights: \n" << weights;
         BOOST_LOG_TRIVIAL(info) << "    mx pre-null: ";
         BOOST_LOG_TRIVIAL(info) << "       re: \n" << 
-            cv::Mat(mx, cv::Range(0, mNProbePos)).reshape(0, mProbeGridWidth);
+            mCVFormatter->format(cv::Mat(mx, cv::Range(0, mNProbePos)).reshape(0, mProbeGridWidth));
         BOOST_LOG_TRIVIAL(info) << "       im: \n" << 
-            cv::Mat(mx, cv::Range(mNProbePos, 2*mNProbePos)).reshape(0, mProbeGridWidth);
+            mCVFormatter->format(cv::Mat(mx, cv::Range(mNProbePos, 2*mNProbePos)).reshape(0, mProbeGridWidth));
 
         //Update state est w/ control
         cv::Mat B(2*mNProbePos, 2, CV_64F, cv::Scalar(0));
@@ -318,12 +323,12 @@ void SpeckleKalman::updateNullingSpeckle(){
 
         }
 
-        BOOST_LOG_TRIVIAL(trace) << "SpeckleKalman: precorr mQc: " << mQc;
+        BOOST_LOG_TRIVIAL(trace) << "SpeckleKalman: precorr mQc: " << mCVFormatter->format(mQc);
 
         correlateProcessNoise(mQc);
 
-        BOOST_LOG_TRIVIAL(trace) << "SpeckleKalman: mQc: " << mQc;
-        BOOST_LOG_TRIVIAL(trace) << "SpeckleKalman: B: " << B;
+        BOOST_LOG_TRIVIAL(trace) << "SpeckleKalman: mQc: " << mCVFormatter->format(mQc);
+        BOOST_LOG_TRIVIAL(trace) << "SpeckleKalman: B: " << mCVFormatter->format(B);
 
         cv::Mat u(2, 1, CV_64F, cv::Scalar(0));
         u.at<double>(0) = mNextSpeck.amp*std::cos(mNextSpeck.phase);
@@ -331,9 +336,9 @@ void SpeckleKalman::updateNullingSpeckle(){
         mx = mx + B*u;
         BOOST_LOG_TRIVIAL(info) << "    mx post-null: ";
         BOOST_LOG_TRIVIAL(info) << "       re: \n" << 
-            cv::Mat(mx, cv::Range(0, mNProbePos)).reshape(0, mProbeGridWidth);
+            mCVFormatter->format(cv::Mat(mx, cv::Range(0, mNProbePos)).reshape(0, mProbeGridWidth));
         BOOST_LOG_TRIVIAL(info) << "       im: \n" << 
-            cv::Mat(mx, cv::Range(mNProbePos, 2*mNProbePos)).reshape(0, mProbeGridWidth);
+            mCVFormatter->format(cv::Mat(mx, cv::Range(mNProbePos, 2*mNProbePos)).reshape(0, mProbeGridWidth));
         BOOST_LOG_TRIVIAL(info) << "SpeckleKalman: Probe Grid Counter: \n" << mProbeGridCounter;
 
         mNNullingIters++;

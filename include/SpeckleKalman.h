@@ -19,6 +19,7 @@ class SpeckleKalman : public SpeckleController
         double mDMCalFactor;
         double mNullingGain;
         dmspeck mNextSpeck;
+        cv::Ptr<cv::Formatter> mCVFormatter;
 
         //Kalman filter matricies
         cv::Mat mP; // Process noise covariance
