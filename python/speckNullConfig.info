@@ -45,8 +45,8 @@ NullingParams
     usFactor 2
     enforceRedetection false
     distThresh 2
-    maxProbeIters 50
-    maxNullingIters 1
+    maxProbeIters 200
+    maxNullingIters 3
 }
 KalmanParams
 {
