@@ -17,6 +17,7 @@ class SpeckleKalman : public SpeckleController
         double mProbeAmp;
         double mMinProbeAmp;
         double mDMCalFactor;
+        double mNullingGain;
         dmspeck mNextSpeck;
 
         //Kalman filter matricies

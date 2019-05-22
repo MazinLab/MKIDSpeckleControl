@@ -17,6 +17,7 @@ SpeckleController::SpeckleController(cv::Point2d pt, boost::property_tree::ptree
     mIntensityCorrectionFactor = 1;
 
     mNProbeIters = 0;
+    mNNullingIters = 0;
     BOOST_LOG_TRIVIAL(debug) << "Speckle: done initialization";
 
 
@@ -72,6 +73,8 @@ cv::Point2d SpeckleController::getCoordinates() const {return mCoords;}
 cv::Point2d SpeckleController::getKvecs() const {return mKvecs;}
 
 int SpeckleController::getNProbeIters() const {return mNProbeIters;}
+
+int SpeckleController::getNNullingIters() const {return mNNullingIters;}
 
 SpeckleController::~SpeckleController(){
     //if(mNProbeIters > 0)

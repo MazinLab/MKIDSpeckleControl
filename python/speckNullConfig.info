@@ -3,8 +3,8 @@ ImgParams
     name DMCalTest0
     nRows 146
     nCols 140
-    xCenter 71 ;70.005627705627703
-    yCenter 71 ;73.274242424242431
+    xCenter 72.2 ;70.005627705627703
+    yCenter 73 ;73.274242424242431
     lambdaOverD 3.005456495374899
     xCtrlStart -10
     xCtrlEnd 50
@@ -35,7 +35,7 @@ DMParams
 }
 NullingParams
 {
-    integrationTime 5
+    integrationTime 20
     maxSpeckles 1
     speckleWindow 5
     exclusionZone 9
@@ -45,19 +45,20 @@ NullingParams
     usFactor 2
     enforceRedetection false
     distThresh 2
-    maxProbeIters 500
-    deleteAfterNull false
+    maxProbeIters 50
+    maxNullingIters 1
 }
 KalmanParams
 {
     probeGridWidth 3
     probeGridSpacing 3.1415
-    snrThresh 8
+    snrThresh 4
     processNoiseVar 00
-    initStateVar 30
+    initStateVar 50
     useConstantR false
-    minProbeIters 10
+    minProbeIters 0
     calVar 0.008
-    useEKFUpdate true
+    nullingGain 0.5
+    useEKFUpdate false
 }
 

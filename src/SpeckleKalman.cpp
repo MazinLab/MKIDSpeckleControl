@@ -30,6 +30,7 @@ SpeckleKalman::SpeckleKalman(cv::Point2d pt, boost::property_tree::ptree &ptree)
 
     mMinProbeIters = mParams.get<int>("KalmanParams.minProbeIters");
     mProbeGridCounter = cv::Mat(mProbeGridWidth, mProbeGridWidth, CV_64F, cv::Scalar(0));
+    mNullingGain = mParams.get<double>("KalmanParams.nullingGain");
 
 
 }
@@ -267,6 +268,7 @@ void SpeckleKalman::updateNullingSpeckle(){
     cv::Point2i nullingAmpLoc;
     cv::minMaxLoc(amplitudeGrid, NULL, &nullingAmp, NULL, &nullingAmpLoc); 
     nullingVar = variance.at<double>(nullingAmpLoc);
+    nullingAmp *= mNullingGain;
 
     double snr = nullingAmp/std::sqrt(nullingVar);
 
@@ -332,6 +334,8 @@ void SpeckleKalman::updateNullingSpeckle(){
         BOOST_LOG_TRIVIAL(info) << "       im: \n" << 
             cv::Mat(mx, cv::Range(mNProbePos, 2*mNProbePos)).reshape(0, mProbeGridWidth);
         BOOST_LOG_TRIVIAL(info) << "SpeckleKalman: Probe Grid Counter: \n" << mProbeGridCounter;
+
+        mNNullingIters++;
         
     }
 
