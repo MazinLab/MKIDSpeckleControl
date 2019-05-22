@@ -17,13 +17,13 @@
 
 int main()
 { 
-    boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::debug);
+    boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::warning);
     boost::property_tree::ptree cfgParams;
     read_info("python/speckNullConfig.info", cfgParams);
 
-    //loopfunctions::runLoop(5, cfgParams);
-    DMChannel chan("dm04disp00");
-    chan.save("dm04disp00");
+    loopfunctions::runLoop(10000, cfgParams);
+    //DMChannel chan("dm04disp00");
+    //chan.save("dm04disp00");
     
 
 

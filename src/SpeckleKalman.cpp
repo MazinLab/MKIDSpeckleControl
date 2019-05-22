@@ -143,7 +143,8 @@ void SpeckleKalman::nonProbeMeasurmentUpdate(double intensity, double variance){
 
     }
 
-    BOOST_LOG_TRIVIAL(info) << "Iter: " << mNProbeIters << "; Probing at: " << mProbeAmp;
+    if(mNProbeIters%10 == 0)
+        BOOST_LOG_TRIVIAL(info) << "Iter: " << mNProbeIters << "; Probing at: " << mProbeAmp;
 
     mInitialIntensity = intensity;
     mInitialVar = variance;
@@ -270,7 +271,7 @@ void SpeckleKalman::updateNullingSpeckle(){
     nullingVar = variance.at<double>(nullingAmpLoc);
     nullingAmp *= mNullingGain;
 
-    double snr = nullingAmp/std::sqrt(nullingVar);
+    double snr = nullingAmp/(mNullingGain*std::sqrt(nullingVar));
 
     BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: Nulling k: " << nullingK;
     BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: Nulling amplitude: " << nullingAmp;

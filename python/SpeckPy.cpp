@@ -50,6 +50,11 @@ void setInfoLog(){
 
 }
 
+void setWarningLog(){
+    boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::warning);
+
+}
+
 BOOST_PYTHON_MODULE(speckpy){
     bp::class_<SpeckleToDM>("SpeckleToDM", bp::init<const char*>())
         .def("addProbeSpeckle", static_cast<void(SpeckleToDM::*)(double, double, double, double)>(&SpeckleToDM::addProbeSpeckle))
@@ -80,5 +85,6 @@ BOOST_PYTHON_MODULE(speckpy){
     bp::def("setTraceLog", &setTraceLog);
     bp::def("setDebugLog", &setDebugLog);
     bp::def("setInfoLog", &setInfoLog);
+    bp::def("setWarningLog", &setWarningLog);
 
 }
