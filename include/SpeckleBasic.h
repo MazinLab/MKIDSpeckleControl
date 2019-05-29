@@ -1,8 +1,9 @@
 #include "SpeckleController.h"
 
-class SpeckleBasic : SpeckleController {
-    public SpeckleBasic(cv::Point2d pt, boost::property_tree::ptree &cfgParams);
+#ifndef SPECKLEBASIC_H
+#define SPECKLEBASIC_H
 
+class SpeckleBasic : public SpeckleController {
     private:
         dmspeck mNextSpeck;
         double mProbeAmp;
@@ -12,6 +13,9 @@ class SpeckleBasic : SpeckleController {
         void updateNullingSpeckle();
 
     public:
+        SpeckleBasic(cv::Point2d pt, boost::property_tree::ptree &cfgParams);
         void update(const cv::Mat &image, double integrationTime);
+        dmspeck getNextSpeckle() const;
 
 };
+#endif

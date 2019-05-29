@@ -32,7 +32,7 @@ void SpeckleNuller::update(const cv::Mat &newImage, double integrationTime){
 
 void SpeckleNuller::updateBadPixMask(const cv::Mat &newMask){
     mBadPixMask = newMask;
-    std::vector<SpeckleCtrlClass>::iterator it;
+    boost::ptr_vector<SpeckleController>::iterator it;
 
     for(it = mSpecklesList.begin(); it < mSpecklesList.end(); it++)
         it->updateBadPixMask(newMask);
@@ -119,7 +119,7 @@ void SpeckleNuller::exclusionZoneCut(std::vector<ImgPt> &maxImgPts, bool checkCu
         //Check to see if curPt is too close to any speckle, but only if we're keeping all currently active speckles
         if(checkCurrentSpeckles)
         {
-            std::vector<SpeckleCtrlClass>::iterator speckIter;
+            boost::ptr_vector<SpeckleController>::iterator speckIter;
             for(speckIter = mSpecklesList.begin(); speckIter < mSpecklesList.end(); speckIter++)
             {
                 ptDist = cv::norm(curPt.coordinates - (*speckIter).getCoordinates());
@@ -171,7 +171,7 @@ void SpeckleNuller::exclusionZoneCut(std::vector<ImgPt> &maxImgPts, bool checkCu
 
 void SpeckleNuller::updateAndCutActiveSpeckles(std::vector<ImgPt> &maxImgPts){
     std::vector<ImgPt>::iterator ptIter;
-    std::vector<SpeckleCtrlClass>::iterator speckIter;
+    boost::ptr_vector<SpeckleController>::iterator speckIter;
     bool speckFound; // check if nulled speckle has been detected
     double ptDist;
     
@@ -208,7 +208,7 @@ void SpeckleNuller::updateAndCutActiveSpeckles(std::vector<ImgPt> &maxImgPts){
 
 void SpeckleNuller::updateAndCutNulledSpeckles(std::vector<ImgPt> &maxImgPts){
     std::vector<ImgPt>::iterator ptIter;
-    std::vector<SpeckleCtrlClass>::iterator speckIter;
+    boost::ptr_vector<SpeckleController>::iterator speckIter;
     bool speckFound; // check if nulled speckle has been detected
     int exclusionZone = mParams.get<int>("NullingParams.exclusionZone");
     double ptDist;
@@ -222,7 +222,7 @@ void SpeckleNuller::updateAndCutNulledSpeckles(std::vector<ImgPt> &maxImgPts){
                 //if(mParams.get<bool>("TrackingParams.updateCoords"))
                 //    (*speckIter).setCoordinates((*ptIter).coordinates);
                 BOOST_LOG_TRIVIAL(debug) << "SpeckleNuller: Re-detected nulled speckle at " << (*ptIter).coordinates;
-                mSpecklesList.push_back(*speckIter);
+                mSpecklesList.push_back(&(*speckIter)); //OMG
                 maxImgPts.erase(ptIter);
                 break;
 
@@ -241,13 +241,17 @@ void SpeckleNuller::createSpeckleObjects(std::vector<ImgPt> &imgPts, bool update
 
     std::vector<ImgPt>::iterator it;
     cv::Point2d coordinates;
+    SpeckleController *speck;
     for(it = imgPts.begin(); it < imgPts.end(); it++){
         coordinates = (*it).coordinates;
-        SpeckleCtrlClass speck(coordinates, mParams);
-        speck.updateBadPixMask(mBadPixMask);
+        if(mParams.get<std::string>("NullingParams.controller") == "kalman")
+            speck = new SpeckleKalman(coordinates, mParams);
+        else
+            speck = new SpeckleBasic(coordinates, mParams);
+        speck->updateBadPixMask(mBadPixMask);
         if(update){
-            speck.update(mImage, mIntegrationTime);
-            mNextDMSpecks.push_back(speck.getNextSpeckle());
+            speck->update(mImage, mIntegrationTime);
+            mNextDMSpecks.push_back(speck->getNextSpeckle());
 
         }
 
@@ -259,7 +263,7 @@ void SpeckleNuller::createSpeckleObjects(std::vector<ImgPt> &imgPts, bool update
 }
 
 void SpeckleNuller::updateSpeckles(){
-    std::vector<SpeckleCtrlClass>::iterator it;
+    boost::ptr_vector<SpeckleController>::iterator it;
     dmspeck speck;
     
     for(it = mSpecklesList.begin(); it < mSpecklesList.end(); it++){

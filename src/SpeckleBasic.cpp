@@ -97,3 +97,8 @@ void SpeckleBasic::updateNullingSpeckle(){
     }
 
 }
+
+dmspeck SpeckleBasic::getNextSpeckle() const{ 
+    return mNextSpeck;
+
+}

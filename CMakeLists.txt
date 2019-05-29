@@ -10,9 +10,9 @@ link_directories(${BOOST_LIBRARY_DIR})
 
 file(GLOB SOURCES "src/*.cpp")
 
-#set (CMAKE_CXX_FLAGS "-DBOOST_LOG_DYN_LINK -g -pg -O0 -std=c++11")
-#set (CMAKE_CXX_FLAGS "-DBOOST_LOG_DYN_LINK -pg -O3 -fopenmp -std=c++11")
-set (CMAKE_CXX_FLAGS "-DBOOST_LOG_DYN_LINK -O3 -fopenmp -std=c++11")
+#set (CMAKE_CXX_FLAGS "-DBOOST_LOG_DYN_LINK -g -O0 -std=c++11") #debug
+#set (CMAKE_CXX_FLAGS "-DBOOST_LOG_DYN_LINK -pg -O3 -fopenmp -std=c++11") #profile
+set (CMAKE_CXX_FLAGS "-DBOOST_LOG_DYN_LINK -O3 -fopenmp -std=c++11") #run TODO: make these real options
 set (CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 file(GLOB TESTSOURCES "tests/main.cpp" ${SOURCES})

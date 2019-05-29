@@ -3,11 +3,13 @@
 #include "params.h"
 #include "ImageGrabber.h"
 #include "SpeckleController.h"
+#include "SpeckleBasic.h"
 #include "SpeckleKalman.h"
 #include "SpeckleToDM.h"
 #include "imageTools.h"
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/info_parser.hpp>
+#include <boost/ptr_container/ptr_vector.hpp>
 
 #define DELETE_SPECKLE -1
 
@@ -27,9 +29,6 @@ struct ImgPt
 
 };
 
-typedef SpeckleKalman SpeckleCtrlClass;
-
-
 /**
 * Implements the speckle nulling loop. Has methods for detecting, probing, and
 * nulling speckles. Contains instances of ImageGrabber and P3KCom, as well as 
@@ -40,7 +39,7 @@ class SpeckleNuller
     private: 
         cv::Mat mImage; //Last MKID image obtained from PacketMaster (control region)
         cv::Mat mBadPixMask; //Bad pixel mask of image. Should be updated when ctrl region changes
-        std::vector<SpeckleCtrlClass> mSpecklesList, mNullSpecklesList; //List of Speckle (objects) being nulled
+        boost::ptr_vector<SpeckleController> mSpecklesList, mNullSpecklesList; //List of Speckle (objects) being nulled
         std::vector<dmspeck> mNextDMSpecks; //List of speckles to put on DM
         boost::property_tree::ptree mParams; //Container for configuration params
         SpeckleToDM mDM;
