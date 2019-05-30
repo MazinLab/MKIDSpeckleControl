@@ -17,15 +17,18 @@
 
 /**
  * Abstract class for implementing a speckle controller for 
- * a single speckle. Includes high level interface and some 
- * low level functionality. Subclasses should only interface 
- * using the provided function headings; i.e. they should not
- * define any additional public methods. 
- * Typical usage:
+ * a single speckle. Defines public interface with 
+ * the following usage procedure:
  *   - Instantiate
- *   - Get new DM probe/null /w getNextSpeckle()
- *   - Supply new measurement with update(&image)
- *   - Delete when speckle is sufficiently suppressed
+ *   - update with initial image using update(&image, integrationTime)
+ *   - perform NPHASES probe measurements 
+ *      - getNextSpeckle() followed by update(&image, integrationTime)
+ *   - apply control output and update with result (no probes) and repeat
+ *
+ * Subclasses should only implement the specified virtual methods
+ * (and any private methods/attributes required for this); no additional
+ * public methods should be defined.
+ *
  **/
 class SpeckleController
 {
@@ -46,14 +49,31 @@ class SpeckleController
         * @param image Image to use for intensity measurement
         **/
         std::tuple<double, double> measureSpeckleIntensityAndSigma(const cv::Mat &image, double integrationTime);
-
+        
+        /**
+         * Pure virtual. Called on the initial update and after control outputs (including 
+         * nullingAmp=0).
+         * @param intensity Intensity of speckle in last image
+         * @param variance Variance of speckle intensity
+         */
         virtual void nonProbeMeasurementUpdate(double intensity, double variance) = 0;
 
+        /**
+         * Pure virtual. Called after DM probe outputs.
+         * @param phaseInd Index of probe used [0, NPHASES)
+         * @param intensity Intensity of speckle in last image
+         * @param variance Variance of speckle intensity
+         */
         virtual void probeMeasurementUpdate(int phaseInd, double intensity, double variance) = 0;
 
-        // return nulling speckle
+        /**
+         * Pure virtual. Called after final probe; returns control (nulling) speckle.
+         */
         virtual dmspeck endOfProbeUpdate() = 0;
 
+        /**
+         * Pure virtual. Returns dmspeck specifying probe speckle at index phaseInd.
+         */
         virtual dmspeck getNextProbeSpeckle(int phaseInd) = 0;
 
         
@@ -61,7 +81,7 @@ class SpeckleController
     protected:
         boost::property_tree::ptree mParams; //container used to store configuration parameters
 
-        cv::Point2d mCoords;
+        cv::Point2d mCoords; //speckle coordinates in control region
         cv::Point2d mKvecs; //speckle k-vectors (spatial angular frequencies)
         
 
