@@ -29,30 +29,16 @@
  **/
 class SpeckleController
 {
-    protected:
-        boost::property_tree::ptree mParams; //container used to store configuration parameters
-
-        double mPhaseList[NPHASES]; //List of probe phases
-        double mPhaseIntensities[NPHASES];
-        double mPhaseVars[NPHASES];
-        double mInitialIntensity;
-        double mInitialVar;
-
+    private:
         int mNProbeIters;
         int mNNullingIters;
-
-        double mIntensityCorrectionFactor;
+        int mCurPhaseInd;
         cv::Mat mApertureMask; //Aperture window used to measure speckle intensity
         cv::Mat mBadPixMask;
+        dmspeck mNextSpeck;
+        double mIntensityCorrectionFactor;
 
-        cv::Point2d mCoords;
-        cv::Point2d mKvecs; //speckle k-vectors (spatial angular frequencies)
-        
-        int mCurPhaseInd;
-        dmspeck mLastSpeckle;
-        int mLastIntTime;
-
-        //METHODS
+        double measureIntensityCorrection() const;
 
         /**
         * Measures the speckle intensity in the provided image, then calculates
@@ -61,7 +47,24 @@ class SpeckleController
         **/
         std::tuple<double, double> measureSpeckleIntensityAndSigma(const cv::Mat &image, double integrationTime);
 
-        double measureIntensityCorrection() const;
+        virtual void nonProbeMeasurementUpdate(double intensity, double variance) = 0;
+
+        virtual void probeMeasurementUpdate(int phaseInd, double intensity, double variance) = 0;
+
+        // return nulling speckle
+        virtual dmspeck endOfProbeUpdate() = 0;
+
+        virtual dmspeck getNextProbeSpeckle(int phaseInd) = 0;
+
+        
+
+    protected:
+        boost::property_tree::ptree mParams; //container used to store configuration parameters
+
+        cv::Point2d mCoords;
+        cv::Point2d mKvecs; //speckle k-vectors (spatial angular frequencies)
+        
+
 
     public:
         /**
@@ -72,9 +75,20 @@ class SpeckleController
         **/
         SpeckleController(cv::Point2d pt, boost::property_tree::ptree &ptree);
 
-        virtual void update(const cv::Mat &image, double integrationTime) = 0;
+        /**
+         * Update controller state with new image. It is assumed that the previous control
+         * output was applied before taking the image. 
+         *
+         * A structure of NPHASES probe iters + 1 control output iter is imposed on all
+         * subclasses; i.e. control outputs (speck.isNull = true) can only be applied when
+         * nIters%(NPHASES+1) = 0
+         *
+         * @param image Image of control region
+         * @param integrationTime IntegrationTime in ms
+         */
+        void update(const cv::Mat &image, double integrationTime);
 
-        virtual dmspeck getNextSpeckle() const = 0;
+        dmspeck getNextSpeckle() const;
 
         void updateBadPixMask(const cv::Mat &mask);
 

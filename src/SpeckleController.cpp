@@ -6,9 +6,6 @@ SpeckleController::SpeckleController(cv::Point2d pt, boost::property_tree::ptree
 
     BOOST_LOG_TRIVIAL(info) << "Creating new speckle at " << mCoords << ": kvecs: " << mKvecs;
 
-    for(int i=0; i<NPHASES; i++)
-        mPhaseList[i] = (double)2*M_PI*i/NPHASES;
-     
     mApertureMask = cv::Mat::zeros(2*mParams.get<int>("NullingParams.apertureRadius")+1, 2*mParams.get<int>("NullingParams.apertureRadius")+1, CV_64F);
     cv::circle(mApertureMask, cv::Point(mParams.get<int>("NullingParams.apertureRadius"), mParams.get<int>("NullingParams.apertureRadius")), mParams.get<int>("NullingParams.apertureRadius"), 1, -1);
 
@@ -31,6 +28,41 @@ void SpeckleController::updateBadPixMask(const cv::Mat &mask)
 
 }
 
+void SpeckleController::update(const cv::Mat &image, double integrationTime){
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleBasic at " << mCoords << ": mCurPhaseInd: " << mCurPhaseInd;
+    double intensity, variance;
+    std::tie(intensity, variance) = measureSpeckleIntensityAndSigma(image, integrationTime);
+
+    if(mCurPhaseInd == -1){
+        nonProbeMeasurementUpdate(intensity, variance);
+
+    }
+
+    else{
+        double intensity, variance;
+        std::tie(intensity, variance) = measureSpeckleIntensityAndSigma(image, integrationTime);
+        probeMeasurementUpdate(mCurPhaseInd, intensity, variance);
+
+    }
+         
+   if(mCurPhaseInd == NPHASES-1){
+       mNProbeIters++;
+       mNextSpeck = endOfProbeUpdate();
+       if(mNextSpeck.amp != 0)
+           mNNullingIters++;
+       mCurPhaseInd = -1;
+
+   }
+
+   else{
+       mCurPhaseInd += 1;
+       mNextSpeck = getNextProbeSpeckle(mCurPhaseInd);
+       mNextSpeck.isNull = false;
+
+   }
+
+}
+
 
 std::tuple<double, double> SpeckleController::measureSpeckleIntensityAndSigma(const cv::Mat &image, double integrationTime)
 {
@@ -46,7 +78,6 @@ std::tuple<double, double> SpeckleController::measureSpeckleIntensityAndSigma(co
     BOOST_LOG_TRIVIAL(debug) << "Speckle at " << mCoords << ": variance:     " << measVariance;
     BOOST_LOG_TRIVIAL(trace) << "Speckle at " << mCoords << ": image:   \n" << speckleIm;
     BOOST_LOG_TRIVIAL(debug) << "";
-    mLastIntTime = integrationTime;
 
     return std::make_tuple(measIntensity, measVariance);
 
@@ -67,6 +98,7 @@ double SpeckleController::measureIntensityCorrection() const
 
 }
 
+dmspeck SpeckleController::getNextSpeckle() const {return mNextSpeck;}
 
 cv::Point2d SpeckleController::getCoordinates() const {return mCoords;}
 

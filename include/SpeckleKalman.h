@@ -5,6 +5,11 @@
 class SpeckleKalman : public SpeckleController
 {
     private:
+        double mPhaseList[NPHASES];
+        double mPhaseIntensities[NPHASES];
+        double mPhaseVars[NPHASES];
+        double mLastIntTime; //TODO: figure out how to set this
+
         int mProbeGridWidth;
         int mNProbePos;
         int mMinProbeIters;
@@ -33,19 +38,31 @@ class SpeckleKalman : public SpeckleController
         cv::Mat mz; // Measurement vector (2D; real/imag phase intensities)
         cv::Mat mR; // Measurement noise covariance matrix
 
+        // METHODS
+        
+        // required implementation of pure virtual methods
+        void nonProbeMeasurementUpdate(double intensity, double variance);
+        void probeMeasurementUpdate(int phaseInd, double intensity, double variance);
+        dmspeck getNextProbeSpeckle(int phaseInd);
+        dmspeck endOfProbeUpdate();
+
         // Makes process noise matrix correlated s.t. sig_i*sig_j = Cij*sig_i*sig_j
         void correlateProcessNoise(cv::Mat &noiseMat);
 
         void initializeProbeGridKvecs();
 
-        // Basically np.ravel_multi_index; gets the state vector indices (re and imag) of a given probe position
+        
+
+        // basically np.ravel_multi_index; gets the state vector indices (re and imag) of a given probe position
         std::tuple<int, int> getKalmanIndices(int r, int c);
         std::tuple<int, int> getKalmanIndices(cv::Point2i &probePos);
         std::tuple<int, int> getProbeGridIndices(int kalmanInd);
+
+
         void updateKalmanState();
-        void updateNullingSpeckle();
-        void nonProbeMeasurmentUpdate(double intensity, double sigma);
+        dmspeck updateNullingSpeckle();
         void updateProbeGridIndices();
+
 
     public:
         SpeckleKalman(cv::Point2d pt, boost::property_tree::ptree &ptree);

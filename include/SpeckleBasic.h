@@ -5,12 +5,18 @@
 
 class SpeckleBasic : public SpeckleController {
     private:
+        double mPhaseList[NPHASES];
+        double mPhaseIntensities[NPHASES];
+        double mPhaseVars[NPHASES];
+
         dmspeck mNextSpeck;
         double mProbeAmp;
         double mDMCalFactor;
 
-        void nonProbeMeasurmentUpdate(double intensity, double variance);
-        void updateNullingSpeckle();
+        void nonProbeMeasurementUpdate(double intensity, double sigma);
+        void probeMeasurementUpdate(int phaseInd, double intensity, double sigma);
+        dmspeck getNextProbeSpeckle(int phaseInd);
+        dmspeck endOfProbeUpdate();
 
     public:
         SpeckleBasic(cv::Point2d pt, boost::property_tree::ptree &cfgParams);

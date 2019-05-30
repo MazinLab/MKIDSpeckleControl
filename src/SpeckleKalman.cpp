@@ -2,6 +2,9 @@
 
 SpeckleKalman::SpeckleKalman(cv::Point2d pt, boost::property_tree::ptree &ptree):
         SpeckleController(pt, ptree){
+    for(int i=0; i<NPHASES; i++)
+        mPhaseList[i] = (double)2*M_PI*i/NPHASES;
+     
     mCVFormatter = cv::Formatter::get();
     mCVFormatter->set32fPrecision(2);
     mCVFormatter->set64fPrecision(2);
@@ -40,50 +43,30 @@ SpeckleKalman::SpeckleKalman(cv::Point2d pt, boost::property_tree::ptree &ptree)
 
 }
 
-void SpeckleKalman::update(const cv::Mat &image, double integrationTime){
-    BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman at " << mCoords << ": mCurPhaseInd: " << mCurPhaseInd;
-    if(mCurPhaseInd == -1){
-        BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman at " << mCoords << ": mCurProbePos: " << mCurProbePos;
-        double intensity, variance;
-        std::tie(intensity, variance) = measureSpeckleIntensityAndSigma(image, integrationTime);
-        nonProbeMeasurmentUpdate(intensity, variance);
-
-    }
-
-    else
-        std::tie(mPhaseIntensities[mCurPhaseInd], mPhaseVars[mCurPhaseInd]) = 
-                measureSpeckleIntensityAndSigma(image, integrationTime);
-         
-   if(mCurPhaseInd == NPHASES-1){
-       mNProbeIters++;
-       updateKalmanState();
-       updateNullingSpeckle();
-       mCurPhaseInd = -1;
-
-   }
-
-   else{
-       mCurPhaseInd += 1;
-       cv::Point2d curKvecs = mProbeGridKvecs.at<cv::Point2d>(mCurProbePos);
-       mNextSpeck.kx = curKvecs.x;
-       mNextSpeck.ky = curKvecs.y;
-       mNextSpeck.amp = mProbeAmp;
-       mNextSpeck.phase = mPhaseList[mCurPhaseInd];
-       mNextSpeck.isNull = false;
-
-   }
+dmspeck SpeckleKalman::getNextProbeSpeckle(int phaseInd){
+   cv::Point2d curKvecs = mProbeGridKvecs.at<cv::Point2d>(mCurProbePos);
+   dmspeck nextSpeck;
+   nextSpeck.kx = curKvecs.x;
+   nextSpeck.ky = curKvecs.y;
+   nextSpeck.amp = mProbeAmp;
+   nextSpeck.phase = mPhaseList[phaseInd];
+   nextSpeck.isNull = false;
+   return nextSpeck;
 
 }
 
-dmspeck SpeckleKalman::getNextSpeckle() const{ 
-    return mNextSpeck;
+void SpeckleKalman::probeMeasurementUpdate(int phaseInd, double intensity, double variance){
+   mPhaseIntensities[phaseInd] = intensity;
+   mPhaseVars[phaseInd] = variance;
 
 }
+    
 
-void SpeckleKalman::nonProbeMeasurmentUpdate(double intensity, double variance){
+
+void SpeckleKalman::nonProbeMeasurementUpdate(double intensity, double variance){
     BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman at " << mCoords << ": rawIntensity: " << intensity;
 
-    if(mParams.get<bool>("KalmanParams.useEKFUpdate") && (mNProbeIters > 0)){
+    if(mParams.get<bool>("KalmanParams.useEKFUpdate") && (getNProbeIters() > 0)){
         //mx = mA*mx;
         double measVarEst;
         //cv::minMaxLoc(mx, NULL, &measVarEst, NULL, NULL);
@@ -141,20 +124,25 @@ void SpeckleKalman::nonProbeMeasurmentUpdate(double intensity, double variance){
         cv::minMaxLoc(amplitude, NULL, &probeAmp, NULL, NULL); 
 
         //probeAmp = std::max(probeAmp, std::sqrt(intensity)*mDMCalFactor);
-        if(mNProbeIters==0)
+        if(getNProbeIters()==0)
             mProbeAmp = std::sqrt(intensity)*mDMCalFactor;
         else
             mProbeAmp = std::max(probeAmp, mMinProbeAmp);
 
     }
 
-    if(mNProbeIters%10 == 0)
-        BOOST_LOG_TRIVIAL(info) << "Iter: " << mNProbeIters << "; Probing at: " << mProbeAmp;
+    if(getNProbeIters()%10 == 0)
+        BOOST_LOG_TRIVIAL(info) << "Iter: " << getNProbeIters() << "; Probing at: " << mProbeAmp;
 
-    mInitialIntensity = intensity;
-    mInitialVar = variance;
 
 }
+
+dmspeck SpeckleKalman::endOfProbeUpdate(){
+    updateKalmanState();
+    return updateNullingSpeckle();
+
+}
+    
     
 
 void SpeckleKalman::updateKalmanState(){
@@ -203,7 +191,7 @@ void SpeckleKalman::updateKalmanState(){
     
     mQc.setTo(0);
     
-    BOOST_LOG_TRIVIAL(debug) << "N probe iters: " << mNProbeIters;
+    BOOST_LOG_TRIVIAL(debug) << "N probe iters: " << getNProbeIters();
 
     updateProbeGridIndices();
 
@@ -221,7 +209,7 @@ void SpeckleKalman::updateProbeGridIndices(){
 }
 
 
-void SpeckleKalman::updateNullingSpeckle(){
+dmspeck SpeckleKalman::updateNullingSpeckle(){
     cv::Mat amplitudeGrid = cv::Mat::zeros(mProbeGridWidth, mProbeGridWidth, CV_64F);
     cv::Mat phaseGrid = cv::Mat::zeros(mProbeGridWidth, mProbeGridWidth, CV_64F);
     BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman at " << mCoords << ": calculating nulling speckle";
@@ -284,16 +272,18 @@ void SpeckleKalman::updateNullingSpeckle(){
     BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: Nulling variance: " << nullingVar;
     BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: Nulling snr: " << snr;
 
-    mNextSpeck.kx = nullingK.x;
-    mNextSpeck.ky = nullingK.y;
-    mNextSpeck.phase = nullingPhase + M_PI;
-    mNextSpeck.isNull = true; 
+    dmspeck nullingSpeck;
 
-    if((snr >= mParams.get<double>("KalmanParams.snrThresh")) && (mNProbeIters >= mMinProbeIters)){
-        mNextSpeck.amp = nullingAmp; //nullingAmp;
+    nullingSpeck.kx = nullingK.x;
+    nullingSpeck.ky = nullingK.y;
+    nullingSpeck.phase = nullingPhase + M_PI;
+    nullingSpeck.isNull = true; 
+
+    if((snr >= mParams.get<double>("KalmanParams.snrThresh")) && (getNProbeIters() >= mMinProbeIters)){
+        nullingSpeck.amp = nullingAmp; //nullingAmp;
 
         BOOST_LOG_TRIVIAL(info) << "SpeckleKalman at " << mCoords << ": applying nulling speckle after "
-            << mNProbeIters << " probe iterations. \n\t k: " << nullingK << " amp: " << nullingAmp << "phase: " << nullingPhase;
+            << getNProbeIters() << " probe iterations. \n\t k: " << nullingK << " amp: " << nullingAmp << "phase: " << nullingPhase;
         BOOST_LOG_TRIVIAL(info) << "weights: \n" << weights;
         BOOST_LOG_TRIVIAL(info) << "    mx pre-null: ";
         BOOST_LOG_TRIVIAL(info) << "       re: \n" << 
@@ -312,7 +302,7 @@ void SpeckleKalman::updateNullingSpeckle(){
         double posCorr;
         for(int i=0; i<mNProbePos; i++){
             std::tie(kRow, kCol) = getProbeGridIndices(i);
-            kDist = cv::norm(cv::Point2d(mNextSpeck.kx, mNextSpeck.ky) - mProbeGridKvecs.at<cv::Point2d>(kRow, kCol));
+            kDist = cv::norm(cv::Point2d(nullingSpeck.kx, nullingSpeck.ky) - mProbeGridKvecs.at<cv::Point2d>(kRow, kCol));
             posCorr = std::exp(-kDist*kDist/(4*mKvecCorrSigma*mKvecCorrSigma));
 
             realB.at<double>(i) = posCorr; 
@@ -331,8 +321,8 @@ void SpeckleKalman::updateNullingSpeckle(){
         BOOST_LOG_TRIVIAL(trace) << "SpeckleKalman: B: " << mCVFormatter->format(B);
 
         cv::Mat u(2, 1, CV_64F, cv::Scalar(0));
-        u.at<double>(0) = mNextSpeck.amp*std::cos(mNextSpeck.phase);
-        u.at<double>(1) = mNextSpeck.amp*std::sin(mNextSpeck.phase);
+        u.at<double>(0) = nullingSpeck.amp*std::cos(nullingSpeck.phase);
+        u.at<double>(1) = nullingSpeck.amp*std::sin(nullingSpeck.phase);
         mx = mx + B*u;
         BOOST_LOG_TRIVIAL(info) << "    mx post-null: ";
         BOOST_LOG_TRIVIAL(info) << "       re: \n" << 
@@ -341,12 +331,12 @@ void SpeckleKalman::updateNullingSpeckle(){
             mCVFormatter->format(cv::Mat(mx, cv::Range(mNProbePos, 2*mNProbePos)).reshape(0, mProbeGridWidth));
         BOOST_LOG_TRIVIAL(info) << "SpeckleKalman: Probe Grid Counter: \n" << mProbeGridCounter;
 
-        mNNullingIters++;
-        
     }
 
     else
-        mNextSpeck.amp = 0;
+        nullingSpeck.amp = 0;
+
+    return nullingSpeck;
     
     
 }
