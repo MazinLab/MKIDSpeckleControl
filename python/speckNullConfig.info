@@ -3,8 +3,8 @@ ImgParams
     name DMCalTest0
     nRows 146
     nCols 140
-    xCenter 72.2 ;70.005627705627703 ;72.2
-    yCenter 73 ;73.274242424242431 ;73
+    xCenter 70.005627705627703 ;72.2
+    yCenter 73.274242424242431 ;73
     lambdaOverD 3.005456495374899
     xCtrlStart -10
     xCtrlEnd 50
@@ -35,7 +35,8 @@ DMParams
 }
 NullingParams
 {
-    integrationTime 5
+    controller basic
+    integrationTime 50
     maxSpeckles 1
     speckleWindow 5
     exclusionZone 9
@@ -60,5 +61,11 @@ KalmanParams
     calSigma 0.008
     nullingGain 0.75
     useEKFUpdate false
+}
+SpeckBasicParams
+{
+    snrThresh 5
+    nullingGain 0.75
+
 }
 

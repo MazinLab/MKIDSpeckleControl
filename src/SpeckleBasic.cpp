@@ -83,10 +83,12 @@ void SpeckleBasic::updateNullingSpeckle(){
         mNextSpeck.phase = nullingPhase;
         mNextSpeck.isNull = true;
 
-    BOOST_LOG_TRIVIAL(info) << "SpeckleBasic at " << mCoords << ": applying nulling speckle after " << mNProbeIters << " iterations";
-    BOOST_LOG_TRIVIAL(info) << "                                   amplitude: " << nullingAmp;
-    BOOST_LOG_TRIVIAL(info) << "                                   phase: " << nullingPhase;
-    BOOST_LOG_TRIVIAL(info) << "                                   SNR: " << nullingSNR;
+        mNNullingIters++;
+
+        BOOST_LOG_TRIVIAL(info) << "SpeckleBasic at " << mCoords << ": applying nulling speckle after " << mNProbeIters << " iterations";
+        BOOST_LOG_TRIVIAL(info) << "                                   amplitude: " << nullingAmp;
+        BOOST_LOG_TRIVIAL(info) << "                                   phase: " << nullingPhase;
+        BOOST_LOG_TRIVIAL(info) << "                                   SNR: " << nullingSNR;
 
     }
 

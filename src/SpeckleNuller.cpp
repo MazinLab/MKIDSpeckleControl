@@ -15,6 +15,11 @@ SpeckleNuller::SpeckleNuller(boost::property_tree::ptree &ptree) :
     mBadPixMask.create(ctrlRegionXSize, ctrlRegionYSize, CV_64F);
     mBadPixMask.setTo(0);
     mSpecklesList.reserve(mParams.get<int>("NullingParams.maxSpeckles"));
+    if(mParams.get<std::string>("NullingParams.controller") != "kalman"){
+        mParams.put("NullingParams.maxNullingIters", 1);
+        BOOST_LOG_TRIVIAL(info) << "Using basic controller, setting max nulling iters to 1";
+
+    }
 
 }
 
