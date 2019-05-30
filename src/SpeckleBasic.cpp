@@ -4,6 +4,7 @@ SpeckleBasic::SpeckleBasic(cv::Point2d pt, boost::property_tree::ptree &cfgParam
     for(int i=0; i<NPHASES; i++){
         mPhaseIntensities[i] = 0;
         mPhaseVars[i] = 0;
+        mPhaseList[i] = (double)2*M_PI*i/NPHASES;
 
     }
 

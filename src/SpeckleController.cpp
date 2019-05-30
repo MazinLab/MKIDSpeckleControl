@@ -29,7 +29,7 @@ void SpeckleController::updateBadPixMask(const cv::Mat &mask)
 }
 
 void SpeckleController::update(const cv::Mat &image, double integrationTime){
-    BOOST_LOG_TRIVIAL(debug) << "SpeckleBasic at " << mCoords << ": mCurPhaseInd: " << mCurPhaseInd;
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleController at " << mCoords << ": mCurPhaseInd: " << mCurPhaseInd;
     double intensity, variance;
     std::tie(intensity, variance) = measureSpeckleIntensityAndSigma(image, integrationTime);
 

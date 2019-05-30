@@ -13,6 +13,7 @@ class SpeckleBasic : public SpeckleController {
         double mProbeAmp;
         double mDMCalFactor;
 
+        // Required declarations of virtual functions
         void nonProbeMeasurementUpdate(double intensity, double sigma);
         void probeMeasurementUpdate(int phaseInd, double intensity, double sigma);
         dmspeck getNextProbeSpeckle(int phaseInd);
@@ -20,8 +21,6 @@ class SpeckleBasic : public SpeckleController {
 
     public:
         SpeckleBasic(cv::Point2d pt, boost::property_tree::ptree &cfgParams);
-        void update(const cv::Mat &image, double integrationTime);
-        dmspeck getNextSpeckle() const;
 
 };
 #endif
