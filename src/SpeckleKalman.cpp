@@ -231,39 +231,61 @@ dmspeck SpeckleKalman::updateNullingSpeckle(){
     BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: Variances: \n" << mCVFormatter->format(variance);
 
     // weights_ij is proportional to amplitudeGrid_ij/(overlap of probe grid w/ gaussian)
-    cv::Mat overlapGrid = cv::Mat::ones(mProbeGridWidth, mProbeGridWidth, CV_64F);
-    cv::GaussianBlur(overlapGrid, overlapGrid, cv::Size(mProbeGridWidth, mProbeGridWidth), 4*M_PI*0.42, 0, cv::BORDER_CONSTANT);
+    int wUSFactor = 2;
+    double resizeFactor = (double)(mProbeGridWidth*2 - 1)/(mProbeGridWidth);
+    int usSize = (int)std::round(resizeFactor*mProbeGridWidth);
+    cv::Mat overlapGrid = cv::Mat::ones(usSize, usSize, CV_64F);
+    cv::GaussianBlur(overlapGrid, overlapGrid, cv::Size(2*usSize + 1,2*usSize + 1), wUSFactor*mKvecCorrSigma/mProbeGridSpacing, 0, cv::BORDER_CONSTANT);
 
-    cv::Mat weights = cv::Mat::zeros(mProbeGridWidth, mProbeGridWidth, CV_64F);
-    cv::GaussianBlur(amplitudeGrid, weights, cv::Size(mProbeGridWidth, mProbeGridWidth), 4*M_PI*0.42, 0, cv::BORDER_CONSTANT);
+    cv::Mat weights = cv::Mat::zeros(usSize, usSize, CV_64F);
+    cv::Mat amplitudeGridUS, realUS, imagUS;
+    cv::resize(amplitudeGrid, amplitudeGridUS, cv::Size(0,0), resizeFactor, resizeFactor);
+    cv::resize(real, realUS, cv::Size(0,0), resizeFactor, resizeFactor);
+    cv::resize(imag, imagUS, cv::Size(0,0), resizeFactor, resizeFactor);
+    cv::GaussianBlur(amplitudeGridUS, weights, cv::Size(2*usSize + 1,2*usSize + 1), wUSFactor*mKvecCorrSigma/mProbeGridSpacing, 0, cv::BORDER_CONSTANT);
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: amplitudeGridConv \n" << mCVFormatter->format(weights);
     //BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: normweights: \n" << mCVFormatter->format(weights);
     cv::divide(weights, overlapGrid, weights);
     //weights = weights.mul(weights);
     weights = weights/cv::sum(weights)[0];    
 
+    mCVFormatter->set64fPrecision(4);
     BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: weights \n" << mCVFormatter->format(weights);
+    mCVFormatter->set64fPrecision(2);
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: amplitudeGridUS \n" << mCVFormatter->format(amplitudeGridUS);
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: overlapGrid \n" << mCVFormatter->format(overlapGrid);
+    cv::Mat kernel = cv::Mat::zeros(usSize, usSize, CV_64F);
+    kernel.at<double>(usSize/2, usSize/2) = 1;
+    cv::GaussianBlur(kernel, kernel, cv::Size(2*usSize + 1, 2*usSize + 1), wUSFactor*mKvecCorrSigma/mProbeGridSpacing, 0, cv::BORDER_CONSTANT);
+    mCVFormatter->set64fPrecision(4);
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: kernel \n" << mCVFormatter->format(kernel);
+    mCVFormatter->set64fPrecision(2);
+
 
     cv::Point2d nullingK;
+    cv::Point2i nullingAmpLoc;
     double nullingAmp;
     double nullingPhase;
     double nullingVar;
     double realSum;
     double imagSum;
-    mProbeGridKvecs.forEach([this, &weights, &nullingK, &nullingAmp, &nullingPhase]
-                (cv::Point2d &value, const int *position) -> void{
-            nullingK += weights.at<double>(position[0], position[1])*value;
-            //nullingAmp += weights.at<double>(position[0], position[1])*amplitudeGrid.at<double>(position[0], position[1]);
-            //nullingPhase += weights.at<double>(position[0], position[1])*phaseGrid.at<double>(position[0], position[1]); 
+    //mProbeGridKvecs.forEach([this, &weights, &nullingK, &nullingAmp, &nullingPhase]
+    //            (cv::Point2d &value, const int *position) -> void{
+    //        nullingK += weights.at<double>(position[0], position[1])*value;
+    //        //nullingAmp += weights.at<double>(position[0], position[1])*amplitudeGrid.at<double>(position[0], position[1]);
+    //        //nullingPhase += weights.at<double>(position[0], position[1])*phaseGrid.at<double>(position[0], position[1]); 
 
-            });
+    //        });
 
     //nullingVar = cv::sum(variance.mul(weights))[0]; //this could also be done inside lambda function
     //Use the maximum amplitudeGrid as nulling amp, as well as the variance at this value
-    realSum = (double)cv::sum(real.mul(weights))[0];
-    imagSum = (double)cv::sum(imag.mul(weights))[0];
+    realSum = (double)cv::sum(realUS.mul(weights))[0];
+    imagSum = (double)cv::sum(imagUS.mul(weights))[0];
     nullingPhase = std::atan2(imagSum, realSum);
-    cv::Point2i nullingAmpLoc;
-    cv::minMaxLoc(amplitudeGrid, NULL, &nullingAmp, NULL, &nullingAmpLoc); 
+    cv::minMaxLoc(weights, NULL, NULL, NULL, &nullingAmpLoc); 
+    nullingAmp = amplitudeGridUS.at<double>(nullingAmpLoc);
+    nullingK.x = mKvecs.x + mProbeGridSpacing*((double)nullingAmpLoc.x/wUSFactor - (int)mProbeGridWidth/2);
+    nullingK.y = mKvecs.y + mProbeGridSpacing*((double)nullingAmpLoc.y/wUSFactor - (int)mProbeGridWidth/2);
     nullingVar = variance.at<double>(nullingAmpLoc);
     nullingAmp *= mNullingGain;
 
@@ -286,8 +308,11 @@ dmspeck SpeckleKalman::updateNullingSpeckle(){
         nullingSpeck.amp = nullingAmp; //nullingAmp;
 
         BOOST_LOG_TRIVIAL(info) << "SpeckleKalman at " << mCoords << ": applying nulling speckle after "
-            << getNProbeIters() << " probe iterations. \n\t k: " << nullingK << " amp: " << nullingAmp << "phase: " << nullingPhase;
-        BOOST_LOG_TRIVIAL(info) << "weights: \n" << weights;
+            << getNProbeIters() << " probe iterations. \n\t k: " << nullingK << " amp: " << nullingAmp << " phase: " << nullingPhase;
+        mCVFormatter->set64fPrecision(4);
+        BOOST_LOG_TRIVIAL(info) << "    weights: \n" << mCVFormatter->format(weights);
+        BOOST_LOG_TRIVIAL(info) << "    nullingloc: \n" << nullingAmpLoc;
+        mCVFormatter->set64fPrecision(2);
         BOOST_LOG_TRIVIAL(info) << "    mx pre-null: ";
         BOOST_LOG_TRIVIAL(info) << "       re: \n" << 
             mCVFormatter->format(cv::Mat(mx, cv::Range(0, mNProbePos)).reshape(0, mProbeGridWidth));
