@@ -100,7 +100,7 @@ class SpeckleController
          * output was applied before taking the image. 
          *
          * A structure of NPHASES probe iters + 1 control output iter is imposed on all
-         * subclasses; i.e. control outputs (speck.isNull = true) can only be applied when
+         * subclasses; i.e. control outputs (speck.isNull = true) should only be applied when
          * nIters%(NPHASES+1) = 0
          *
          * @param image Image of control region
@@ -108,6 +108,11 @@ class SpeckleController
          */
         void update(const cv::Mat &image, double integrationTime);
 
+        /**
+         * Returns a dmspeck containing the next (probe or null) speckle to apply to the 
+         * DM. Speckle is completely determined in update(); this function is separate 
+         * for flexibility
+         */
         dmspeck getNextSpeckle() const;
 
         void updateBadPixMask(const cv::Mat &mask);

@@ -33,17 +33,11 @@ void SpeckleController::update(const cv::Mat &image, double integrationTime){
     double intensity, variance;
     std::tie(intensity, variance) = measureSpeckleIntensityAndSigma(image, integrationTime);
 
-    if(mCurPhaseInd == -1){
+    if(mCurPhaseInd == -1)
         nonProbeMeasurementUpdate(intensity, variance);
 
-    }
-
-    else{
-        double intensity, variance;
-        std::tie(intensity, variance) = measureSpeckleIntensityAndSigma(image, integrationTime);
+    else
         probeMeasurementUpdate(mCurPhaseInd, intensity, variance);
-
-    }
          
    if(mCurPhaseInd == NPHASES-1){
        mNProbeIters++;

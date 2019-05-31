@@ -11,6 +11,8 @@ SpeckleBasic::SpeckleBasic(cv::Point2d pt, boost::property_tree::ptree &cfgParam
     mDMCalFactor = getDMCalFactorCPS(mKvecs, mParams.get<double>("DMParams.a"), mParams.get<double>("DMParams.b"), 
             mParams.get<double>("DMParams.c"));
 
+    BOOST_LOG_TRIVIAL(debug) << "DM Cal Factor: " << mDMCalFactor;
+
 }
         
 
@@ -53,6 +55,16 @@ dmspeck SpeckleBasic::endOfProbeUpdate(){
     double nullingPhase = std::atan2(imag, real);
     nullingPhase += M_PI;
     nullingAmp *= mParams.get<double>("SpeckBasicParams.nullingGain");
+
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleBasic at " << mCoords << ": mPhaseIntensities: " << mPhaseIntensities[0];
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleBasic at " << mCoords << ": mPhaseIntensities: " << mPhaseIntensities[1];
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleBasic at " << mCoords << ": mPhaseIntensities: " << mPhaseIntensities[2];
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleBasic at " << mCoords << ": mPhaseIntensities: " << mPhaseIntensities[3];
+
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleBasic at " << mCoords << ": mPhaseVars: " << mPhaseVars[0];
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleBasic at " << mCoords << ": mPhaseVars: " << mPhaseVars[1];
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleBasic at " << mCoords << ": mPhaseVars: " << mPhaseVars[2];
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleBasic at " << mCoords << ": mPhaseVars: " << mPhaseVars[3];
 
     BOOST_LOG_TRIVIAL(debug) << "SpeckleBasic at " << mCoords << ": real: " << real;
     BOOST_LOG_TRIVIAL(debug) << "SpeckleBasic at " << mCoords << ": imag: " << imag;

@@ -13,7 +13,7 @@ ImgParams
     useWvl false
     wvlStart 700
     wvlStop 1200
-    useBadPixMask true
+    useBadPixMask false
     beammapFile asdkf
     wvlSolFile asdffd
     badPixMaskFile /home/neelay/data/20190514/finalMap_20181218_badPixMask.bin
@@ -35,8 +35,8 @@ DMParams
 }
 NullingParams
 {
-    controller basic
-    integrationTime 50
+    controller kalman
+    integrationTime 5
     maxSpeckles 1
     speckleWindow 5
     exclusionZone 9
@@ -47,13 +47,13 @@ NullingParams
     enforceRedetection false
     distThresh 2
     maxProbeIters 200
-    maxNullingIters 3
+    maxNullingIters 1
 }
 KalmanParams
 {
-    probeGridWidth 3
+    probeGridWidth 1
     probeGridSpacing 3.1415
-    snrThresh 0
+    snrThresh 5
     processNoiseVar 00
     initStateVar 50
     useConstantR false

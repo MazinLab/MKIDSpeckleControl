@@ -221,7 +221,7 @@ dmspeck SpeckleKalman::updateNullingSpeckle(){
     imag = imag.reshape(1, mProbeGridWidth);
     
     cv::Mat variance = mP.diag();
-    variance = cv::Mat(variance, cv::Range(0, mNProbePos)) + cv::Mat(variance, cv::Range(mNProbePos, 2*mNProbePos));
+    variance = 0.5*cv::Mat(variance, cv::Range(0, mNProbePos)) + 0.5*cv::Mat(variance, cv::Range(mNProbePos, 2*mNProbePos));
     variance = variance.reshape(1, mProbeGridWidth);
     assert(variance.cols == mProbeGridWidth);
     
