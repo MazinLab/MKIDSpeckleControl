@@ -231,11 +231,14 @@ dmspeck SpeckleKalman::updateNullingSpeckle(){
     BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: Variances: \n" << mCVFormatter->format(variance);
 
     // weights_ij is proportional to amplitudeGrid_ij/(overlap of probe grid w/ gaussian)
-    cv::Mat weights = cv::Mat::ones(mProbeGridWidth, mProbeGridWidth, CV_64F);
-    cv::GaussianBlur(weights, weights, cv::Size(mProbeGridWidth, mProbeGridWidth), 4*M_PI*0.42, 0, cv::BORDER_CONSTANT);
-    BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: normweights: \n" << mCVFormatter->format(weights);
-    cv::divide(amplitudeGrid, weights, weights);
-    weights = weights.mul(weights);
+    cv::Mat overlapGrid = cv::Mat::ones(mProbeGridWidth, mProbeGridWidth, CV_64F);
+    cv::GaussianBlur(overlapGrid, overlapGrid, cv::Size(mProbeGridWidth, mProbeGridWidth), 4*M_PI*0.42, 0, cv::BORDER_CONSTANT);
+
+    cv::Mat weights = cv::Mat::zeros(mProbeGridWidth, mProbeGridWidth, CV_64F);
+    cv::GaussianBlur(amplitudeGrid, weights, cv::Size(mProbeGridWidth, mProbeGridWidth), 4*M_PI*0.42, 0, cv::BORDER_CONSTANT);
+    //BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: normweights: \n" << mCVFormatter->format(weights);
+    cv::divide(weights, overlapGrid, weights);
+    //weights = weights.mul(weights);
     weights = weights/cv::sum(weights)[0];    
 
     BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: weights \n" << mCVFormatter->format(weights);

@@ -47,24 +47,24 @@ NullingParams
     enforceRedetection false
     distThresh 2
     maxProbeIters 200
-    maxNullingIters 1
+    maxNullingIters 5
 }
 KalmanParams
 {
-    probeGridWidth 1
-    probeGridSpacing 3.1415
-    snrThresh 5
+    probeGridWidth 3
+    probeGridSpacing 1.5 ;3.1415
+    snrThresh 7
     processNoiseVar 00
     initStateVar 50
     useConstantR false
-    minProbeIters 9
+    minProbeIters 90
     calSigma 0.008
     nullingGain 0.75
     useEKFUpdate false
 }
 SpeckBasicParams
 {
-    snrThresh 5
+    snrThresh 7
     nullingGain 0.75
 
 }
