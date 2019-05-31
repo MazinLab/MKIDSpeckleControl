@@ -1,4 +1,5 @@
 #include <opencv2/opencv.hpp>
+#include <random>
 
 //logging
 #include <boost/log/core.hpp>
