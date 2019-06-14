@@ -242,10 +242,10 @@ dmspeck SpeckleKalman::updateNullingSpeckle(){
     cv::resize(amplitudeGrid, amplitudeGridUS, cv::Size(0,0), resizeFactor, resizeFactor);
     cv::resize(real, realUS, cv::Size(0,0), resizeFactor, resizeFactor);
     cv::resize(imag, imagUS, cv::Size(0,0), resizeFactor, resizeFactor);
-    cv::GaussianBlur(amplitudeGridUS, weights, cv::Size(2*usSize + 1,2*usSize + 1), wUSFactor*mKvecCorrSigma/mProbeGridSpacing, 0, cv::BORDER_CONSTANT);
+    cv::GaussianBlur(amplitudeGridUS, weights, cv::Size(usSize, usSize), 0.25*wUSFactor*mKvecCorrSigma/mProbeGridSpacing, 0, cv::BORDER_REFLECT_101); //, cv::BORDER_CONSTANT);
     BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: amplitudeGridConv \n" << mCVFormatter->format(weights);
     //BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: normweights: \n" << mCVFormatter->format(weights);
-    cv::divide(weights, overlapGrid, weights);
+    //cv::divide(weights, overlapGrid, weights); // divide weights by overlap fraction with kernel
     //weights = weights.mul(weights);
     weights = weights/cv::sum(weights)[0];    
 
@@ -256,7 +256,7 @@ dmspeck SpeckleKalman::updateNullingSpeckle(){
     BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: overlapGrid \n" << mCVFormatter->format(overlapGrid);
     cv::Mat kernel = cv::Mat::zeros(usSize, usSize, CV_64F);
     kernel.at<double>(usSize/2, usSize/2) = 1;
-    cv::GaussianBlur(kernel, kernel, cv::Size(2*usSize + 1, 2*usSize + 1), wUSFactor*mKvecCorrSigma/mProbeGridSpacing, 0, cv::BORDER_CONSTANT);
+    cv::GaussianBlur(kernel, kernel, cv::Size(usSize, usSize), 0.25*wUSFactor*mKvecCorrSigma/mProbeGridSpacing, 0, cv::BORDER_CONSTANT);
     mCVFormatter->set64fPrecision(4);
     BOOST_LOG_TRIVIAL(debug) << "SpeckleKalman: kernel \n" << mCVFormatter->format(kernel);
     mCVFormatter->set64fPrecision(2);
@@ -286,7 +286,7 @@ dmspeck SpeckleKalman::updateNullingSpeckle(){
     nullingAmp = amplitudeGridUS.at<double>(nullingAmpLoc);
     nullingK.x = mKvecs.x + mProbeGridSpacing*((double)nullingAmpLoc.x/wUSFactor - (int)mProbeGridWidth/2);
     nullingK.y = mKvecs.y + mProbeGridSpacing*((double)nullingAmpLoc.y/wUSFactor - (int)mProbeGridWidth/2);
-    nullingVar = variance.at<double>(nullingAmpLoc);
+    nullingVar = variance.at<double>(nullingAmpLoc/2);
     nullingAmp *= mNullingGain;
 
     double snr = nullingAmp/(mNullingGain*std::sqrt(nullingVar));

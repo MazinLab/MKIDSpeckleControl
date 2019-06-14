@@ -205,6 +205,7 @@ void ImageGrabber::loadBadPixMask()
     std::ifstream badPixFile(badPixFn.c_str(), std::ifstream::in|std::ifstream::binary);
     if(!badPixFile.good()) BOOST_LOG_TRIVIAL(warning) << "Could not find bad pixel mask";
     badPixFile.read(mBadPixBuff, 2*mShmImage.md->nCols*mShmImage.md->nRows);
+    badPixFile.close();
     mBadPixMask = cv::Mat(mShmImage.md->nRows, mShmImage.md->nCols, CV_16UC1, mBadPixBuff);
     mBadPixMaskCtrl = cv::Mat(mBadPixMask, cv::Range(mYCtrlStart, mYCtrlEnd), cv::Range(mXCtrlStart, mXCtrlEnd));
 
@@ -216,6 +217,7 @@ void ImageGrabber::loadFlatCal()
     std::ifstream flatCalFile(flatCalFn.c_str(), std::ifstream::in|std::ifstream::binary);
     if(!flatCalFile.good()) BOOST_LOG_TRIVIAL(warning) << "Could not find flat cal";
     flatCalFile.read(mFlatCalBuff, 8*mShmImage.md->nCols*mShmImage.md->nRows);
+    flatCalFile.close();
     mFlatWeights = cv::Mat(mShmImage.md->nRows, mShmImage.md->nCols, CV_64FC1, mFlatCalBuff);
     mFlatWeightsCtrl = cv::Mat(mFlatWeights, cv::Range(mYCtrlStart, mYCtrlEnd), cv::Range(mXCtrlStart, mXCtrlEnd));
     //cv::imshow("flat", mFlatWeights);
@@ -230,6 +232,7 @@ void ImageGrabber::loadDarkSub()
     std::ifstream mDarkSubFile(mDarkSubFn.c_str(), std::ifstream::in|std::ifstream::binary);
     if(!mDarkSubFile.good()) BOOST_LOG_TRIVIAL(warning) << "Could not find dark sub";
     mDarkSubFile.read(mDarkSubBuff, 2*mShmImage.md->nCols*mShmImage.md->nRows);
+    mDarkSubFile.close();
     mDarkSub = cv::Mat(mShmImage.md->nRows, mShmImage.md->nCols, CV_16UC1, mDarkSubBuff);
     mDarkSubCtrl = cv::Mat(mDarkSub, cv::Range(mYCtrlStart, mYCtrlEnd), cv::Range(mXCtrlStart, mXCtrlEnd));
     mDarkSubCtrl.convertTo(mDarkSubCtrl, CV_64FC1);
@@ -316,7 +319,7 @@ void ImageGrabber::close()
     if(mParams.get<bool>("useFlatCal"))
         free(mFlatCalBuff);
     if(mParams.get<bool>("useDarkSub"))
-    free(mDarkSubBuff);
+        free(mDarkSubBuff);
 
 }
 
