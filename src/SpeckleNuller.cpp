@@ -15,7 +15,7 @@ SpeckleNuller::SpeckleNuller(boost::property_tree::ptree &ptree) :
     mBadPixMask.create(ctrlRegionXSize, ctrlRegionYSize, CV_64F);
     mBadPixMask.setTo(0);
     mSpecklesList.reserve(mParams.get<int>("NullingParams.maxSpeckles"));
-    if(mParams.get<std::string>("NullingParams.controller") != "kalman"){
+    if(mParams.get<std::string>("NullingParams.controller") == "basic"){
         mParams.put("NullingParams.maxNullingIters", 1);
         BOOST_LOG_TRIVIAL(info) << "Using basic controller, setting max nulling iters to 1";
 
@@ -250,9 +250,13 @@ void SpeckleNuller::createSpeckleObjects(std::vector<ImgPt> &imgPts, bool update
     for(it = imgPts.begin(); it < imgPts.end(); it++){
         coordinates = (*it).coordinates;
         if(mParams.get<std::string>("NullingParams.controller") == "kalman")
-            speck = new SpeckleKalman(coordinates, mParams);
-        else
+            speck = new SpeckleKalman(coordinates, mParams); 
+        else if(mParams.get<std::string>("NullingParams.controller") == "kalmanPoisson")
+            speck = new SpeckleKalmanPoisson(coordinates, mParams);
+        else if(mParams.get<std::string>("NullingParams.controller") == "basic")
             speck = new SpeckleBasic(coordinates, mParams);
+        else
+            throw "Controller type not implemented";
         speck->updateBadPixMask(mBadPixMask);
         if(update){
             speck->update(mImage, mIntegrationTime);

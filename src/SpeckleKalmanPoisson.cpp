@@ -20,7 +20,7 @@ SpeckleKalmanPoisson::SpeckleKalmanPoisson(cv::Point2d pt, boost::property_tree:
 
     mx = cv::Mat::zeros(2*mNProbePos, 1, CV_64F);
     mA = cv::Mat::eye(2*mNProbePos, 2*mNProbePos, CV_64F);
-    mP = mParams.get<double>("KalmanParams.initStateVar")*cv::Mat::eye(2*mNProbePos, 2*mNProbePos, CV_64F);
+    mPi = mParams.get<double>("KalmanParams.initStateVar")*cv::Mat::eye(2*mNProbePos, 2*mNProbePos, CV_64F);
     mQ = mParams.get<double>("KalmanParams.processNoiseVar")*cv::Mat::eye(2*mNProbePos, 2*mNProbePos, CV_64F);
     mQc = cv::Mat::zeros(2*mNProbePos, 2*mNProbePos, CV_64F);
     mR = cv::Mat::zeros(2, 2, CV_64F);
@@ -29,7 +29,7 @@ SpeckleKalmanPoisson::SpeckleKalmanPoisson(cv::Point2d pt, boost::property_tree:
     initializeProbeGridKvecs();
     BOOST_LOG_TRIVIAL(debug) << "SpeckleKalmanPoisson: Probe Grid: " << mProbeGridKvecs;
 
-    correlateProcessNoise(mP);
+    correlateProcessNoise(mPi);
     //BOOST_LOG_TRIVIAL(debug) << "SpeckleKalmanPoisson: Initial State Variance: " << mP;
 
     mMinProbeIters = mParams.get<int>("KalmanParams.minProbeIters");
@@ -321,6 +321,8 @@ dmspeck SpeckleKalmanPoisson::updateNullingSpeckle(){
 
         //Update Covariance 
         mP = mP + mQc;
+        mzList.clear();
+        mHList.clear();
 
     }
 

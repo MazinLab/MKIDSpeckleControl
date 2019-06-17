@@ -5,6 +5,7 @@
 #include "SpeckleController.h"
 #include "SpeckleBasic.h"
 #include "SpeckleKalman.h"
+#include "SpeckleKalmanPoisson.h"
 #include "SpeckleToDM.h"
 #include "imageTools.h"
 #include <boost/property_tree/ptree.hpp>
