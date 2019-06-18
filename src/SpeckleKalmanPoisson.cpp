@@ -25,7 +25,7 @@ SpeckleKalmanPoisson::SpeckleKalmanPoisson(cv::Point2d pt, boost::property_tree:
     mQ = mParams.get<double>("KalmanParams.processNoiseVar")*cv::Mat::eye(2*mNProbePos, 2*mNProbePos, CV_64F);
     mQc = cv::Mat::zeros(2*mNProbePos, 2*mNProbePos, CV_64F);
     mR = cv::Mat::zeros(2, 2, CV_64F);
-    mMinProbeAmp = 1.5;
+    mMinProbeAmp = mParams.get<double>("KalmanParams.minProbeAmp");
 
     initializeProbeGridKvecs();
     BOOST_LOG_TRIVIAL(debug) << "SpeckleKalmanPoisson: Probe Grid: " << mProbeGridKvecs;
@@ -174,25 +174,39 @@ void SpeckleKalmanPoisson::updateKalmanState(){
 }
 
 void SpeckleKalmanPoisson::updateProbeGridIndices(){
-    mProbeGridCounter.at<double>(mCurProbePos.x, mCurProbePos.y) += 1;
+    mProbeGridCounter.at<double>(mCurProbePos) += 1;
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleKalmanPoisson: Probe Grid Counter: \n" << mProbeGridCounter;
     //std::tie(mCurProbePos.x, mCurProbePos.y) = getProbeGridIndices((int)std::rand()%mNProbePos);
     int reInd, imInd;
-    std::tie(reInd, imInd) = getKalmanIndices(mCurProbePos);
     //std::cout << "reind: " << reInd;
-    //probe entire grid in sequence:
-    //  std::tie(mCurProbePos.y, mCurProbePos.x) = getProbeGridIndices((reInd + 1)%mNProbePos);
-    //probe grid in "+" pattern:
-    if(mCurProbePos.x == mProbeGridWidth-1){
-        mCurProbePos.x = mProbeGridWidth/2;
-        mCurProbePos.y = 0;
+    //probe entire grid in sequence for first 9 iterations:
+    if(getNProbeIters() < mProbeGridWidth*mProbeGridWidth){
+        std::tie(reInd, imInd) = getKalmanIndices(mCurProbePos);
+        std::tie(mCurProbePos.y, mCurProbePos.x) = getProbeGridIndices((reInd + 1)%mNProbePos);
 
     }
-    else if(mCurProbePos.y == mProbeGridWidth-1){
-        mCurProbePos.x = 0;
-        mCurProbePos.y = mProbeGridWidth/2;
+
+    //else pick a random probe w/ probability pgeps, else pick the maximum
+    else{
+        if(std::rand()%100 < mParams.get<double>("KalmanParams.pgEps")*100)
+            std::tie(mCurProbePos.x, mCurProbePos.y) = getProbeGridIndices((int)std::rand()%mNProbePos);
+        else{
+            cv::Mat amplitude = cv::Mat::zeros(mProbeGridWidth, mProbeGridWidth, CV_64F);
+            cv::Mat phase = cv::Mat::zeros(mProbeGridWidth, mProbeGridWidth, CV_64F);
+
+            cv::Mat real(mx, cv::Range(0, mNProbePos));
+            cv::Mat imag(mx, cv::Range(mNProbePos, 2*mNProbePos));
+            real = real.reshape(1, mProbeGridWidth);
+            imag = imag.reshape(1, mProbeGridWidth);
+            cv::cartToPolar(real, imag, amplitude, phase);
+            cv::Point2i probePos;
+            cv::minMaxLoc(amplitude, NULL, NULL, NULL, &probePos); 
+            mCurProbePos = probePos;
+            BOOST_LOG_TRIVIAL(debug) << "Picked max amplitude probe pos at: " << mCurProbePos;
+
+        }            
+
     }
-    
-        
 
 }
 
@@ -231,7 +245,7 @@ dmspeck SpeckleKalmanPoisson::updateNullingSpeckle(){
     cv::resize(real, realUS, cv::Size(0,0), resizeFactor, resizeFactor);
     cv::resize(imag, imagUS, cv::Size(0,0), resizeFactor, resizeFactor);
     cv::GaussianBlur(amplitudeGridUS, weights, cv::Size(usSize, usSize), 0.25*wUSFactor*mKvecCorrSigma/mProbeGridSpacing, 0, cv::BORDER_REFLECT_101); //, cv::BORDER_CONSTANT);
-    BOOST_LOG_TRIVIAL(debug) << "SpeckleKalmanPoisson: amplitudeGridConv \n" << mCVFormatter->format(weights);
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleKalmanPoisson: amplitudeGridConv \n" << mCVFormatter->format(weights);
     //BOOST_LOG_TRIVIAL(debug) << "SpeckleKalmanPoisson: normweights: \n" << mCVFormatter->format(weights);
     //cv::divide(weights, overlapGrid, weights); // divide weights by overlap fraction with kernel
     //weights = weights.mul(weights);
@@ -241,12 +255,12 @@ dmspeck SpeckleKalmanPoisson::updateNullingSpeckle(){
     BOOST_LOG_TRIVIAL(debug) << "SpeckleKalmanPoisson: weights \n" << mCVFormatter->format(weights);
     mCVFormatter->set64fPrecision(2);
     BOOST_LOG_TRIVIAL(debug) << "SpeckleKalmanPoisson: amplitudeGridUS \n" << mCVFormatter->format(amplitudeGridUS);
-    BOOST_LOG_TRIVIAL(debug) << "SpeckleKalmanPoisson: overlapGrid \n" << mCVFormatter->format(overlapGrid);
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleKalmanPoisson: overlapGrid \n" << mCVFormatter->format(overlapGrid);
     cv::Mat kernel = cv::Mat::zeros(usSize, usSize, CV_64F);
     kernel.at<double>(usSize/2, usSize/2) = 1;
     cv::GaussianBlur(kernel, kernel, cv::Size(usSize, usSize), 0.25*wUSFactor*mKvecCorrSigma/mProbeGridSpacing, 0, cv::BORDER_CONSTANT);
     mCVFormatter->set64fPrecision(4);
-    BOOST_LOG_TRIVIAL(debug) << "SpeckleKalmanPoisson: kernel \n" << mCVFormatter->format(kernel);
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleKalmanPoisson: kernel \n" << mCVFormatter->format(kernel);
     mCVFormatter->set64fPrecision(2);
 
 
