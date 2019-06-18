@@ -25,7 +25,7 @@ SpeckleKalmanPoisson::SpeckleKalmanPoisson(cv::Point2d pt, boost::property_tree:
     mQ = mParams.get<double>("KalmanParams.processNoiseVar")*cv::Mat::eye(2*mNProbePos, 2*mNProbePos, CV_64F);
     mQc = cv::Mat::zeros(2*mNProbePos, 2*mNProbePos, CV_64F);
     mR = cv::Mat::zeros(2, 2, CV_64F);
-    mMinProbeAmp = 2;
+    mMinProbeAmp = 1.5;
 
     initializeProbeGridKvecs();
     BOOST_LOG_TRIVIAL(debug) << "SpeckleKalmanPoisson: Probe Grid: " << mProbeGridKvecs;
@@ -64,22 +64,24 @@ void SpeckleKalmanPoisson::probeMeasurementUpdate(int phaseInd, double intensity
 void SpeckleKalmanPoisson::nonProbeMeasurementUpdate(double intensity, double variance){
     BOOST_LOG_TRIVIAL(debug) << "SpeckleKalmanPoisson at " << mCoords << ": rawIntensity: " << intensity;
 
-    cv::Mat amplitude = cv::Mat::zeros(mProbeGridWidth, mProbeGridWidth, CV_64F);
-    cv::Mat phase = cv::Mat::zeros(mProbeGridWidth, mProbeGridWidth, CV_64F);
+    //cv::Mat amplitude = cv::Mat::zeros(mProbeGridWidth, mProbeGridWidth, CV_64F);
+    //cv::Mat phase = cv::Mat::zeros(mProbeGridWidth, mProbeGridWidth, CV_64F);
 
-    cv::Mat real(mx, cv::Range(0, mNProbePos));
-    cv::Mat imag(mx, cv::Range(mNProbePos, 2*mNProbePos));
-    real = real.reshape(1, mProbeGridWidth);
-    imag = imag.reshape(1, mProbeGridWidth);
-    cv::cartToPolar(real, imag, amplitude, phase);
-    double probeAmp;
-    cv::minMaxLoc(amplitude, NULL, &probeAmp, NULL, NULL); 
+    //cv::Mat real(mx, cv::Range(0, mNProbePos));
+    //cv::Mat imag(mx, cv::Range(mNProbePos, 2*mNProbePos));
+    //real = real.reshape(1, mProbeGridWidth);
+    //imag = imag.reshape(1, mProbeGridWidth);
+    //cv::cartToPolar(real, imag, amplitude, phase);
+    //double probeAmp;
+    //cv::minMaxLoc(amplitude, NULL, &probeAmp, NULL, NULL); 
 
     //probeAmp = std::max(probeAmp, std::sqrt(intensity)*mDMCalFactor);
-    if(getNProbeIters()==0)
-        mProbeAmp = std::sqrt(intensity)*mDMCalFactor;
-    //else
-    //    mProbeAmp = std::max(probeAmp, mMinProbeAmp);
+    
+    //Running average
+    int nProbesSinceNull = mzList.size();
+    mProbeAmp = mProbeAmp*nProbesSinceNull/(nProbesSinceNull + 1) 
+        + std::sqrt(intensity)*mDMCalFactor/(nProbesSinceNull + 1);
+    mProbeAmp = std::max(mProbeAmp, mMinProbeAmp);
 
     
 
@@ -177,7 +179,20 @@ void SpeckleKalmanPoisson::updateProbeGridIndices(){
     int reInd, imInd;
     std::tie(reInd, imInd) = getKalmanIndices(mCurProbePos);
     //std::cout << "reind: " << reInd;
-    std::tie(mCurProbePos.y, mCurProbePos.x) = getProbeGridIndices((reInd + 1)%mNProbePos);
+    //probe entire grid in sequence:
+    //  std::tie(mCurProbePos.y, mCurProbePos.x) = getProbeGridIndices((reInd + 1)%mNProbePos);
+    //probe grid in "+" pattern:
+    if(mCurProbePos.x == mProbeGridWidth-1){
+        mCurProbePos.x = mProbeGridWidth/2;
+        mCurProbePos.y = 0;
+
+    }
+    else if(mCurProbePos.y == mProbeGridWidth-1){
+        mCurProbePos.x = 0;
+        mCurProbePos.y = mProbeGridWidth/2;
+    }
+    
+        
 
 }
 
@@ -342,7 +357,7 @@ dmspeck SpeckleKalmanPoisson::updateNullingSpeckle(){
         mHList.clear();
 
         //Update Probe amplitude
-        mProbeAmp = std::max(mMinProbeAmp, (1-mNullingGain)*mProbeAmp);
+        //mProbeAmp = std::max(mMinProbeAmp, (1-mNullingGain)*mProbeAmp);
 
     }
 

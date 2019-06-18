@@ -4,7 +4,7 @@ ImgParams
     nRows 146
     nCols 140
     xCenter 70 ;70.005627705627703 ;72.2
-    yCenter 75.2 ;73.274242424242431 ;73
+    yCenter 73.2 ;73.274242424242431 ;73
     lambdaOverD 3.005456495374899
     xCtrlStart -10
     xCtrlEnd 50
@@ -36,7 +36,7 @@ DMParams
 NullingParams
 {
     controller kalmanPoisson
-    integrationTime 5
+    integrationTime 2
     maxSpeckles 1
     speckleWindow 5
     exclusionZone 9
