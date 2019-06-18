@@ -5,7 +5,7 @@ SpeckleKalmanPoisson::SpeckleKalmanPoisson(cv::Point2d pt, boost::property_tree:
     for(int i=0; i<NPHASES; i++)
         mPhaseList[i] = (double)2*M_PI*i/NPHASES;
      
-    mCVFormatter = cv::Formatter::get();
+    mCVFormatter = cv::Formatter::get(cv::Formatter::FMT_PYTHON);
     mCVFormatter->set32fPrecision(2);
     mCVFormatter->set64fPrecision(2);
 
@@ -16,6 +16,7 @@ SpeckleKalmanPoisson::SpeckleKalmanPoisson(cv::Point2d pt, boost::property_tree:
     mCurProbePos = cv::Point2i(mProbeGridWidth/2, mProbeGridWidth/2);
     mDMCalFactor = getDMCalFactorCPS(mKvecs, mParams.get<double>("DMParams.a"), mParams.get<double>("DMParams.b"), 
             mParams.get<double>("DMParams.c"));
+    mDMCalSigma = mParams.get<double>("KalmanParams.calSigma")/(2*mDMCalFactor);
     BOOST_LOG_TRIVIAL(debug) << "SpeckleKalmanPoisson: DMCalFactor: " << mDMCalFactor;
 
     mx = cv::Mat::zeros(2*mNProbePos, 1, CV_64F);
@@ -77,8 +78,8 @@ void SpeckleKalmanPoisson::nonProbeMeasurementUpdate(double intensity, double va
     //probeAmp = std::max(probeAmp, std::sqrt(intensity)*mDMCalFactor);
     if(getNProbeIters()==0)
         mProbeAmp = std::sqrt(intensity)*mDMCalFactor;
-    else
-        mProbeAmp = std::max(probeAmp, mMinProbeAmp);
+    //else
+    //    mProbeAmp = std::max(probeAmp, mMinProbeAmp);
 
     
 
@@ -122,6 +123,7 @@ void SpeckleKalmanPoisson::updateKalmanState(){
     mP = mPi.clone();
     mx.setTo(0);
     cv::Mat S, K, y;
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleKalmanPoisson: propagating filter...";
     for(int i=0; i<mzList.size(); i++){
         mx = mA*mx;
         mP = mA*mP*mA.t() + mQ;
@@ -130,6 +132,16 @@ void SpeckleKalmanPoisson::updateKalmanState(){
         y = mzList[i] - mHList[i]*mx;
         mx = mx + K*y;
         mP = (cv::Mat::eye(mP.rows, mP.cols, CV_64F) - K*mHList[i])*mP;
+        if(mParams.get<bool>("KalmanParams.forceCovariance"))
+            correlateProcessNoise(mP);
+        BOOST_LOG_TRIVIAL(trace) << "     z[" << i << "]: \n" << mCVFormatter->format(mzList[i]);
+        BOOST_LOG_TRIVIAL(trace) << "     H[" << i << "]: \n" << mCVFormatter->format(mHList[i]);
+        BOOST_LOG_TRIVIAL(trace) << "     S[" << i << "]: \n" << mCVFormatter->format(S);
+        BOOST_LOG_TRIVIAL(trace) << "     K[" << i << "]: \n" << mCVFormatter->format(K);
+        BOOST_LOG_TRIVIAL(trace) << "  I-KH[" << i << "]: \n" << mCVFormatter->format(cv::Mat::eye(mP.rows, mP.cols, CV_64F) 
+                - K*mHList[i]);
+        BOOST_LOG_TRIVIAL(trace) << "    mP[" << i << "]: \n" << mCVFormatter->format(mP);
+        BOOST_LOG_TRIVIAL(trace) << "    mx[" << i << "]: \n" << mCVFormatter->format(mx);
 
     }
 
@@ -148,6 +160,7 @@ void SpeckleKalmanPoisson::updateKalmanState(){
     BOOST_LOG_TRIVIAL(trace) << "   Q: \n" << mCVFormatter->format(mQ);
     //BOOST_LOG_TRIVIAL(debug) << "   K: " << mK;
     BOOST_LOG_TRIVIAL(trace) << "   P: " << mCVFormatter->format(mP);
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleKalmanPoisson varEst: " << mR.at<double>(0, 0) << " after " << mHList.size();
     
     mQc.setTo(0);
     
@@ -292,12 +305,15 @@ dmspeck SpeckleKalmanPoisson::updateNullingSpeckle(){
             std::tie(kRow, kCol) = getProbeGridIndices(i);
             kDist = cv::norm(cv::Point2d(nullingSpeck.kx, nullingSpeck.ky) - mProbeGridKvecs.at<cv::Point2d>(kRow, kCol));
             posCorr = std::exp(-kDist*kDist/(4*mKvecCorrSigma*mKvecCorrSigma));
+            BOOST_LOG_TRIVIAL(trace) << "SpeckleKalmanPoisson: posCorr mQc: " << posCorr;
+            BOOST_LOG_TRIVIAL(trace) << "SpeckleKalmanPoisson: mx mQc: " << mx.at<double>(i);
+            BOOST_LOG_TRIVIAL(trace) << "SpeckleKalmanPoisson: mDMCalFactor mQc: " << mDMCalFactor;
 
             realB.at<double>(i) = posCorr; 
             imagB.at<double>(i) = posCorr; 
 
-            realQc.at<double>(i, i) = 4*mNullingGain*std::pow(mx.at<double>(i), 2)*std::pow(mParams.get<double>("KalmanParams.calSigma"), 2)/(mDMCalFactor*mDMCalFactor)*posCorr;
-            imagQc.at<double>(i, i) = 4*mNullingGain*std::pow(mx.at<double>(i + mNProbePos), 2)*std::pow(mParams.get<double>("KalmanParams.calSigma"), 2)/(mDMCalFactor*mDMCalFactor)*posCorr;
+            realQc.at<double>(i, i) = 4*mNullingGain*std::pow(mx.at<double>(i), 2)*mDMCalSigma*mDMCalSigma/(mDMCalFactor*mDMCalFactor)*posCorr;
+            imagQc.at<double>(i, i) = 4*mNullingGain*std::pow(mx.at<double>(i + mNProbePos), 2)*mDMCalSigma*mDMCalSigma/(mDMCalFactor*mDMCalFactor)*posCorr;
 
         }
 
@@ -321,8 +337,12 @@ dmspeck SpeckleKalmanPoisson::updateNullingSpeckle(){
 
         //Update Covariance 
         mP = mP + mQc;
+        mPi = mP.clone();
         mzList.clear();
         mHList.clear();
+
+        //Update Probe amplitude
+        mProbeAmp = std::max(mMinProbeAmp, (1-mNullingGain)*mProbeAmp);
 
     }
 

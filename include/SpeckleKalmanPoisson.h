@@ -22,6 +22,7 @@ class SpeckleKalmanPoisson : public SpeckleController
         double mProbeAmp;
         double mMinProbeAmp;
         double mDMCalFactor;
+        double mDMCalSigma;
         double mNullingGain;
         dmspeck mNextSpeck;
         cv::Ptr<cv::Formatter> mCVFormatter;
