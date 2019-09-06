@@ -37,7 +37,7 @@ class Calibrator(object):
         if speckWin is None:
             speckWin = int(np.ceil(lOverDEst))
 
-        intensityCorrectionImage = sciim.gaussian_filter(self.goodPixMask, lOverDEst*0.42)
+        intensityCorrectionImage = sciim.gaussian_filter(self.goodPixMask.astype(np.float), lOverDEst*0.42)
 
         for i in range(nPoints):
             self.dm.addProbeSpeckle(self.kvecs[i,0], self.kvecs[i,1], amplitude, 0)
@@ -156,14 +156,15 @@ class CalspotGUI(object):
         return self._speckLocs
 
 if __name__=='__main__':
-    cal = Calibrator('dm04disp07', 'DMCalTest0')
+    beammap = Beammap(file='/home/scexao/mkids/20190905/finalMap_20181218.bmap', xydim=(140, 146))
+    cal = Calibrator('dm00disp06', 'mkidshm1', beammap=beammap)
     #create_log(__name__)
     create_log('mkidreadout')
-    cal.run(20, 60, 50, 5, 1, speckWin=5)
+    cal.run(20, 50, 50, 5, 5, speckWin=5)
     cal.calculateCenter()
     cal.calculateLOverD()
     cal.calibrateIntensity()
-    cal.writeToConfig('speckNullConfig.info')
+    cal.writeToConfig('/home/scexao/mkids/20190905/speckNullConfig0.info')
     print 'center:', cal.center
     print 'l/D:', cal.nPixPerLD
     print 'calCoeffs'
