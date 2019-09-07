@@ -27,7 +27,8 @@ class Calibrator(object):
         else:
             self.goodPixMask = np.ones(self.shmImage.shape)
 
-    def run(self, start, end, amplitude, nPoints=10, integrationTime=5, lOverDEst=3, speckWin=None):
+    def run(self, start, end, amplitude, nPoints=10, integrationTime=5, lOverDEst=3, speckWin=None, angle=0):
+        self.rotmat = np.array([[np.cos(angle), -np.sin(angle)], [np.sin(angle), np.cos(angle)]])
         self.kvecs = np.array([np.linspace(start, end, nPoints), np.linspace(start, end, nPoints)]).T
         self.speckLocs = np.zeros((nPoints*2, 2, 2)) #NSpecklepairs x 2 speckles x [x, y]
         self.speckIntensities = np.zeros((nPoints*2, 2)) #NSpecklePairs x 2 speckles
@@ -39,12 +40,19 @@ class Calibrator(object):
 
         intensityCorrectionImage = sciim.gaussian_filter(self.goodPixMask.astype(np.float), lOverDEst*0.42)
 
+        self.shmImage.startIntegration(0, integrationTime)
+        refimage = self.shmImage.receiveImage()
+
         for i in range(nPoints):
-            self.dm.addProbeSpeckle(self.kvecs[i,0], self.kvecs[i,1], amplitude, 0)
-            self.dm.addProbeSpeckle(self.kvecs[i,0], -self.kvecs[i,1], amplitude, 0)
+            k0 = np.matmul(self.rotmat, np.array([self.kvecs[i,0], self.kvecs[i,1]]))
+            k1 = np.matmul(self.rotmat, np.array([self.kvecs[i,0], -self.kvecs[i,1]]))
+            self.dm.addProbeSpeckle(k0[0], k0[1], amplitude, 0)
+            self.dm.addProbeSpeckle(k1[0], k1[1], amplitude, 0)
+            #self.dm.addProbeSpeckle(self.kvecs[i,0], self.kvecs[i,1], amplitude, 0)
+            #self.dm.addProbeSpeckle(self.kvecs[i,0], -self.kvecs[i,1], amplitude, 0)
             self.dm.updateDM()
             self.shmImage.startIntegration(0, integrationTime)
-            image = self.shmImage.receiveImage()
+            image = self.shmImage.receiveImage() - refimage
 
             while(True):
                 calgui = CalspotGUI(image)
@@ -160,11 +168,11 @@ if __name__=='__main__':
     cal = Calibrator('dm00disp06', 'mkidshm1', beammap=beammap)
     #create_log(__name__)
     create_log('mkidreadout')
-    cal.run(20, 50, 50, 5, 5, speckWin=5)
+    cal.run(40, 50, 4, 5, 5, speckWin=5, angle=np.pi/4)
     cal.calculateCenter()
     cal.calculateLOverD()
     cal.calibrateIntensity()
-    cal.writeToConfig('/home/scexao/mkids/20190905/speckNullConfig0.info')
+    cal.writeToConfig('/home/scexao/mkids/20190906/speckNullConfig0_1.info')
     print 'center:', cal.center
     print 'l/D:', cal.nPixPerLD
     print 'calCoeffs'

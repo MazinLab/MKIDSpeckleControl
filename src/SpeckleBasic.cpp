@@ -11,6 +11,8 @@ SpeckleBasic::SpeckleBasic(cv::Point2d pt, boost::property_tree::ptree &cfgParam
     mDMCalFactor = getDMCalFactorCPS(mKvecs, mParams.get<double>("DMParams.a"), mParams.get<double>("DMParams.b"), 
             mParams.get<double>("DMParams.c"));
 
+    mProbeAmp = 0;
+
     BOOST_LOG_TRIVIAL(debug) << "DM Cal Factor: " << mDMCalFactor;
 
 }
