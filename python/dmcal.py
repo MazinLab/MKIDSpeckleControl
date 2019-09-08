@@ -7,10 +7,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os, sys
 import scipy.ndimage as sciim
+import argparse
 
 class Calibrator(object):
 
-    def __init__(self, dmChanName, sharedImageName, useWvl=False, wvlStart=700, wvlStop=1400, beammap=None):
+    def __init__(self, dmChanName, sharedImageName, useWvl=False, wvlStart=700, wvlStop=1400, beammap=None, intensityOnly=False):
+        self.intensityOnly = intensityOnly
         self.dm = speckpy.SpeckleToDM(dmChanName)
         self.shmImage = shm.ImageCube(sharedImageName)
         self.shmImage.useWvl = useWvl
@@ -59,8 +61,11 @@ class Calibrator(object):
                 try:
                     self.speckLocs[i*2:i*2+2, :, :] = calgui.speckLocs
                 except RuntimeError as err:
-                    print err
-                    continue
+                    if self.intensityOnly:
+                        pass
+                    else:
+                        print err
+                        continue
 
                 break
 
@@ -102,12 +107,15 @@ class Calibrator(object):
         goodMask = ~np.isnan(intensities)
         a, b, c = np.polyfit(kMags[goodMask], self.amplitude**2/intensities[goodMask], 2)
 
+        c_only = np.mean(self.amplitude**2/intensities[goodMask])
+
         plt.plot(kMags[goodMask], intensities[goodMask], '.')
         x = np.linspace(kMags[0], kMags[-1])
         plt.plot(x, self.amplitude**2/(a*x**2 + b*x + c))
         plt.show()
 
         self.intensityCal = np.array([a, b, c])
+        self.intensityCalCOnly = c_only
 
     def writeToConfig(self, cfgFn):
         params = speckpy.PropertyTree()
@@ -164,18 +172,25 @@ class CalspotGUI(object):
         return self._speckLocs
 
 if __name__=='__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', '--intensity-only', action='store_true')
+    args = parser.parse_args()
+
     beammap = Beammap(file='/home/scexao/mkids/20190905/finalMap_20181218.bmap', xydim=(140, 146))
-    cal = Calibrator('dm00disp06', 'mkidshm1', beammap=beammap)
+    cal = Calibrator('dm00disp06', 'mkidshm1', beammap=beammap, intensityOnly=args.intensity_onlyj)
     #create_log(__name__)
     create_log('mkidreadout')
-    cal.run(40, 50, 4, 5, 5, speckWin=5, angle=np.pi/4)
-    cal.calculateCenter()
-    cal.calculateLOverD()
+    #cal.run(35/np.sqrt(2), 70/np.sqrt(2), 5, 5, 5, speckWin=5, angle=np.pi/4)
+    cal.run(35, 70, 5, 5, 5, speckWin=5, angle=0)
+    if not args.intensity_only:
+        cal.calculateCenter()
+        cal.calculateLOverD()
     cal.calibrateIntensity()
-    cal.writeToConfig('/home/scexao/mkids/20190906/speckNullConfig0_1.info')
+    cal.writeToConfig('/home/scexao/mkids/20190907/speckNullConfigCoron.info')
     print 'center:', cal.center
     print 'l/D:', cal.nPixPerLD
     print 'calCoeffs'
     print '    a:', cal.intensityCal[0]
     print '    b:', cal.intensityCal[1]
     print '    c:', cal.intensityCal[2]
+    print 'c_only:', cal.intensityCalCOnly
