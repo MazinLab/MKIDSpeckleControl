@@ -5,6 +5,11 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/info_parser.hpp>
 
+#include <boost/log/trivial.hpp>
+#include <boost/log/common.hpp>
+#include <boost/log/utility/setup/file.hpp>
+#include <boost/log/utility/setup/console.hpp>
+
 #include "SpeckleNuller.h"
 #include "PTreeWrapper.h"
 #include "loopFunctions.h"
@@ -55,6 +60,11 @@ void setWarningLog(){
 
 }
 
+void addLogfile(const std::string &logfile){
+    boost::log::add_file_log(logfile);
+
+}
+
 BOOST_PYTHON_MODULE(speckpy){
     bp::class_<SpeckleToDM>("SpeckleToDM", bp::init<const char*>())
         .def("addProbeSpeckle", static_cast<void(SpeckleToDM::*)(double, double, double, double)>(&SpeckleToDM::addProbeSpeckle))
@@ -86,5 +96,6 @@ BOOST_PYTHON_MODULE(speckpy){
     bp::def("setDebugLog", &setDebugLog);
     bp::def("setInfoLog", &setInfoLog);
     bp::def("setWarningLog", &setWarningLog);
+    bp::def("addLogfile", &addLogfile);
 
 }

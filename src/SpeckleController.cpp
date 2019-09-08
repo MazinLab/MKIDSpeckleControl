@@ -67,11 +67,14 @@ std::tuple<double, double> SpeckleController::measureSpeckleIntensityAndSigma(co
     speckleIm = speckleIm.mul(mApertureMask);
     measIntensity = (double)cv::sum(speckleIm)[0]/mIntensityCorrectionFactor*1000/integrationTime;
     measVariance = measIntensity*mIntensityCorrectionFactor/mIntensityCorrectionFactor*1000/integrationTime;
+    //TODO: make this a parameter
+    measVariance = std::max(measVariance, std::pow(std::sqrt(0.5)*1000/integrationTime, 2)); //variance of 0.5 photons in image
 
     BOOST_LOG_TRIVIAL(debug) << "Speckle at " << mCoords << ": intensity :" << measIntensity;
     BOOST_LOG_TRIVIAL(debug) << "Speckle at " << mCoords << ": variance:     " << measVariance;
     BOOST_LOG_TRIVIAL(trace) << "Speckle at " << mCoords << ": image:   \n" << speckleIm;
     BOOST_LOG_TRIVIAL(debug) << "";
+
 
     return std::make_tuple(measIntensity, measVariance);
 
