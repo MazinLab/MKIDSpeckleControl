@@ -1,4 +1,5 @@
 import speckpy
+from mkidcore.readdict import ReadDict
 import mkidreadout.readout.sharedmem as shm
 from mkidcore.corelog import getLogger, create_log
 from mkidcore.objects import Beammap
@@ -11,8 +12,7 @@ import argparse
 
 class Calibrator(object):
 
-    def __init__(self, dmChanName, sharedImageName, useWvl=False, wvlStart=700, wvlStop=1400, beammap=None, intensityOnly=False):
-        self.intensityOnly = intensityOnly
+    def __init__(self, dmChanName, sharedImageName, useWvl=False, wvlStart=700, wvlStop=1400, beammap=None):
         self.dm = speckpy.SpeckleToDM(dmChanName)
         self.shmImage = shm.ImageCube(sharedImageName)
         self.shmImage.useWvl = useWvl
@@ -29,12 +29,47 @@ class Calibrator(object):
         else:
             self.goodPixMask = np.ones(self.shmImage.shape)
 
-    def run(self, start, end, amplitude, nPoints=10, integrationTime=5, lOverDEst=3, speckWin=None, angle=0):
-        self.rotmat = np.array([[np.cos(angle), -np.sin(angle)], [np.sin(angle), np.cos(angle)]])
-        self.kvecs = np.array([np.linspace(start, end, nPoints), np.linspace(start, end, nPoints)]).T
-        self.speckLocs = np.zeros((nPoints*2, 2, 2)) #NSpecklepairs x 2 speckles x [x, y]
-        self.speckIntensities = np.zeros((nPoints*2, 2)) #NSpecklePairs x 2 speckles
-        self.speckIntensities.fill(np.nan)
+    def run(self, start, end, amplitude, nPoints=10, integrationTime=5, lOverDEst=None, speckWin=None, angle=0, calType='full'):
+        calType = calType.lower()
+        assert calType=='full' or calType=='intensity' or calType=='center'
+        self.calType = calType
+
+        if lOverDEst is None:
+            if calType=='center':
+                raise Exception('Must provide l/D for center calibration. If unknown run "full" cal')
+            lOverDEst = 3
+
+        if calType == 'center':
+            self.nPixPerLD = lOverDEst
+            useWaffle = False #only use single pair of speckles for center cal. maybe make this a parameter
+            enforcePairs = False
+
+        elif calType == 'intensity':
+            useWaffle = True
+            enforcePairs = False
+
+        else:
+            useWaffle = True
+            enforcePairs = True
+
+        self.angle = angle
+
+        rotmat = np.array([[np.cos(angle), -np.sin(angle)], [np.sin(angle), np.cos(angle)]])
+
+        if useWaffle:
+            self.kvecs = np.array([np.linspace(start, end, nPoints), np.zeros(nPoints)]).T
+            self.kvecs = np.stack((self.kvecs, np.array([np.zeros(nPoints), np.linspace(start, end, nPoints)]).T), axis=1)
+            self.kvecs = np.matmul(rotmat, self.kvecs).transpose((0, 2, 1)) #dims are (nPoints, 2 kvecs per point, 2 coords per kvec)
+            self.speckLocs = np.zeros((nPoints*2, 2, 2)) #NSpecklepairs x 2 speckles x [x, y]
+            self.speckIntensities = np.zeros((nPoints*2, 2)) #NSpecklePairs x 2 speckles
+            self.speckIntensities.fill(np.nan)
+        else:
+            self.kvecs = np.array([np.linspace(start, end, nPoints), np.zeros(nPoints)])
+            self.kvecs = np.matmul(rotmat, self.kvecs).T #dims are (nPoints, 2 coords per kvec)
+            self.speckLocs = np.zeros((nPoints, 2, 2)) #NSpecklePairs x 2 speckles 2 [x, y]
+            self.speckIntensities = np.zeros((nPoints, 2))
+            self.speckIntensities.fill(np.nan)
+
         self.amplitude = amplitude
 
         if speckWin is None:
@@ -46,45 +81,73 @@ class Calibrator(object):
         refimage = self.shmImage.receiveImage()
 
         for i in range(nPoints):
-            k0 = np.matmul(self.rotmat, np.array([self.kvecs[i,0], self.kvecs[i,1]]))
-            k1 = np.matmul(self.rotmat, np.array([self.kvecs[i,0], -self.kvecs[i,1]]))
-            self.dm.addProbeSpeckle(k0[0], k0[1], amplitude, 0)
-            self.dm.addProbeSpeckle(k1[0], k1[1], amplitude, 0)
-            #self.dm.addProbeSpeckle(self.kvecs[i,0], self.kvecs[i,1], amplitude, 0)
-            #self.dm.addProbeSpeckle(self.kvecs[i,0], -self.kvecs[i,1], amplitude, 0)
+            if useWaffle:
+                k0 = self.kvecs[i, 0]
+                k1 = self.kvecs[i, 1]
+                self.dm.addProbeSpeckle(k0[0], k0[1], amplitude, 0)
+                self.dm.addProbeSpeckle(k1[0], k1[1], amplitude, 0)
+            else:
+                self.dm.addProbeSpeckle(self.kvecs[i,0], self.kvecs[i,1], amplitude, 0)
+
             self.dm.updateDM()
             self.shmImage.startIntegration(0, integrationTime)
             image = self.shmImage.receiveImage() - refimage
 
             while(True):
-                calgui = CalspotGUI(image)
+                calgui = CalspotGUI(image, enforcePairs=enforcePairs, 2+2*useWaffle)
                 try:
-                    self.speckLocs[i*2:i*2+2, :, :] = calgui.speckLocs
-                except RuntimeError as err:
-                    if self.intensityOnly:
-                        pass
+                    if useWaffle:
+                        self.speckLocs[i*2:i*2+2, :, :] = calgui.speckLocs
                     else:
-                        print err
-                        continue
+                        self.speckLocs[i, :, :] = calgui.speckLocs
+                except RuntimeError as err:
+                    print err
+                    continue
 
                 break
 
             self.dm.clearProbeSpeckles()
 
             #image = image/intensityCorrectionImage
-            for j in range(4):
-                y = self.speckLocs[i*2 + j/2, j%2, 0]
-                x = self.speckLocs[i*2 + j/2, j%2, 1]
-                if ~np.isnan(x) and ~np.isnan(y):
-                    self.speckIntensities[i*2 + j/2, j%2] = np.sum(image[int(y - np.floor(speckWin/2.)) : int(y + np.ceil(speckWin/2.)), 
-                                             int(x - np.floor(speckWin/2.)) : int(x + np.ceil(speckWin/2.))])/(intensityCorrectionImage[int(y), int(x)]*integrationTime)
+            if useWaffle:
+                for j in range(4):
+                    y = self.speckLocs[i*2 + j/2, j%2, 0]
+                    x = self.speckLocs[i*2 + j/2, j%2, 1]
+                    if ~np.isnan(x) and ~np.isnan(y):
+                        self.speckIntensities[i*2 + j/2, j%2] = np.sum(image[int(y - np.floor(speckWin/2.)) : int(y + np.ceil(speckWin/2.)), 
+                                                 int(x - np.floor(speckWin/2.)) : int(x + np.ceil(speckWin/2.))])/(intensityCorrectionImage[int(y), int(x)]*integrationTime)
+            else:
+                for j in range(2):
+                    y = self.speckLocs[i, j, 0]
+                    x = self.speckLocs[i, j, 1]
+                    if ~np.isnan(x) and ~np.isnan(y):
+                        self.speckIntensities[i*2 + j/2, j%2] = np.sum(image[int(y - np.floor(speckWin/2.)) : int(y + np.ceil(speckWin/2.)), 
+                                                 int(x - np.floor(speckWin/2.)) : int(x + np.ceil(speckWin/2.))])/(intensityCorrectionImage[int(y), int(x)]*integrationTime)
 
         self.dm.updateDM()
+        if self.calType == 'full':
+            self.calculateLOverD()
+            self.calculateCenter()
+            self.calibrateIntensity()
+        elif self.calType == 'center':
+            self.calculateCenter()
+            self.calibrateIntensity
+        else:
+            self.calibrateIntensity()
+
 
 
 
     def calculateCenter(self):
-        self.center = np.nanmean(self.speckLocs, axis=(0,1))
+        if self.calType == 'full':
+            self.center = np.nanmean(self.speckLocs, axis=(0,1))
+        else:
+            kMags = np.sqrt(self.kvecs[:, 0]**2 + self.kvecs[:, 1]**2)
+            goodLocMask = ~np.isnan(self.speckLocs) #n k-points, 2 specks each, [x, y]
+            goodKMask = np.sum(goodLocMask, axis=1)
+            assert goodKMask[:, 0] == goodKMask[:, 1] #y should be good iff x is good
+            goodKMask = goodKMask[:, 0]
+            #pixLocs = self.speckLocs/self.nPixPerLD
 
     def calculateLOverD(self):
         pairDiffs = np.diff(self.speckLocs, axis=1)
@@ -120,9 +183,10 @@ class Calibrator(object):
     def writeToConfig(self, cfgFn):
         params = speckpy.PropertyTree()
         params.read_info(cfgFn)
-        params.put('ImgParams.xCenter', self.center[1])
-        params.put('ImgParams.yCenter', self.center[0])
-        params.put('ImgParams.lambdaOverD', self.nPixPerLD)
+        if not self.intensityOnly:
+            params.put('ImgParams.xCenter', self.center[1])
+            params.put('ImgParams.yCenter', self.center[0])
+            params.put('ImgParams.lambdaOverD', self.nPixPerLD)
         params.put('DMParams.a', self.intensityCal[0])
         params.put('DMParams.b', self.intensityCal[1])
         params.put('DMParams.c', self.intensityCal[2])
@@ -133,12 +197,14 @@ class Calibrator(object):
 
 class CalspotGUI(object):
     
-    def __init__(self, image):
-        self._speckLocs = np.zeros((2, 2, 2)) # nPairs x 2 specks/pair x 2 coords/speck
+    def __init__(self, image, enforcePairs=True, nPairs=2):
+        self._speckLocs = np.zeros((nPairs, 2, 2)) # nPairs x 2 specks/pair x 2 coords/speck
         self._speckLocs.fill(np.nan)
         self.fig = plt.figure(figsize=(10,10))
         self.ax = self.fig.add_subplot(111)
         self.ax.imshow(image)
+        self.enforcePairs = enforcePairs
+        self.nPairs = nPairs
 
         print 'Click on the first speckle pair. (speckles in pair are across eachother from psf)'
         print 'Press r at any time to clear speckle locs and start over'
@@ -167,28 +233,29 @@ class CalspotGUI(object):
     @property
     def speckLocs(self):
         for i in range(2):
-            if not(np.all(np.isnan(self._speckLocs[i])) or np.all(~np.isnan(self._speckLocs[i]))):
+            if not(np.all(np.isnan(self._speckLocs[i])) or np.all(~np.isnan(self._speckLocs[i]))) and self.enforcePairs:
                 raise RuntimeError('Must click a conjugate pair for each identified speckle! Restarting...')
         return self._speckLocs
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-i', '--intensity-only', action='store_true')
+    parser.add_argument('-c', '--config', default=None)
     args = parser.parse_args()
 
-    beammap = Beammap(file='/home/scexao/mkids/20190905/finalMap_20181218.bmap', xydim=(140, 146))
-    cal = Calibrator('dm00disp06', 'mkidshm1', beammap=beammap, intensityOnly=args.intensity_onlyj)
-    #create_log(__name__)
+    config = ReadDict(file=args.config)
+    if config['beammap']:
+        beammap = Beammap(file=config['beammap'])
+    else:
+        beammap = None
+
+    cal = Calibrator(config['dmChannel'], config['imageName'], beammap=beammap, intensityOnly=args.intensity_only)
     create_log('mkidreadout')
-    #cal.run(35/np.sqrt(2), 70/np.sqrt(2), 5, 5, 5, speckWin=5, angle=np.pi/4)
-    cal.run(35, 70, 5, 5, 5, speckWin=5, angle=0)
+    cal.run(config['startK'], config['stopK'], config['dmAmp'], config['nPoints'], config['integrationTime'], speckWin=5, angle=config['angle'])
     if not args.intensity_only:
-        cal.calculateCenter()
-        cal.calculateLOverD()
-    cal.calibrateIntensity()
-    cal.writeToConfig('/home/scexao/mkids/20190907/speckNullConfigCoron.info')
-    print 'center:', cal.center
-    print 'l/D:', cal.nPixPerLD
+        print 'center:', cal.center
+        print 'l/D:', cal.nPixPerLD
+        if config['outputConfig']:
+            cal.writeToConfig(config['outputConfig'])
     print 'calCoeffs'
     print '    a:', cal.intensityCal[0]
     print '    b:', cal.intensityCal[1]
