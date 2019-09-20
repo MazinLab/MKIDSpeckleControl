@@ -3,17 +3,17 @@ ImgParams
     name DMCalTest0
     nRows 146
     nCols 140
-    xCenter 70 ;70.005627705627703 ;72.2
-    yCenter 73.2 ;73.274242424242431 ;73
+    xCenter 70 ;68.5 ;70.005627705627703 ;72.2
+    yCenter 73.2 ;75.2 ;73.274242424242431 ;73
     lambdaOverD 3.005456495374899
-    xCtrlStart -10
+    xCtrlStart 0
     xCtrlEnd 50
     yCtrlStart -30
     yCtrlEnd 50
     useWvl false
     wvlStart 700
     wvlStop 1200
-    useBadPixMask false
+    useBadPixMask true
     beammapFile asdkf
     wvlSolFile asdffd
     badPixMaskFile /home/neelay/data/20190514/finalMap_20181218_badPixMask.bin
@@ -53,9 +53,9 @@ KalmanParams
 {
     probeGridWidth 3
     probeGridSpacing 3.1415
-    pgEps 0.3
+    pgEps 0.1
     minProbeAmp 0
-    snrThresh 5
+    snrThresh 4
     processNoiseVar 00
     initStateVar 300
     useConstantR false

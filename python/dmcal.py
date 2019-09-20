@@ -5,6 +5,7 @@ from mkidcore.corelog import getLogger, create_log
 from mkidcore.objects import Beammap
 
 import numpy as np
+import numpy.linalg as npl
 import matplotlib.pyplot as plt
 import os, sys
 import scipy.ndimage as sciim
@@ -60,7 +61,7 @@ class Calibrator(object):
             self.kvecs = np.array([np.linspace(start, end, nPoints), np.zeros(nPoints)]).T
             self.kvecs = np.stack((self.kvecs, np.array([np.zeros(nPoints), np.linspace(start, end, nPoints)]).T), axis=1)
             self.kvecs = np.matmul(rotmat, self.kvecs).transpose((0, 2, 1)) #dims are (nPoints, 2 kvecs per point, 2 coords per kvec)
-            self.speckLocs = np.zeros((nPoints*2, 2, 2)) #NSpecklepairs x 2 speckles x [x, y]
+            self.speckLocs = np.zeros((nPoints*2, 2, 2)) #2NSpecklepairs x 2 speckles x [x, y]
             self.speckIntensities = np.zeros((nPoints*2, 2)) #NSpecklePairs x 2 speckles
             self.speckIntensities.fill(np.nan)
         else:
@@ -141,13 +142,39 @@ class Calibrator(object):
     def calculateCenter(self):
         if self.calType == 'full':
             self.center = np.nanmean(self.speckLocs, axis=(0,1))
-        else:
+        elif self.calType == 'center':
             kMags = np.sqrt(self.kvecs[:, 0]**2 + self.kvecs[:, 1]**2)
-            goodLocMask = ~np.isnan(self.speckLocs) #n k-points, 2 specks each, [x, y]
+            goodLocMask = ~np.isnan(self.speckLocs)[:,:,0] #n k-points, 2 specks each, [x, y]
             goodKMask = np.sum(goodLocMask, axis=1)
-            assert goodKMask[:, 0] == goodKMask[:, 1] #y should be good iff x is good
-            goodKMask = goodKMask[:, 0]
+
+            goodKInds = np.where(goodKMask)[0]
+            goodLocInds = np.where(goodLocMask)[0]
+            pairLocMask = np.nan*np.ones((self.speckLocs.shape[:2])) #which speckle in pair is it
+            firstSpeck = self.speckLocs[goodLocInds[0]]
+            pairLocMask[goodLocInds[0]] = 1
+            
+            for i, ind in enumerate(goodKInds):
+                if np.sum(goodLocMask[ind]) == 2: #two good speckles at this k
+                    closestSpeck = np.argmin(npl.norm(self.speckLocs[ind, 0] - firstSpeck), npl.norm(self.speckLocs[ind, 1] - firstSpeck))
+                    pairLocMask[ind, closestSpeck] = 1
+                    pairLocMask[ind, closestSpeck-1] = -1
+                elif np.sum(goodLocMask[ind]) == 1:
+                    expectedDiff = self.nPixPerLD*(kMags[goodKInds[0]] - kMags[ind])/(2*np.pi) #expected pixel delta 
+                    diff = npl.norm(self.speckLocs[ind][goodLocMask[ind]] - firstSpeck)
+                    if diff > 2*expectedDiff:
+                        self.pairLocMask[ind, np.where(goodLocMask[ind])[0]] = -1
+                    else:
+                        self.pairLocMask[ind, np.where(goodLocMask[ind])[0]] = 1
+                else:
+                    raise Exception
+            
+            
+            
+
+                
             #pixLocs = self.speckLocs/self.nPixPerLD
+        else:
+            raise Exception('NO! :/')
 
     def calculateLOverD(self):
         pairDiffs = np.diff(self.speckLocs, axis=1)
