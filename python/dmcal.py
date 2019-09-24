@@ -95,7 +95,7 @@ class Calibrator(object):
             image = self.shmImage.receiveImage() - refimage
 
             while(True):
-                calgui = CalspotGUI(image, enforcePairs=enforcePairs, 2+2*useWaffle)
+                calgui = CalspotGUI(image, enforcePairs=enforcePairs, nPairs=1+useWaffle)
                 try:
                     if useWaffle:
                         self.speckLocs[i*2:i*2+2, :, :] = calgui.speckLocs
@@ -275,9 +275,10 @@ if __name__=='__main__':
     else:
         beammap = None
 
-    cal = Calibrator(config['dmChannel'], config['imageName'], beammap=beammap, intensityOnly=args.intensity_only)
+    cal = Calibrator(config['dmChannel'], config['imageName'], beammap=beammap)
     create_log('mkidreadout')
-    cal.run(config['startK'], config['stopK'], config['dmAmp'], config['nPoints'], config['integrationTime'], speckWin=5, angle=config['angle'])
+    cal.run(config['startK'], config['stopK'], config['dmAmp'], config['nPoints'], config['integrationTime'], speckWin=5, 
+            angle=config['angle'], calType=config['type'])
     if not args.intensity_only:
         print 'center:', cal.center
         print 'l/D:', cal.nPixPerLD
