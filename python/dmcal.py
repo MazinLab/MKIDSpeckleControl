@@ -1,3 +1,18 @@
+"""
+Cal script for MKIDS/SCEXAO interface. Uses python interfaces to MKID shared memory stream and 
+CACAO DM channels. Calibrates PSF center, lambda/D, and DM amplitude -> intensity on detector.
+Angle is assumed to be 0. Configuration parameters are specified in file (see dmcal_example.cfg). 
+Modes:
+    full - uses waffle to calibrate center, intensity, and l/D. Must click on speckles in
+        pairs that are across each other.
+    center - uses a single speckle pair for calibration. Useful for center cal when PSF is
+        off or one one side of the array. Use with caution, code is complicated and might have bugs.
+    intensity - uses waffle for intensity cal only. Speckle pair restriction from "full" mode
+        not enforced.
+
+"""
+
+
 import speckpy
 from mkidcore.readdict import ReadDict
 import mkidreadout.readout.sharedmem as shm
