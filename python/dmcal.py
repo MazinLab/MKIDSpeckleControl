@@ -37,7 +37,7 @@ class Calibrator(object):
 
         if lOverDEst is None:
             if calType=='center':
-                raise Exception('Must provide l/D for center calibration. If unknown run "full" cal')
+                raise Exception('Must provide l/D estimate for center calibration. If unknown run "full" cal')
             lOverDEst = 3
 
         if calType == 'center':
@@ -196,12 +196,7 @@ class Calibrator(object):
             print centerLocs1
             print centerLocs2
             self.center = (np.mean(centerLocs1, axis=0)*nPairs1 + np.mean(centerLocs2, axis=0)*nPairs2)/(nPairs1 + nPairs2)
-
-            
-            
-            
-            
-
+            self.nPixPerLD = npl.norm(nPixPerKVect)*(2*np.pi)
                 
             #pixLocs = self.speckLocs/self.nPixPerLD
         else:
