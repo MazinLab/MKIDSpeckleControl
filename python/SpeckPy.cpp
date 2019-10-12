@@ -23,10 +23,10 @@ boost::property_tree::ptree extractPropertyTree(bp::object pytree){
 
 }
 
-bp::list run(int nIters, bp::object pyparams, bool returnLC=false){
+bp::list run(int nIters, bp::object pyparams, bool returnLC=false, bool useAbsTiming=false){
     boost::property_tree::ptree params = extractPropertyTree(pyparams);
     //std::cout << params.get<std::string>("ImgParams.name") << std::endl;
-    std::vector<int> lightCurve = loopfunctions::runLoop(nIters, params, returnLC);
+    std::vector<int> lightCurve = loopfunctions::runLoop(nIters, params, returnLC, useAbsTiming);
 
     bp::list lcList;
 
@@ -38,7 +38,10 @@ bp::list run(int nIters, bp::object pyparams, bool returnLC=false){
 }
 
 bp::list runNoLC(int nIters, bp::object pyparams){
-    return run(nIters, pyparams, false);}
+    return run(nIters, pyparams, false, false);}
+
+bp::list runRelTiming(int nIters, bp::object pyparams, bool returnLC){
+    return run(nIters, pyparams, returnLC, false);}
 
 void setTraceLog(){
     boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::trace);
@@ -92,6 +95,7 @@ BOOST_PYTHON_MODULE(speckpy){
 
     bp::def("runLoop", &run);
     bp::def("runLoop", &runNoLC);
+    bp::def("runLoop", &runRelTiming);
     bp::def("setTraceLog", &setTraceLog);
     bp::def("setDebugLog", &setDebugLog);
     bp::def("setInfoLog", &setInfoLog);
