@@ -4,10 +4,10 @@ from mkidcore.objects import Beammap
 from mkidpipeline.calibration.wavecal import Solution
 
 def saveBadPixBin(beammap, wvlSol=None, hotPixMask=None):
-    if hotPixMask is not None:
-        raise NotImplementedError('Hot pix masking not yet immplemented')
     resIDMap = beammap.residmap
     badPixMask = beammap.failmask
+    if hotPixMask is not None:
+        badPixMask |= hotPixMask.astype(bool)
 
     if wvlSol:
         for r in resIDMap.shape[0]:

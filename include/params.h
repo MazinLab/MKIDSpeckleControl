@@ -4,7 +4,7 @@
 **/
 
 //IMAGE PARAMS
-#define TSOFFS 1514764800 //difference between UTC timestamp and Jan 1 2018
+#define TSOFFS 1546300800 //difference between UTC timestamp and Jan 1 2018
 
 //NULLING PARAMS
 #define NPHASES 4

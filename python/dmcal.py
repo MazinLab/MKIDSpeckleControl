@@ -313,7 +313,7 @@ if __name__=='__main__':
 
     config = ReadDict(file=args.config)
     if config['beammap']:
-        beammap = Beammap(file=config['beammap'])
+        beammap = Beammap(file=config['beammap'], xydim=(140,146))
     else:
         beammap = None
 
