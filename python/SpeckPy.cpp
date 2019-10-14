@@ -9,6 +9,11 @@
 #include <boost/log/common.hpp>
 #include <boost/log/utility/setup/file.hpp>
 #include <boost/log/utility/setup/console.hpp>
+#include <boost/log/expressions.hpp>
+#include <boost/log/sources/severity_logger.hpp>
+#include <boost/log/utility/setup/common_attributes.hpp>
+#include <boost/log/support/date_time.hpp>
+#include <boost/date_time/posix_time/posix_time_types.hpp>
 
 #include "SpeckleNuller.h"
 #include "PTreeWrapper.h"
@@ -64,7 +69,23 @@ void setWarningLog(){
 }
 
 void addLogfile(const std::string &logfile){
-    boost::log::add_file_log(logfile);
+    boost::log::core::get()->remove_all_sinks();
+    boost::log::add_common_attributes();
+    boost::log::add_file_log(
+            boost::log::keywords::file_name = logfile,
+            boost::log::keywords::format = 
+                (boost::log::expressions::stream << "[" <<
+                    boost::log::expressions::format_date_time<boost::posix_time::ptime>("TimeStamp", "%Y-%m-%d %H:%M:%S")
+                    << "][" << boost::log::trivial::severity << "]: " << boost::log::expressions::smessage)
+            
+            );
+
+    boost::log::add_console_log(std::cout,  
+            boost::log::keywords::format = 
+                (boost::log::expressions::stream << "[" <<
+                    boost::log::expressions::format_date_time<boost::posix_time::ptime>("TimeStamp", "%Y-%m-%d %H:%M:%S")
+                    << "][" << boost::log::trivial::severity << "]: " << boost::log::expressions::smessage)
+            );
 
 }
 
