@@ -308,7 +308,7 @@ class CalspotGUI(object):
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--config', default=None)
+    parser.add_argument('-c', '--config', default=None, help='config file for cal (NOT speckNullConfig.info)')
     args = parser.parse_args()
 
     config = ReadDict(file=args.config)
