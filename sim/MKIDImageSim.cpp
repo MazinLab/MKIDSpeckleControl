@@ -44,7 +44,7 @@ class MKIDImageSim{
         
         // dmImShm: cv::Mat wrapper around DM shared memory buffer
         // integrationTime: in ms
-        cv::Mat convertDMToFP(const cv::Mat &dmImShm, int integrationTime, bool addNoise=true){
+        cv::Mat convertDMToFP(const cv::Mat &dmImShm, int integrationTime, bool addNoise=true, int cpsBackground=0){
             int ppRows = (int)dmImShm.rows*nPixPerLD;
             int ppCols = (int)dmImShm.cols*nPixPerLD;
             if((ppRows < fpRows) || (ppCols < fpCols)){
@@ -104,6 +104,8 @@ class MKIDImageSim{
             fpIm = fpIm*integrationTime/1000; //int time in ms, convert fpIm from CPS to counts
             if(addNoise)
                 addPoissonNoise(fpIm);
+            if(cpsBackground > 0)
+                addPoissonBackground(fpIm, (double)cpsBackground*integrationTime/1000); 
             cv::Mat fpImOut(ppRows, ppCols, CV_32S);
             fpIm.convertTo(fpImOut, CV_32S);
             fpImOut = cv::Mat(fpImOut, cv::Range(ppRows/2 - fpRows/2, ppRows/2 + fpRows/2), 
@@ -123,6 +125,17 @@ class MKIDImageSim{
             fpIm.forEach<float>([this, &generator](float &value, const int *position) -> void {
                     std::poisson_distribution<int> dist(value);
                     value = (float)dist(generator);
+
+                });
+
+        }
+
+        void addPoissonBackground(cv::Mat &fpIm, double counts){
+            std::default_random_engine generator; 
+
+            fpIm.forEach<float>([this, counts, &generator](float &value, const int *position) -> void {
+                    std::poisson_distribution<int> dist(counts);
+                    value += (float)dist(generator);
 
                 });
 

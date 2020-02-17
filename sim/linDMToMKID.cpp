@@ -13,7 +13,7 @@
 
 
 int main(int argc, char* argv[]){
-    char dmShmImName[80] = "dm04disp";
+    char dmShmImName[80] = "dm00disp";
     char mkidShmName[80] = "DMCalTest0";
     char badPixMask[200] = "/home/neelay/data/20190514/finalMap_20181218_badPixMask.bin";
     int fpNRows;
@@ -71,7 +71,7 @@ int main(int argc, char* argv[]){
 
         if(takingImage){
             BOOST_LOG_TRIVIAL(debug) << "Grabbing data from DM...";
-            fpImMat += mkid.convertDMToFP(dmImMat, fpShmIm.md->integrationTime/(2*nIntegrations));
+            fpImMat += mkid.convertDMToFP(dmImMat, fpShmIm.md->integrationTime/(2*nIntegrations), true, 100);
             intCounter++;
             if(intCounter==nIntegrations){
                 BOOST_LOG_TRIVIAL(debug) << "Done with image";

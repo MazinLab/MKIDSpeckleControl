@@ -75,7 +75,7 @@ void addLogfile(const std::string &logfile){
             boost::log::keywords::file_name = logfile,
             boost::log::keywords::format = 
                 (boost::log::expressions::stream << "[" <<
-                    boost::log::expressions::format_date_time<boost::posix_time::ptime>("TimeStamp", "%Y-%m-%d %H:%M:%S")
+                    boost::log::expressions::format_date_time<boost::posix_time::ptime>("TimeStamp", "%Y-%m-%d %H:%M:%S.%f")
                     << "][" << boost::log::trivial::severity << "]: " << boost::log::expressions::smessage)
             
             );
@@ -83,7 +83,7 @@ void addLogfile(const std::string &logfile){
     boost::log::add_console_log(std::cout,  
             boost::log::keywords::format = 
                 (boost::log::expressions::stream << "[" <<
-                    boost::log::expressions::format_date_time<boost::posix_time::ptime>("TimeStamp", "%Y-%m-%d %H:%M:%S")
+                    boost::log::expressions::format_date_time<boost::posix_time::ptime>("TimeStamp", "%Y-%m-%d %H:%M:%S.%f")
                     << "][" << boost::log::trivial::severity << "]: " << boost::log::expressions::smessage)
             );
 
