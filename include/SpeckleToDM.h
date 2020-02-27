@@ -22,6 +22,7 @@ class SpeckleToDM
         cv::Mat probeMap;
         cv::Mat nullMap;
         cv::Mat fullMapShm; //wrapper around shm image of DM channel
+        cv::Mat tempMap;
 
         DMChannel dmChannel;
         int dmXSize;

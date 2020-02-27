@@ -4,7 +4,8 @@ SpeckleToDM::SpeckleToDM(const char dmChanName[80], bool _usenm) : dmChannel(dmC
     dmXSize = dmChannel.getXSize();
     dmYSize = dmChannel.getYSize();
     fullMapShm = cv::Mat(dmYSize, dmXSize, CV_32F, dmChannel.getBufferPtr<float>());
-    
+
+    tempMap = cv::Mat::zeros(dmYSize, dmXSize, CV_32F); 
     probeMap = cv::Mat(dmYSize, dmXSize, CV_32F);
     nullMap = cv::Mat(dmYSize, dmXSize, CV_32F);
     probeMap.setTo(0);
@@ -73,8 +74,8 @@ cv::Mat SpeckleToDM::generateMapFromSpeckle(const cv::Point2d kvecs, double amp,
     if(usenm)
         amp /= 1000; // dm channel is in um stroke
     float phx, phy;
-    cv::Mat map = cv::Mat::zeros(dmYSize, dmXSize, CV_32F);
-    map.forEach<Pixel>([this, &phx, &phy, amp, phase, &kvecs](Pixel &value, const int *position) -> void
+    //tempMap.setTo(0);
+    tempMap.forEach<Pixel>([this, &phx, &phy, amp, phase, &kvecs](Pixel &value, const int *position) -> void
         { phy = (double)(((1.0/this->dmYSize)*position[0]-0.5)*kvecs.y);
           phx = (double)(((1.0/this->dmXSize)*position[1]-0.5)*kvecs.x);
           value = (float)amp*std::cos(phx + phy + phase);
@@ -82,7 +83,7 @@ cv::Mat SpeckleToDM::generateMapFromSpeckle(const cv::Point2d kvecs, double amp,
         });
     
     
-    return map;
+    return tempMap;
 
 }
 
