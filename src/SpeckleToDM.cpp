@@ -74,13 +74,23 @@ cv::Mat SpeckleToDM::generateMapFromSpeckle(const cv::Point2d kvecs, double amp,
     if(usenm)
         amp /= 1000; // dm channel is in um stroke
     float phx, phy;
-    //tempMap.setTo(0);
+    tempMap.setTo(0);
     tempMap.forEach<Pixel>([this, &phx, &phy, amp, phase, &kvecs](Pixel &value, const int *position) -> void
         { phy = (double)(((1.0/this->dmYSize)*position[0]-0.5)*kvecs.y);
           phx = (double)(((1.0/this->dmXSize)*position[1]-0.5)*kvecs.x);
           value = (float)amp*std::cos(phx + phy + phase);
 
         });
+
+    //int r, c;
+
+    //for(r=0; r<dmYSize; r++)
+    //    for(c=0; c<dmXSize; c++){
+    //        phy = (double)(((1.0/this->dmYSize)*r-0.5)*kvecs.y);
+    //        phx = (double)(((1.0/this->dmXSize)*c-0.5)*kvecs.x);
+    //        tempMap.at<Pixel>(r, c) = (float)amp*std::cos(phx + phy + phase);
+
+    //    }
     
     
     return tempMap;
