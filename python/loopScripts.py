@@ -27,3 +27,4 @@ def runLoop(cfgFile, nIters, logLevel='info'):
     plt.savefig(str(startTs)+'.png')
     np.savez(str(startTs)+'.npz', lc=lc, t=t)
     pt.write(str(startTs)+'.info')
+    return t, lc
