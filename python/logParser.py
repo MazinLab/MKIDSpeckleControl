@@ -93,7 +93,7 @@ if __name__=='__main__':
 
     print 'total time: {}'.format((tend - tstart).total_seconds())
     for step in iterSteps:
-        print '{}: {}'.format(step.name, np.mean(step.tList))
+        print '{}: {} per iter'.format(step.name, np.mean(step.tList))
         plt.plot(step.tList, label=step.name)
     #plt.plot(tList)
     plt.legend()

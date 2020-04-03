@@ -7,6 +7,9 @@
 #ifndef SPECKLETODM_H
 #define SPECKLETODM_H
 
+#define DM_X_SIZE 50
+#define DM_Y_SIZE 50
+
 typedef float Pixel; //needed for DM map lambda function
 
 /*
@@ -22,6 +25,10 @@ class SpeckleToDM
         cv::Mat probeMap;
         cv::Mat nullMap;
         cv::Mat fullMapShm; //wrapper around shm image of DM channel
+        float probeMapBuf[DM_X_SIZE*DM_Y_SIZE];
+        float nullMapBuf[DM_X_SIZE*DM_Y_SIZE];
+        float tempMapBuf[DM_X_SIZE*DM_Y_SIZE];
+        
         cv::Mat tempMap;
 
         DMChannel dmChannel;
@@ -33,7 +40,7 @@ class SpeckleToDM
         boost::property_tree::ptree cfgParams;
 
         //Methods:
-        cv::Mat generateMapFromSpeckle(const cv::Point2d kvecs, double amp, double phase);
+        void generateMapFromSpeckle(const cv::Point2d kvecs, double amp, double phase, cv::Mat &map);
 
     public:
         
