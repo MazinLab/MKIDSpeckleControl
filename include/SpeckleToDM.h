@@ -22,25 +22,25 @@ class SpeckleToDM
     private:
         std::vector<dmspeck> probeSpeckles; //not used
         std::vector<dmspeck> nullingSpeckles; //not used
-        cv::Mat probeMap;
-        cv::Mat nullMap;
-        cv::Mat fullMapShm; //wrapper around shm image of DM channel
-        float probeMapBuf[DM_X_SIZE*DM_Y_SIZE];
-        float nullMapBuf[DM_X_SIZE*DM_Y_SIZE];
-        float tempMapBuf[DM_X_SIZE*DM_Y_SIZE];
+        //cv::Mat probeMap;
+        //cv::Mat nullMap;
+        float *fullMapShm; //wrapper around shm image of DM channel
+        float probeMap[DM_X_SIZE*DM_Y_SIZE];
+        float nullMap[DM_X_SIZE*DM_Y_SIZE];
+        float tempMap[DM_X_SIZE*DM_Y_SIZE];
         
-        cv::Mat tempMap;
+        //cv::Mat tempMap;
 
         DMChannel dmChannel;
-        int dmXSize;
-        int dmYSize;
+        //int dmXSize;
+        //int dmYSize;
 
         bool usenm;
 
         boost::property_tree::ptree cfgParams;
 
         //Methods:
-        void generateMapFromSpeckle(const cv::Point2d kvecs, double amp, double phase, cv::Mat &map);
+        void generateMapFromSpeckle(const cv::Point2d kvecs, double amp, double phase, float *map);
 
     public:
         

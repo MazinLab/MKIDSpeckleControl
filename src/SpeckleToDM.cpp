@@ -1,21 +1,18 @@
 #include "SpeckleToDM.h"
 
 SpeckleToDM::SpeckleToDM(const char dmChanName[80], bool _usenm) : dmChannel(dmChanName), usenm(_usenm){
-    dmXSize = dmChannel.getXSize();
-    dmYSize = dmChannel.getYSize();
-    if((dmXSize != DM_X_SIZE) or (dmXSize != DM_X_SIZE))
+    if((dmChannel.getXSize() != DM_X_SIZE) or (dmChannel.getYSize() != DM_X_SIZE))
         throw;
 
-    fullMapShm = cv::Mat(dmYSize, dmXSize, CV_32F, dmChannel.getBufferPtr<float>());
+    fullMapShm = dmChannel.getBufferPtr<float>();
 
-    tempMap = cv::Mat(dmYSize, dmXSize, CV_32F, tempMapBuf); 
-    probeMap = cv::Mat(dmYSize, dmXSize, CV_32F, probeMapBuf);
-    nullMap = cv::Mat(dmYSize, dmXSize, CV_32F, nullMapBuf);
-    probeMap.setTo(0);
-    nullMap.setTo(0);
 
 }
 
+void setMapToZero(float *map){
+    memset(map, 0, DM_X_SIZE*DM_Y_SIZE*sizeof(float));
+
+}
 
 void SpeckleToDM::addProbeSpeckle(cv::Point2d kvecs, double amp, double phase)
 {
@@ -51,28 +48,31 @@ void SpeckleToDM::addNullingSpeckle(double kx, double ky, double amp, double pha
 
 void SpeckleToDM::clearProbeSpeckles()
 {
-    probeMap.setTo(0);
+    setMapToZero(probeMap);
     BOOST_LOG_TRIVIAL(debug) << "SpeckleToDM " << dmChannel.getName() << ": Clearing probe speckles";
 
 }
 
 void SpeckleToDM::clearNullingSpeckles()
 {
-    nullMap.setTo(0);
+    setMapToZero(nullMap);
     BOOST_LOG_TRIVIAL(debug) << "SpeckleToDM " << dmChannel.getName() << ": Clearing nulling speckles";
 
 }
 
 void SpeckleToDM::updateDM()
 {
-    cv::add(probeMap, nullMap, fullMapShm);
+    int r, c;
+    for(r=0; r<DM_Y_SIZE; r++)
+        for(c=0; c<DM_X_SIZE; c++)
+            fullMapShm[r*DM_X_SIZE + c] = probeMap[r*DM_X_SIZE + c] + nullMap[r*DM_X_SIZE + c];
     dmChannel.postAllSemaphores();
     BOOST_LOG_TRIVIAL(debug) << "SpeckleToDM " << dmChannel.getName() << ": Updating DM with new speckles";
 
 }
 
 
-void SpeckleToDM::generateMapFromSpeckle(const cv::Point2d kvecs, double amp, double phase, cv::Mat &map)
+void SpeckleToDM::generateMapFromSpeckle(const cv::Point2d kvecs, double amp, double phase, float *map)
 {
     if(usenm)
         amp /= 1000; // dm channel is in um stroke
@@ -85,13 +85,12 @@ void SpeckleToDM::generateMapFromSpeckle(const cv::Point2d kvecs, double amp, do
     //    });
 
     int r, c;
-    float *mapPtr = map.ptr<float>(0);
 
-    for(r=0; r<dmYSize; r++)
-        for(c=0; c<dmXSize; c++){
-            phy = (float)(((1.0/this->dmYSize)*r-0.5)*kvecs.y);
-            phx = (float)(((1.0/this->dmXSize)*c-0.5)*kvecs.x);
-            *(mapPtr + r*dmXSize + c) += (float)amp*std::cos(phx + phy + phase);
+    for(r=0; r<DM_Y_SIZE; r++)
+        for(c=0; c<DM_X_SIZE; c++){
+            phy = 0; //(float)(((1.0/DM_Y_SIZE)*r-0.5)*kvecs.y);
+            phx = 0; //(float)(((1.0/DM_X_SIZE)*c-0.5)*kvecs.x);
+            *(map + r*DM_X_SIZE + c) += (float)amp*std::cos(phx + phy + phase);
 
         }
     
@@ -99,5 +98,5 @@ void SpeckleToDM::generateMapFromSpeckle(const cv::Point2d kvecs, double amp, do
 
 }
 
-int SpeckleToDM::getXSize(){ return dmXSize;}
-int SpeckleToDM::getYSize(){ return dmYSize;}
+int SpeckleToDM::getXSize(){ return DM_X_SIZE;}
+int SpeckleToDM::getYSize(){ return DM_Y_SIZE;}
