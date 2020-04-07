@@ -80,7 +80,7 @@ if __name__=='__main__':
         iterSteps = []
         iterSteps.append(IterStep('full', 'starting integration', 'Updating DM'))
         iterSteps.append(IterStep('get image', 'waiting...', 'grabbing ctrl region...'))
-        iterSteps.append(IterStep('dm map', 'Clearing probe speckles', 'updating...'))
+        iterSteps.append(IterStep('dm map', 'Clearing probe speckles', 'Updating DM with new'))
         while line:
             if START_STATEMENT in line:
                 parseIter(iterLines, iterSteps)
