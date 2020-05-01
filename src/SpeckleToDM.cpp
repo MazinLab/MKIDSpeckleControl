@@ -88,8 +88,8 @@ void SpeckleToDM::generateMapFromSpeckle(const cv::Point2d kvecs, double amp, do
 
     for(r=0; r<DM_Y_SIZE; r++)
         for(c=0; c<DM_X_SIZE; c++){
-            phy = 0; //(float)(((1.0/DM_Y_SIZE)*r-0.5)*kvecs.y);
-            phx = 0; //(float)(((1.0/DM_X_SIZE)*c-0.5)*kvecs.x);
+            phy = (float)(((1.0/DM_Y_SIZE)*r-0.5)*kvecs.y);
+            phx = (float)(((1.0/DM_X_SIZE)*c-0.5)*kvecs.x);
             *(map + r*DM_X_SIZE + c) += (float)amp*std::cos(phx + phy + phase);
 
         }
