@@ -89,7 +89,7 @@ void addLogfile(const std::string &logfile){
 
 }
 
-BOOST_PYTHON_MODULE(speckpy){
+BOOST_PYTHON_MODULE(_speckpy){
     bp::class_<SpeckleToDM>("SpeckleToDM", bp::init<const char*>())
         .def("addProbeSpeckle", static_cast<void(SpeckleToDM::*)(double, double, double, double)>(&SpeckleToDM::addProbeSpeckle))
         .def("addNullingSpeckle", static_cast<void(SpeckleToDM::*)(double, double, double, double)>(&SpeckleToDM::addNullingSpeckle))
