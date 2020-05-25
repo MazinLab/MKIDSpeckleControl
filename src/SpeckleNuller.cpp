@@ -26,7 +26,9 @@ SpeckleNuller::SpeckleNuller(boost::property_tree::ptree &ptree) :
 void SpeckleNuller::update(const cv::Mat &newImage, double integrationTime){
     BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: updating...";
     mIntegrationTime = integrationTime;
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: convert image to float...";
     newImage.convertTo(mImage, CV_64F);
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: done convert image to float...";
     updateSpeckles();
     if(mIters%(NPHASES + 1) == 0)
         findNewSpeckles();
@@ -274,6 +276,8 @@ void SpeckleNuller::createSpeckleObjects(std::vector<ImgPt> &imgPts, bool update
 void SpeckleNuller::updateSpeckles(){
     boost::ptr_vector<SpeckleController>::iterator it;
     dmspeck speck;
+
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: updating speckle objects...";
     
     for(it = mSpecklesList.begin(); it < mSpecklesList.end(); it++){
         it->update(mImage, mIntegrationTime);
@@ -297,6 +301,8 @@ void SpeckleNuller::updateSpeckles(){
             it--;
 
         }
+
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: done updating speckle objects";
             
 
     }
