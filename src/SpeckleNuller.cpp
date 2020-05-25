@@ -49,12 +49,13 @@ void SpeckleNuller::updateBadPixMask(const cv::Mat &newMask){
 
 
 std::vector<ImgPt> SpeckleNuller::detectSpeckles(){ 
-    //BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: detecting new speckles...";
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: detecting new speckles...";
     double usFactor = mParams.get<double>("NullingParams.usFactor");
 
     //first do gaussian us filt on image
-    //BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: gaussian filtering...";
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: gaussian filtering...";
     cv::Mat filtImg = gaussianBadPixUSFilt(mImage, mBadPixMask, (int)usFactor, mParams.get<double>("ImgParams.lambdaOverD"));
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: done filtering...";
 
     //scale image parameters by usFactor, since image is upsampled
     int speckleWindow = mParams.get<int>("NullingParams.speckleWindow")*mParams.get<int>("NullingParams.usFactor");
@@ -62,6 +63,7 @@ std::vector<ImgPt> SpeckleNuller::detectSpeckles(){
     //BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: params: " << speckleWindow << " " << apertureRadius;
 
     //Find local maxima within mParams.get<int>("NullingParams.speckleWindow") size window
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: finding local maxima...";
     cv::Mat kernel = cv::Mat::ones(speckleWindow, speckleWindow, CV_8UC1);
     cv::Mat maxFiltIm, isMaximum;
     std::vector<cv::Point2i> maxima;
