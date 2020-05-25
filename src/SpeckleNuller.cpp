@@ -302,10 +302,11 @@ void SpeckleNuller::updateSpeckles(){
 
         }
 
-    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: done updating speckle objects";
             
 
     }
+
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: done updating speckle objects";
         
 }
 
