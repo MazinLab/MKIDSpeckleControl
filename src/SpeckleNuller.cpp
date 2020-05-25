@@ -317,13 +317,17 @@ void SpeckleNuller::findNewSpeckles(){
     }
 
     else{
+        BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: start exclusionZoneCut";
         exclusionZoneCut(imgPts, true);
+        BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: done exclusionZoneCut";
         if(imgPts.size() > (mParams.get<int>("NullingParams.maxSpeckles") - mSpecklesList.size()))
             imgPts.erase(imgPts.begin() + mParams.get<int>("NullingParams.maxSpeckles") - mSpecklesList.size(), imgPts.end());
 
     }
 
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: creating speckle objects";
     createSpeckleObjects(imgPts);
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: done creating speckle objects";
 
 }
 
