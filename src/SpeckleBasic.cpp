@@ -20,11 +20,12 @@ SpeckleBasic::SpeckleBasic(cv::Point2d pt, boost::property_tree::ptree &cfgParam
 
 
 void SpeckleBasic::nonProbeMeasurementUpdate(double intensity, double variance){
-    mProbeAmp = mProbeAmp*getNProbeIters()/(getNProbeIters() + 1) 
-        + std::sqrt(intensity)*mDMCalFactor/(getNProbeIters() + 1);
+    int nProbeIters = getNProbeIters();
+    mProbeAmp = mProbeAmp*nProbeIters/(nProbeIters + 1) 
+        + std::sqrt(intensity)*mDMCalFactor/(nProbeIters + 1);
 
-    if(getNProbeIters()%10 == 0)
-        BOOST_LOG_TRIVIAL(info) << "Iter: " << getNProbeIters() << "; Probing at: " << mProbeAmp;
+    if(nProbeIters%10 == 0)
+        BOOST_LOG_TRIVIAL(info) << "Iter: " << nProbeIters << "; Probing at: " << mProbeAmp;
 
 }
 
