@@ -21,8 +21,8 @@ cv::Mat gaussianBadPixUSFilt(cv::Mat image, cv::Mat &badPixMask, int usFactor, d
 
     //gaussian blur
     BOOST_LOG_TRIVIAL(trace) << "bpfilt: gaussian blur";
-    cv::GaussianBlur(imageUS, imageUS, cv::Size(0,0), lambdaOverD*(double)usFactor*0.42);
-    cv::GaussianBlur(badPixMaskInvUS, badPixMaskInvUS, cv::Size(0,0), lambdaOverD*(double)usFactor*0.42);
+    cv::GaussianBlur(imageUS, imageUS, cv::Size(7,7), lambdaOverD*(double)usFactor*0.42);
+    cv::GaussianBlur(badPixMaskInvUS, badPixMaskInvUS, cv::Size(7,7), lambdaOverD*(double)usFactor*0.42);
     BOOST_LOG_TRIVIAL(trace) << "bpfilt: done initial gaussian blur";
     badPixMaskInvUS.setTo(100000, badPixMaskInvUS<=0.05); //replace with really big number so we're not dividing by something small
     image = imageUS.mul(1/badPixMaskInvUS);
