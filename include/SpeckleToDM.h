@@ -113,6 +113,8 @@ class SpeckleToDM
          */
         void updateCalParams(int placeholder);
 
+        void setMapToZero(float *map);
+
         // Getters:
         int getXSize();
         int getYSize();

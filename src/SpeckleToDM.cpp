@@ -5,11 +5,14 @@ SpeckleToDM::SpeckleToDM(const char dmChanName[80], bool _usenm) : dmChannel(dmC
         throw;
 
     fullMapShm = dmChannel.getBufferPtr<float>();
+    setMapToZero(probeMap);
+    setMapToZero(nullMap);
+    setMapToZero(tempMap);
 
 
 }
 
-void setMapToZero(float *map){
+void SpeckleToDM::setMapToZero(float *map){
     memset(map, 0, DM_X_SIZE*DM_Y_SIZE*sizeof(float));
 
 }
