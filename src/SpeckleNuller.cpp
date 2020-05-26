@@ -88,7 +88,9 @@ std::vector<ImgPt> SpeckleNuller::detectSpeckles(){
     //Put Points in ImgPt Struct List
     std::vector<cv::Point2i>::iterator it;
     ImgPt tempPt;
-    for(it = maxima.begin(); it != maxima.end(); it++)
+    std::vector<cv::Point2i>::iterator endIt = std::min(maxima.begin() + 
+            2*mParams.get<int>("NullingParams.maxSpeckles"), maxima.end());
+    for(it = maxima.begin(); it != endIt; it++)
     {
         tempPt.coordinates = cv::Point2d((double)(*it).x/usFactor, (double)(*it).y/usFactor); //coordinates in real image
         tempPt.intensity = filtImg.at<double>(*it);
