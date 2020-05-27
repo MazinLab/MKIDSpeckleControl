@@ -11,8 +11,8 @@ SpeckleNuller::SpeckleNuller(boost::property_tree::ptree &ptree) :
     mParams = ptree;
     int ctrlRegionXSize = mParams.get<int>("ImgParams.xCtrlEnd") - mParams.get<int>("ImgParams.xCtrlStart");
     int ctrlRegionYSize = mParams.get<int>("ImgParams.yCtrlEnd") - mParams.get<int>("ImgParams.yCtrlStart");
-    mImage.create(ctrlRegionYSize, ctrlRegionXSize, CV_64FC1);
-    mBadPixMask.create(ctrlRegionXSize, ctrlRegionYSize, CV_64F);
+    mImage.create(ctrlRegionYSize, ctrlRegionXSize, CV_32FC1);
+    mBadPixMask.create(ctrlRegionXSize, ctrlRegionYSize, CV_32F);
     mBadPixMask.setTo(0);
     mSpecklesList.reserve(mParams.get<int>("NullingParams.maxSpeckles"));
     if(mParams.get<std::string>("NullingParams.controller") == "basic"){
@@ -27,7 +27,7 @@ void SpeckleNuller::update(const cv::Mat &newImage, double integrationTime){
     BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: updating...";
     mIntegrationTime = integrationTime;
     BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: convert image to float...";
-    newImage.convertTo(mImage, CV_64F);
+    newImage.convertTo(mImage, CV_32F);
     BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: done convert image to float...";
     updateSpeckles();
     if(mIters%(NPHASES + 1) == 0)
