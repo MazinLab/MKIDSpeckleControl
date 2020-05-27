@@ -38,6 +38,7 @@ class SpeckleController
         int mCurPhaseInd;
         cv::Mat mApertureMask; //Aperture window used to measure speckle intensity
         cv::Mat mBadPixMask;
+        cv::Mat mSpeckleIm;
         dmspeck mNextSpeck;
         double mIntensityCorrectionFactor;
 

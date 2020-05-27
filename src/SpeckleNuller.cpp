@@ -11,8 +11,8 @@ SpeckleNuller::SpeckleNuller(boost::property_tree::ptree &ptree) :
     mParams = ptree;
     int ctrlRegionXSize = mParams.get<int>("ImgParams.xCtrlEnd") - mParams.get<int>("ImgParams.xCtrlStart");
     int ctrlRegionYSize = mParams.get<int>("ImgParams.yCtrlEnd") - mParams.get<int>("ImgParams.yCtrlStart");
-    mImage.create(ctrlRegionYSize, ctrlRegionXSize, CV_64FC1);
-    mBadPixMask.create(ctrlRegionXSize, ctrlRegionYSize, CV_64F);
+    mImage.create(ctrlRegionYSize, ctrlRegionXSize, CV_32FC1);
+    mBadPixMask.create(ctrlRegionXSize, ctrlRegionYSize, CV_32F);
     mBadPixMask.setTo(0);
     mSpecklesList.reserve(mParams.get<int>("NullingParams.maxSpeckles"));
     if(mParams.get<std::string>("NullingParams.controller") == "basic"){
@@ -26,7 +26,9 @@ SpeckleNuller::SpeckleNuller(boost::property_tree::ptree &ptree) :
 void SpeckleNuller::update(const cv::Mat &newImage, double integrationTime){
     BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: updating...";
     mIntegrationTime = integrationTime;
-    newImage.convertTo(mImage, CV_64F);
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: convert image to float...";
+    newImage.convertTo(mImage, CV_32F);
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: done convert image to float...";
     updateSpeckles();
     if(mIters%(NPHASES + 1) == 0)
         findNewSpeckles();
@@ -47,12 +49,13 @@ void SpeckleNuller::updateBadPixMask(const cv::Mat &newMask){
 
 
 std::vector<ImgPt> SpeckleNuller::detectSpeckles(){ 
-    //BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: detecting new speckles...";
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: detecting new speckles...";
     double usFactor = mParams.get<double>("NullingParams.usFactor");
 
     //first do gaussian us filt on image
-    //BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: gaussian filtering...";
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: gaussian filtering...";
     cv::Mat filtImg = gaussianBadPixUSFilt(mImage, mBadPixMask, (int)usFactor, mParams.get<double>("ImgParams.lambdaOverD"));
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: done filtering...";
 
     //scale image parameters by usFactor, since image is upsampled
     int speckleWindow = mParams.get<int>("NullingParams.speckleWindow")*mParams.get<int>("NullingParams.usFactor");
@@ -60,6 +63,7 @@ std::vector<ImgPt> SpeckleNuller::detectSpeckles(){
     //BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: params: " << speckleWindow << " " << apertureRadius;
 
     //Find local maxima within mParams.get<int>("NullingParams.speckleWindow") size window
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: finding local maxima...";
     cv::Mat kernel = cv::Mat::ones(speckleWindow, speckleWindow, CV_8UC1);
     cv::Mat maxFiltIm, isMaximum;
     std::vector<cv::Point2i> maxima;
@@ -84,7 +88,9 @@ std::vector<ImgPt> SpeckleNuller::detectSpeckles(){
     //Put Points in ImgPt Struct List
     std::vector<cv::Point2i>::iterator it;
     ImgPt tempPt;
-    for(it = maxima.begin(); it != maxima.end(); it++)
+    std::vector<cv::Point2i>::iterator endIt = std::min(maxima.begin() + 
+            2*mParams.get<int>("NullingParams.maxSpeckles"), maxima.end());
+    for(it = maxima.begin(); it != endIt; it++)
     {
         tempPt.coordinates = cv::Point2d((double)(*it).x/usFactor, (double)(*it).y/usFactor); //coordinates in real image
         tempPt.intensity = filtImg.at<double>(*it);
@@ -274,6 +280,8 @@ void SpeckleNuller::createSpeckleObjects(std::vector<ImgPt> &imgPts, bool update
 void SpeckleNuller::updateSpeckles(){
     boost::ptr_vector<SpeckleController>::iterator it;
     dmspeck speck;
+
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: updating speckle objects...";
     
     for(it = mSpecklesList.begin(); it < mSpecklesList.end(); it++){
         it->update(mImage, mIntegrationTime);
@@ -297,9 +305,12 @@ void SpeckleNuller::updateSpeckles(){
             it--;
 
         }
+
             
 
     }
+
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: done updating speckle objects";
         
 }
 
@@ -317,13 +328,17 @@ void SpeckleNuller::findNewSpeckles(){
     }
 
     else{
+        BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: start exclusionZoneCut";
         exclusionZoneCut(imgPts, true);
         if(imgPts.size() > (mParams.get<int>("NullingParams.maxSpeckles") - mSpecklesList.size()))
             imgPts.erase(imgPts.begin() + mParams.get<int>("NullingParams.maxSpeckles") - mSpecklesList.size(), imgPts.end());
+        BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: done exclusionZoneCut";
 
     }
 
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: creating speckle objects";
     createSpeckleObjects(imgPts);
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: done creating speckle objects";
 
 }
 

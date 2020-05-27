@@ -7,9 +7,9 @@ ImgParams
     yCenter 73.2 ;75.2 ;73.274242424242431 ;73
     lambdaOverD 3.005456495374899
     xCtrlStart 0
-    xCtrlEnd 50
-    yCtrlStart -30
-    yCtrlEnd 50
+    xCtrlEnd 60
+    yCtrlStart -60
+    yCtrlEnd 60
     useWvl false
     wvlStart 700
     wvlStop 1200
@@ -26,7 +26,7 @@ ImgParams
 }
 DMParams
 {
-    channel dm04disp07
+    channel dm00disp06
     a 0
     b 0
     c 0.04
@@ -35,11 +35,11 @@ DMParams
 }
 NullingParams
 {
-    controller kalmanPoisson
-    integrationTime 2
-    maxSpeckles 1
+    controller basic
+    integrationTime 500
+    maxSpeckles 10
     speckleWindow 5
-    exclusionZone 9
+    exclusionZone 5
     apertureRadius 2
     useBoxBlur false
     useGaussianBlur false

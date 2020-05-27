@@ -46,9 +46,9 @@
 int main()
 { 
     boost::property_tree::ptree cfgParams;
-    read_info("python/speckNullConfig.info", cfgParams);
+    read_info("python/speckNullConfig20200402.info", cfgParams);
     //addLogfile("prof/proflog.log");
-    boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::info);
+    boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::trace);
 
     loopfunctions::runLoop(500, cfgParams, true);
     //DMChannel chan("dm04disp00");
