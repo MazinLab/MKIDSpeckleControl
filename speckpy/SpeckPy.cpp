@@ -68,7 +68,7 @@ void setWarningLog(){
 
 }
 
-void addLogfile(const std::string &logfile){
+void addLogfile(const std::string &logfile, bool useConsoleLog){
     boost::log::core::get()->remove_all_sinks();
     boost::log::add_common_attributes();
     boost::log::add_file_log(
@@ -80,12 +80,13 @@ void addLogfile(const std::string &logfile){
             
             );
 
-    boost::log::add_console_log(std::cout,  
-            boost::log::keywords::format = 
-                (boost::log::expressions::stream << "[" <<
-                    boost::log::expressions::format_date_time<boost::posix_time::ptime>("TimeStamp", "%Y-%m-%d %H:%M:%S.%f")
-                    << "][" << boost::log::trivial::severity << "]: " << boost::log::expressions::smessage)
-            );
+    if(useConsoleLog)
+        boost::log::add_console_log(std::cout,  
+                boost::log::keywords::format = 
+                    (boost::log::expressions::stream << "[" <<
+                        boost::log::expressions::format_date_time<boost::posix_time::ptime>("TimeStamp", "%Y-%m-%d %H:%M:%S.%f")
+                        << "][" << boost::log::trivial::severity << "]: " << boost::log::expressions::smessage)
+                );
 
 }
 

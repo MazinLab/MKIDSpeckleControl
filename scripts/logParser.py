@@ -46,7 +46,7 @@ class IterStep(object):
         self.endTime = None
 
 def getTimestamp(line):
-    ts = line.split(' ')[1][:-1]
+    ts = line.split(' ')[1][:15]
     t0 = datetime.strptime(ts, '%H:%M:%S.%f')
     return t0
 
@@ -74,7 +74,7 @@ if __name__=='__main__':
 
     with open(args.file, 'r') as f:
         line = f.readline()
-        ts = line.split(' ')[1][:-1]
+        ts = line.split(' ')[1][:15]
         tstart = datetime.strptime(ts, '%H:%M:%S.%f')
         iterLines = []
         iterSteps = []

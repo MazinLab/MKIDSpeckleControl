@@ -9,7 +9,8 @@ cv::Mat gaussianBadPixUSFilt(cv::Mat image, cv::Mat &badPixMask, int usFactor, d
     BOOST_LOG_TRIVIAL(trace) << "bpfilt: remove bad pixels";
     cv::Mat badPixMaskInv = (~badPixMask)&1;
     badPixMaskInv.convertTo(badPixMaskInv, image.type());
-    image = image.mul(badPixMaskInv);
+    //image = image.mul(badPixMaskInv);
+    cv::multiply(image, badPixMaskInv, image);
     BOOST_LOG_TRIVIAL(trace) << "bpfilt: done remove bad pixels";
 
     //upsample
