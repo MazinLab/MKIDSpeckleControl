@@ -33,3 +33,9 @@
 
 # vim backups
 *.swp
+
+*.pyc
+*.log
+*.prof
+*.png
+*.npz
