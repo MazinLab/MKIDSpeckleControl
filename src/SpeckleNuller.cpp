@@ -7,13 +7,18 @@ bool cmpImgPt(ImgPt lhs, ImgPt rhs)
 }
 
 SpeckleNuller::SpeckleNuller(boost::property_tree::ptree &ptree) : 
-        mDM(ptree.get<std::string>("DMParams.channel").c_str()), mIters(0){
+        mDM(ptree.get<std::string>("DMParams.channel").c_str()), 
+        mIters(0),
+        mBadPixFilter(ptree.get<int>("NullingParams.usFactor"),
+                ptree.get<double>("ImgParams.lambdaOverD"),
+                7){
     mParams = ptree;
     int ctrlRegionXSize = mParams.get<int>("ImgParams.xCtrlEnd") - mParams.get<int>("ImgParams.xCtrlStart");
     int ctrlRegionYSize = mParams.get<int>("ImgParams.yCtrlEnd") - mParams.get<int>("ImgParams.yCtrlStart");
     mImage.create(ctrlRegionYSize, ctrlRegionXSize, CV_32FC1);
     mBadPixMask.create(ctrlRegionXSize, ctrlRegionYSize, CV_32F);
     mBadPixMask.setTo(0);
+    mBadPixFilter.updateBadPixMask(mBadPixMask);
     mSpecklesList.reserve(mParams.get<int>("NullingParams.maxSpeckles"));
     if(mParams.get<std::string>("NullingParams.controller") == "basic"){
         mParams.put("NullingParams.maxNullingIters", 1);
@@ -40,6 +45,7 @@ void SpeckleNuller::update(const cv::Mat &newImage, double integrationTime){
 void SpeckleNuller::updateBadPixMask(const cv::Mat &newMask){
     mBadPixMask = newMask;
     boost::ptr_vector<SpeckleController>::iterator it;
+    mBadPixFilter.updateBadPixMask(mBadPixMask);
 
     for(it = mSpecklesList.begin(); it < mSpecklesList.end(); it++)
         it->updateBadPixMask(newMask);
@@ -54,7 +60,7 @@ std::vector<ImgPt> SpeckleNuller::detectSpeckles(){
 
     //first do gaussian us filt on image
     BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: gaussian filtering...";
-    cv::Mat filtImg = gaussianBadPixUSFilt(mImage, mBadPixMask, (int)usFactor, mParams.get<double>("ImgParams.lambdaOverD"));
+    cv::Mat filtImg = mBadPixFilter.filter(mImage);
     BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: done filtering...";
 
     //scale image parameters by usFactor, since image is upsampled

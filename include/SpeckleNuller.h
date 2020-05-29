@@ -7,7 +7,7 @@
 #include "SpeckleKalman.h"
 #include "SpeckleKalmanPoisson.h"
 #include "SpeckleToDM.h"
-#include "imageTools.h"
+#include "BadPixFilt.h"
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/info_parser.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
@@ -40,10 +40,13 @@ class SpeckleNuller
     private: 
         cv::Mat mImage; //Last MKID image obtained from PacketMaster (control region)
         cv::Mat mBadPixMask; //Bad pixel mask of image. Should be updated when ctrl region changes
+        cv::Mat mBadPixMaskInv; //Bad pixel mask of image. Should be updated when ctrl region changes
+        cv::Mat mBadPixMaskInvUS; //Bad pixel mask of image. Should be updated when ctrl region changes
         boost::ptr_vector<SpeckleController> mSpecklesList, mNullSpecklesList; //List of Speckle (objects) being nulled
         std::vector<dmspeck> mNextDMSpecks; //List of speckles to put on DM
         boost::property_tree::ptree mParams; //Container for configuration params
         SpeckleToDM mDM;
+        BadPixFilt mBadPixFilter;
         int mIters;
         double mIntegrationTime;
 

@@ -8,7 +8,6 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/log/trivial.hpp>
 //#include "simInterfaceTools.h"
-#include "imageTools.h"
 #include "dmTools.h"
 #include "dmspeck.h"
 
