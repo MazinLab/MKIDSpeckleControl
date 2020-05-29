@@ -1,6 +1,6 @@
 #include "imageTools.h"
 
-cv::Mat gaussianBadPixUSFilt(cv::Mat image, cv::Mat &badPixMask, int usFactor, double lambdaOverD)
+cv::Mat gaussianBadPixUSFilt(cv::Mat image, cv::Mat &badPixMask, cv::Mat &kernel, int usFactor)
 {
     assert(image.rows == badPixMask.rows);
     assert(image.cols == badPixMask.cols);
@@ -22,8 +22,10 @@ cv::Mat gaussianBadPixUSFilt(cv::Mat image, cv::Mat &badPixMask, int usFactor, d
 
     //gaussian blur
     BOOST_LOG_TRIVIAL(trace) << "bpfilt: gaussian blur";
-    cv::GaussianBlur(imageUS, imageUS, cv::Size(7,7), lambdaOverD*(double)usFactor*0.42);
-    cv::GaussianBlur(badPixMaskInvUS, badPixMaskInvUS, cv::Size(7,7), lambdaOverD*(double)usFactor*0.42);
+    //cv::GaussianBlur(imageUS, imageUS, cv::Size(7,7), lambdaOverD*(double)usFactor*0.42);
+    //cv::GaussianBlur(badPixMaskInvUS, badPixMaskInvUS, cv::Size(7,7), lambdaOverD*(double)usFactor*0.42);
+    cv::sepFilter2D(imageUS, imageUS, -1, kernel, kernel);
+    cv::sepFilter2D(badPixMaskInvUS, badPixMaskInvUS, -1, kernel, kernel);
     BOOST_LOG_TRIVIAL(trace) << "bpfilt: done initial gaussian blur";
     badPixMaskInvUS.setTo(100000, badPixMaskInvUS<=0.05); //replace with really big number so we're not dividing by something small
     image = imageUS.mul(1/badPixMaskInvUS);
@@ -32,3 +34,7 @@ cv::Mat gaussianBadPixUSFilt(cv::Mat image, cv::Mat &badPixMask, int usFactor, d
 
 }
 
+cv::Mat createGaussianFilter(int usFactor, double lambdaOverD){
+    return cv::getGaussianKernel(7, lambdaOverD*(double)usFactor*0.42, CV_32F);
+
+}

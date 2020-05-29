@@ -44,6 +44,7 @@ class SpeckleNuller
         std::vector<dmspeck> mNextDMSpecks; //List of speckles to put on DM
         boost::property_tree::ptree mParams; //Container for configuration params
         SpeckleToDM mDM;
+        cv::Mat gaussKernel;
         int mIters;
         double mIntegrationTime;
 

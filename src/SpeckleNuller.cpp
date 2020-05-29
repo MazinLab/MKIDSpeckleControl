@@ -21,6 +21,8 @@ SpeckleNuller::SpeckleNuller(boost::property_tree::ptree &ptree) :
 
     }
 
+    gaussKernel = createGaussianFilter(mParams.get<int>("NullingParams.usFactor"), mParams.get<double>("ImgParams.lambdaOverD"));
+
 }
 
 void SpeckleNuller::update(const cv::Mat &newImage, double integrationTime){
@@ -54,7 +56,7 @@ std::vector<ImgPt> SpeckleNuller::detectSpeckles(){
 
     //first do gaussian us filt on image
     BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: gaussian filtering...";
-    cv::Mat filtImg = gaussianBadPixUSFilt(mImage, mBadPixMask, (int)usFactor, mParams.get<double>("ImgParams.lambdaOverD"));
+    cv::Mat filtImg = gaussianBadPixUSFilt(mImage, mBadPixMask, gaussKernel, (int)usFactor);
     BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: done filtering...";
 
     //scale image parameters by usFactor, since image is upsampled
