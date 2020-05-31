@@ -10,13 +10,12 @@ SpeckleNuller::SpeckleNuller(boost::property_tree::ptree &ptree) :
         mDM(ptree.get<std::string>("DMParams.channel").c_str()), 
         mIters(0),
         mBadPixFilter(ptree.get<int>("NullingParams.usFactor"),
-                ptree.get<double>("ImgParams.lambdaOverD"),
-                7){
+                ptree.get<double>("ImgParams.lambdaOverD"), 7){
     mParams = ptree;
     int ctrlRegionXSize = mParams.get<int>("ImgParams.xCtrlEnd") - mParams.get<int>("ImgParams.xCtrlStart");
     int ctrlRegionYSize = mParams.get<int>("ImgParams.yCtrlEnd") - mParams.get<int>("ImgParams.yCtrlStart");
     mImage.create(ctrlRegionYSize, ctrlRegionXSize, CV_32FC1);
-    mBadPixMask.create(ctrlRegionXSize, ctrlRegionYSize, CV_32F);
+    mBadPixMask.create(ctrlRegionYSize, ctrlRegionXSize, CV_32F);
     mBadPixMask.setTo(0);
     mBadPixFilter.updateBadPixMask(mBadPixMask);
     mSpecklesList.reserve(mParams.get<int>("NullingParams.maxSpeckles"));
@@ -94,12 +93,12 @@ std::vector<ImgPt> SpeckleNuller::detectSpeckles(){
     //Put Points in ImgPt Struct List
     std::vector<cv::Point2i>::iterator it;
     ImgPt tempPt;
-    std::vector<cv::Point2i>::iterator endIt = std::min(maxima.begin() + 
-            2*mParams.get<int>("NullingParams.maxSpeckles"), maxima.end());
-    for(it = maxima.begin(); it != endIt; it++)
+    //std::vector<cv::Point2i>::iterator endIt = std::min(maxima.begin() + 
+    //        2*mParams.get<int>("NullingParams.maxSpeckles"), maxima.end());
+    for(it = maxima.begin(); it != maxima.end(); it++)
     {
         tempPt.coordinates = cv::Point2d((double)(*it).x/usFactor, (double)(*it).y/usFactor); //coordinates in real image
-        tempPt.intensity = filtImg.at<double>(*it);
+        tempPt.intensity = filtImg.at<float>(*it);
         //BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: Detected speckle at " << tempPt.coordinates << " intensity: " << tempPt.intensity;
         if(tempPt.intensity != 0)
             if((tempPt.coordinates.x < (mImage.cols-apertureRadius)) && (tempPt.coordinates.x > (apertureRadius))
