@@ -3,9 +3,14 @@ import time
 import matplotlib.pyplot as plt
 import _speckpy as sp
 
-def runLoop(cfgFile, nIters, logLevel='info'):
-    pt = sp.PropertyTree()
-    pt.read_info(cfgFile)
+def runLoop(cfg, nIters, logLevel='info'):
+    if isinstance(cfg, sp.PropertyTree):
+        pt = cfg
+    elif isinstance(cfg, str):
+        pt = sp.PropertyTree()
+        pt.read_info(cfg)
+    else:
+        raise Exception('Unknown cfg type')
     startTs = int(time.time())
     sp.addLogfile(str(startTs) + '.log', False)
     dmNulling = sp.SpeckleToDM(pt.get("DMParams.channel"))
@@ -25,6 +30,7 @@ def runLoop(cfgFile, nIters, logLevel='info'):
     plt.xlabel('Time (seconds)')
     plt.ylabel('Control Region Intensity (counts)')
     plt.savefig(str(startTs)+'.png')
+    plt.close()
     np.savez(str(startTs)+'.npz', lc=lc, t=t)
     pt.write(str(startTs)+'.info')
     return t, lc
