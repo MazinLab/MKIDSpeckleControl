@@ -23,8 +23,8 @@ void ImageGrabber::initialize(){
     mRawImageShm = cv::Mat(mShmImage.md->nRows, mShmImage.md->nCols, CV_32S, mShmImage.image);
     BOOST_LOG_TRIVIAL(trace) << "ImageGrabber: done opening " << mParams.get<std::string>("name");
 
-    MKIDShmImage_setWvlRange(&mShmImage, mParams.get("wvlStart", 700), mParams.get("wvlStop", 1400));
-    mShmImage.md->useWvl = mParams.get("useWvl", 0);
+    MKIDShmImage_setWvlRange(&mShmImage, mParams.get<int>("wvlStart"), mParams.get<int>("wvlStop"));
+    mShmImage.md->useWvl = mParams.get<int>("useWvl");
 
     //TODO: consider changing centers to floats
     mXCenter = (int)std::round(mParams.get<double>("xCenter"));
@@ -203,7 +203,7 @@ void ImageGrabber::loadBadPixMask()
 {
     std::string badPixFn = mParams.get<std::string>("badPixMaskFile");
     std::ifstream badPixFile(badPixFn.c_str(), std::ifstream::in|std::ifstream::binary);
-    if(!badPixFile.good()) BOOST_LOG_TRIVIAL(warning) << "Could not find bad pixel mask";
+    if(!badPixFile.good()) throw;
     badPixFile.read(mBadPixBuff, 2*mShmImage.md->nCols*mShmImage.md->nRows);
     badPixFile.close();
     mBadPixMask = cv::Mat(mShmImage.md->nRows, mShmImage.md->nCols, CV_16UC1, mBadPixBuff);
