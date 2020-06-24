@@ -89,10 +89,11 @@ double SpeckleController::measureIntensityCorrection() const
         (int)mCoords.y+mParams.get<int>("NullingParams.apertureRadius")+1), cv::Range((int)mCoords.x-mParams.get<int>("NullingParams.apertureRadius"), 
         (int)mCoords.x+mParams.get<int>("NullingParams.apertureRadius")+1));
     apertureGoodPixMask.convertTo(apertureGoodPixMask, CV_32F);
-    cv::Mat gaussKernel = cv::getGaussianKernel(2*mParams.get<int>("NullingParams.apertureRadius")+1, mParams.get<double>("ImgParams.lambdaOverD")*0.42, CV_32F);
-    gaussKernel = gaussKernel*gaussKernel.t();
-    BOOST_LOG_TRIVIAL(trace) << "Speckle good pix mask: " <<  apertureGoodPixMask;
-    return (double)cv::sum(gaussKernel.mul(apertureGoodPixMask))[0]/cv::sum(gaussKernel)[0];
+    return (double)cv::sum(apertureGoodPixMask.mul(mApertureMask))[0]/cv::sum(mApertureMask)[0];
+    //cv::Mat gaussKernel = cv::getGaussianKernel(2*mParams.get<int>("NullingParams.apertureRadius")+1, mParams.get<double>("ImgParams.lambdaOverD")*0.42, CV_32F);
+    //gaussKernel = gaussKernel*gaussKernel.t();
+    //BOOST_LOG_TRIVIAL(trace) << "Speckle good pix mask: " <<  apertureGoodPixMask;
+    //return (double)cv::sum(gaussKernel.mul(apertureGoodPixMask))[0]/cv::sum(gaussKernel)[0];
 
 }
 
