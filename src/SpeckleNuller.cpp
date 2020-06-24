@@ -28,11 +28,11 @@ SpeckleNuller::SpeckleNuller(boost::property_tree::ptree &ptree) :
 }
 
 void SpeckleNuller::update(const cv::Mat &newImage, double integrationTime){
-    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: updating...";
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleNuller: updating...";
     mIntegrationTime = integrationTime;
-    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: convert image to float...";
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleNuller: convert image to float...";
     newImage.convertTo(mImage, CV_32F);
-    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: done convert image to float...";
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleNuller: done convert image to float...";
     updateSpeckles();
     if(mIters%(NPHASES + 1) == 0)
         findNewSpeckles();
@@ -54,13 +54,13 @@ void SpeckleNuller::updateBadPixMask(const cv::Mat &newMask){
 
 
 std::vector<ImgPt> SpeckleNuller::detectSpeckles(){ 
-    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: detecting new speckles...";
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleNuller: detecting new speckles...";
     double usFactor = mParams.get<double>("NullingParams.usFactor");
 
     //first do gaussian us filt on image
-    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: gaussian filtering...";
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleNuller: gaussian filtering...";
     cv::Mat filtImg = mBadPixFilter.filter(mImage);
-    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: done filtering...";
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleNuller: done filtering...";
 
     //scale image parameters by usFactor, since image is upsampled
     int speckleWindow = mParams.get<int>("NullingParams.speckleWindow")*mParams.get<int>("NullingParams.usFactor");
@@ -68,7 +68,7 @@ std::vector<ImgPt> SpeckleNuller::detectSpeckles(){
     //BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: params: " << speckleWindow << " " << apertureRadius;
 
     //Find local maxima within mParams.get<int>("NullingParams.speckleWindow") size window
-    BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: finding local maxima...";
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleNuller: finding local maxima...";
     cv::Mat kernel = cv::Mat::ones(speckleWindow, speckleWindow, CV_8UC1);
     cv::Mat maxFiltIm, isMaximum;
     std::vector<cv::Point2i> maxima;
@@ -99,7 +99,7 @@ std::vector<ImgPt> SpeckleNuller::detectSpeckles(){
     {
         tempPt.coordinates = cv::Point2d((double)(*it).x/usFactor, (double)(*it).y/usFactor); //coordinates in real image
         tempPt.intensity = filtImg.at<float>(*it);
-        //BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: Detected speckle at " << tempPt.coordinates << " intensity: " << tempPt.intensity;
+        BOOST_LOG_TRIVIAL(trace) << "SpeckleNuller: Detected speckle at " << tempPt.coordinates << " intensity: " << tempPt.intensity;
         if(tempPt.intensity != 0)
             if((tempPt.coordinates.x < (mImage.cols-apertureRadius)) && (tempPt.coordinates.x > (apertureRadius))
                 && (tempPt.coordinates.y < (mImage.rows-apertureRadius)) && (tempPt.coordinates.y > (apertureRadius)))

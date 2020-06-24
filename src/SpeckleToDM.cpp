@@ -20,7 +20,7 @@ void SpeckleToDM::setMapToZero(float *map){
 void SpeckleToDM::addProbeSpeckle(cv::Point2d kvecs, double amp, double phase)
 {
     generateMapFromSpeckle(kvecs, amp, phase, probeMap);
-    BOOST_LOG_TRIVIAL(debug) << "SpeckleToDM " << dmChannel.getName() << ": Adding probe speckle with k: " 
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleToDM " << dmChannel.getName() << ": Adding probe speckle with k: " 
         << kvecs << ", amplitude: " << amp << ", phase: " << phase;
 
 }
@@ -28,7 +28,7 @@ void SpeckleToDM::addProbeSpeckle(cv::Point2d kvecs, double amp, double phase)
 void SpeckleToDM::addProbeSpeckle(double kx, double ky, double amp, double phase)
 {
     generateMapFromSpeckle(cv::Point2d(kx, ky), amp, phase, probeMap);
-    BOOST_LOG_TRIVIAL(debug) << "SpeckleToDM " << dmChannel.getName() << ": Adding probe speckle with k: " 
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleToDM " << dmChannel.getName() << ": Adding probe speckle with k: " 
         << cv::Point2d(kx, ky) << ", amplitude: " << amp << ", phase: " << phase;
 
 }
@@ -36,7 +36,7 @@ void SpeckleToDM::addProbeSpeckle(double kx, double ky, double amp, double phase
 void SpeckleToDM::addNullingSpeckle(cv::Point2d kvecs, double amp, double phase)
 {
     generateMapFromSpeckle(kvecs, amp, phase, nullMap);
-    BOOST_LOG_TRIVIAL(debug) << "SpeckleToDM " << dmChannel.getName() << ": Adding nulling speckle with k: " 
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleToDM " << dmChannel.getName() << ": Adding nulling speckle with k: " 
         << kvecs << ", amplitude: " << amp << ", phase: " << phase;
 
 }
@@ -44,7 +44,7 @@ void SpeckleToDM::addNullingSpeckle(cv::Point2d kvecs, double amp, double phase)
 void SpeckleToDM::addNullingSpeckle(double kx, double ky, double amp, double phase)
 {
     generateMapFromSpeckle(cv::Point2d(kx, ky), amp, phase, nullMap);
-    BOOST_LOG_TRIVIAL(debug) << "SpeckleToDM " << dmChannel.getName() << ": Adding nulling speckle with k: " 
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleToDM " << dmChannel.getName() << ": Adding nulling speckle with k: " 
         << cv::Point2d(kx, ky) << ", amplitude: " << amp << ", phase: " << phase;
 
 }

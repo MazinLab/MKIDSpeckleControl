@@ -60,20 +60,20 @@ dmspeck SpeckleBasic::endOfProbeUpdate(){
     nullingPhase += M_PI;
     nullingAmp *= mParams.get<double>("SpeckBasicParams.nullingGain");
 
-    //BOOST_LOG_TRIVIAL(trace) << "SpeckleBasic at " << mCoords << ": mPhaseIntensities: " << mPhaseIntensities[0];
-    //BOOST_LOG_TRIVIAL(trace) << "SpeckleBasic at " << mCoords << ": mPhaseIntensities: " << mPhaseIntensities[1];
-    //BOOST_LOG_TRIVIAL(trace) << "SpeckleBasic at " << mCoords << ": mPhaseIntensities: " << mPhaseIntensities[2];
-    //BOOST_LOG_TRIVIAL(trace) << "SpeckleBasic at " << mCoords << ": mPhaseIntensities: " << mPhaseIntensities[3];
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleBasic at " << mCoords << ": mPhaseIntensities: " << mPhaseIntensities[0];
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleBasic at " << mCoords << ": mPhaseIntensities: " << mPhaseIntensities[1];
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleBasic at " << mCoords << ": mPhaseIntensities: " << mPhaseIntensities[2];
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleBasic at " << mCoords << ": mPhaseIntensities: " << mPhaseIntensities[3];
 
-    //BOOST_LOG_TRIVIAL(trace) << "SpeckleBasic at " << mCoords << ": mPhaseVars: " << mPhaseVars[0];
-    //BOOST_LOG_TRIVIAL(trace) << "SpeckleBasic at " << mCoords << ": mPhaseVars: " << mPhaseVars[1];
-    //BOOST_LOG_TRIVIAL(trace) << "SpeckleBasic at " << mCoords << ": mPhaseVars: " << mPhaseVars[2];
-    //BOOST_LOG_TRIVIAL(trace) << "SpeckleBasic at " << mCoords << ": mPhaseVars: " << mPhaseVars[3];
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleBasic at " << mCoords << ": mPhaseVars: " << mPhaseVars[0];
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleBasic at " << mCoords << ": mPhaseVars: " << mPhaseVars[1];
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleBasic at " << mCoords << ": mPhaseVars: " << mPhaseVars[2];
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleBasic at " << mCoords << ": mPhaseVars: " << mPhaseVars[3];
 
-    //BOOST_LOG_TRIVIAL(debug) << "SpeckleBasic at " << mCoords << ": real: " << real;
-    //BOOST_LOG_TRIVIAL(debug) << "SpeckleBasic at " << mCoords << ": imag: " << imag;
-    //BOOST_LOG_TRIVIAL(debug) << "SpeckleBasic at " << mCoords << ": sigma: " << nullingSigma;
-    //BOOST_LOG_TRIVIAL(debug) << "SpeckleBasic at " << mCoords << ": SNR: " << nullingSNR;
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleBasic at " << mCoords << ": real: " << real;
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleBasic at " << mCoords << ": imag: " << imag;
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleBasic at " << mCoords << ": sigma: " << nullingSigma;
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleBasic at " << mCoords << ": SNR: " << nullingSNR;
 
     dmspeck nullingSpeck;
 
@@ -84,10 +84,10 @@ dmspeck SpeckleBasic::endOfProbeUpdate(){
         nullingSpeck.phase = nullingPhase;
         nullingSpeck.isNull = true;
 
-        //BOOST_LOG_TRIVIAL(info) << "SpeckleBasic at " << mCoords << ": applying nulling speckle after " << getNProbeIters() << " iterations";
-        //BOOST_LOG_TRIVIAL(info) << "                                   amplitude: " << nullingAmp;
-        //BOOST_LOG_TRIVIAL(info) << "                                   phase: " << nullingPhase;
-        //BOOST_LOG_TRIVIAL(info) << "                                   SNR: " << nullingSNR;
+        BOOST_LOG_TRIVIAL(info) << "SpeckleBasic at " << mCoords << ": applying nulling speckle after " << getNProbeIters() << " iterations";
+        BOOST_LOG_TRIVIAL(info) << "                                   amplitude: " << nullingAmp;
+        BOOST_LOG_TRIVIAL(info) << "                                   phase: " << nullingPhase;
+        BOOST_LOG_TRIVIAL(info) << "                                   SNR: " << nullingSNR;
 
     }
 

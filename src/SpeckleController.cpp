@@ -29,7 +29,7 @@ void SpeckleController::updateBadPixMask(const cv::Mat &mask)
 }
 
 void SpeckleController::update(const cv::Mat &image, double integrationTime){
-    BOOST_LOG_TRIVIAL(debug) << "SpeckleController at " << mCoords << ": mCurPhaseInd: " << mCurPhaseInd;
+    BOOST_LOG_TRIVIAL(trace) << "SpeckleController at " << mCoords << ": mCurPhaseInd: " << mCurPhaseInd;
     double intensity, variance;
     std::tie(intensity, variance) = measureSpeckleIntensityAndSigma(image, integrationTime);
 
@@ -71,10 +71,10 @@ std::tuple<double, double> SpeckleController::measureSpeckleIntensityAndSigma(co
     //TODO: make this a parameter
     measVariance = std::max(measVariance, std::pow(0.707107*1000/integrationTime, 2)); //variance of 0.5 photons in image
 
-    //BOOST_LOG_TRIVIAL(debug) << "Speckle at " << mCoords << ": intensity :" << measIntensity;
-    //BOOST_LOG_TRIVIAL(debug) << "Speckle at " << mCoords << ": variance:     " << measVariance;
-    //BOOST_LOG_TRIVIAL(trace) << "Speckle at " << mCoords << ": image:   \n" << mSpeckleIm;
-    //BOOST_LOG_TRIVIAL(debug) << "";
+    BOOST_LOG_TRIVIAL(trace) << "Speckle at " << mCoords << ": intensity :" << measIntensity;
+    BOOST_LOG_TRIVIAL(trace) << "Speckle at " << mCoords << ": variance:     " << measVariance;
+    BOOST_LOG_TRIVIAL(trace) << "Speckle at " << mCoords << ": image:   \n" << mSpeckleIm;
+    BOOST_LOG_TRIVIAL(trace) << "";
 
 
     return std::make_tuple(measIntensity, measVariance);
