@@ -2,9 +2,11 @@
 
 SpeckleController::SpeckleController(cv::Point2d pt, boost::property_tree::ptree &ptree):
         mParams(ptree), mCoords(pt), mCurPhaseInd(-1){
+    BOOST_LOG_TRIVIAL(info) << "Creating new speckle at " << mCoords << ": kvecs: " << mKvecs;
     mKvecs = calculateKvecs(mCoords, mParams);
 
-    BOOST_LOG_TRIVIAL(info) << "Creating new speckle at " << mCoords << ": kvecs: " << mKvecs;
+    BOOST_LOG_TRIVIAL(debug) << "Done calculating kvecs";
+
 
     mApertureMask = cv::Mat::zeros(2*mParams.get<int>("NullingParams.apertureRadius")+1, 2*mParams.get<int>("NullingParams.apertureRadius")+1, CV_32F);
     cv::circle(mApertureMask, cv::Point(mParams.get<int>("NullingParams.apertureRadius"), mParams.get<int>("NullingParams.apertureRadius")), mParams.get<int>("NullingParams.apertureRadius"), 1, -1);
