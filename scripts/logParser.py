@@ -93,7 +93,7 @@ if __name__=='__main__':
         iterSteps.append(IterStep('update speckles', 'SpeckleNuller: updating...', 'Clearing probe speckles'))
         iterSteps.append(IterStep('update speckle objects', 'SpeckleNuller: updating speckle objects', 'done updating speckle objects'))
         #iterSteps.append(IterStep('exclusion zone cut', 'start exclusionZoneCut', 'done exclusionZoneCut'))
-        #iterSteps.append(IterStep('create speckle objects', 'creating speckle objects...', 'done creating speckle objects'))
+        iterSteps.append(IterStep('create speckle objects', 'SpeckleNuller: creating speckle objects...', 'done creating speckle objects'))
         while line:
             if START_STATEMENT in line:
                 parseIter(iterLines, iterSteps)

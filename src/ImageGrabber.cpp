@@ -128,13 +128,13 @@ void ImageGrabber::startIntegrating(uint64_t startts, double integrationTime, in
 
 cv::Mat &ImageGrabber::getCtrlRegionImage(bool process) 
 {
-    BOOST_LOG_TRIVIAL(trace) << "ImageGrabber: waiting...";
+    BOOST_LOG_TRIVIAL(debug) << "ImageGrabber: waiting...";
     if(!mUpToDate){
         MKIDShmImage_wait(&mShmImage, DONE_SEM_IND);
         mUpToDate = true;
 
     }
-    BOOST_LOG_TRIVIAL(trace) << "ImageGrabber: grabbing ctrl region...";
+    BOOST_LOG_TRIVIAL(debug) << "ImageGrabber: grabbing ctrl region...";
     mCtrlRegionImage = cv::Mat(mRawImageShm, cv::Range(mYCtrlStart, mYCtrlEnd), cv::Range(mXCtrlStart, mXCtrlEnd));
     if(process)
         processCtrlRegion();
@@ -145,7 +145,7 @@ cv::Mat &ImageGrabber::getCtrlRegionImage(bool process)
 
 cv::Mat &ImageGrabber::getImage(bool process)
 {
-    BOOST_LOG_TRIVIAL(trace) << "ImageGrabber: waiting...";
+    BOOST_LOG_TRIVIAL(debug) << "ImageGrabber: waiting...";
     if(!mUpToDate){
         MKIDShmImage_wait(&mShmImage, DONE_SEM_IND);
         mUpToDate = true;

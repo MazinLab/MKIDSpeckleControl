@@ -281,6 +281,8 @@ void SpeckleNuller::createSpeckleObjects(std::vector<ImgPt> &imgPts, bool update
 
     }
 
+    BOOST_LOG_TRIVIAL(debug) << "SpeckleNuller: done creating speckle objects...";
+
 
 }
 
