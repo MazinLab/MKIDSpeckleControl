@@ -1,15 +1,15 @@
 #include "SpeckleController.h"
 
-SpeckleController::SpeckleController(cv::Point2d pt, boost::property_tree::ptree &ptree):
-        mParams(ptree), mCoords(pt), mCurPhaseInd(-1){
+SpeckleController::SpeckleController(cv::Point2d pt, boost::property_tree::ptree &ptree, cv::Mat apertureMask):
+        mParams(ptree), mCoords(pt), mCurPhaseInd(-1), mApertureMask(apertureMask){
     BOOST_LOG_TRIVIAL(info) << "Creating new speckle at " << mCoords << ": kvecs: " << mKvecs;
     mKvecs = calculateKvecs(mCoords, mParams);
 
-    BOOST_LOG_TRIVIAL(debug) << "Done calculating kvecs";
+    BOOST_LOG_TRIVIAL(trace) << "Done calculating kvecs";
 
 
-    mApertureMask = cv::Mat::zeros(2*mParams.get<int>("NullingParams.apertureRadius")+1, 2*mParams.get<int>("NullingParams.apertureRadius")+1, CV_32F);
-    cv::circle(mApertureMask, cv::Point(mParams.get<int>("NullingParams.apertureRadius"), mParams.get<int>("NullingParams.apertureRadius")), mParams.get<int>("NullingParams.apertureRadius"), 1, -1);
+    //mApertureMask = cv::Mat::zeros(2*mParams.get<int>("NullingParams.apertureRadius")+1, 2*mParams.get<int>("NullingParams.apertureRadius")+1, CV_32F);
+    //cv::circle(mApertureMask, cv::Point(mParams.get<int>("NullingParams.apertureRadius"), mParams.get<int>("NullingParams.apertureRadius")), mParams.get<int>("NullingParams.apertureRadius"), 1, -1);
 
     mBadPixMask = cv::Mat::zeros(mParams.get<int>("ImgParams.yCtrlEnd") - mParams.get<int>("ImgParams.yCtrlStart"), 
         mParams.get<int>("ImgParams.xCtrlEnd") - mParams.get<int>("ImgParams.xCtrlStart"), CV_16U);
@@ -17,7 +17,7 @@ SpeckleController::SpeckleController(cv::Point2d pt, boost::property_tree::ptree
 
     mNProbeIters = 0;
     mNNullingIters = 0;
-    BOOST_LOG_TRIVIAL(debug) << "Speckle: done initialization";
+    BOOST_LOG_TRIVIAL(trace) << "Speckle: done initialization";
 
 
 }
@@ -26,7 +26,7 @@ void SpeckleController::updateBadPixMask(const cv::Mat &mask)
 {
     mBadPixMask = mask;
     mIntensityCorrectionFactor = measureIntensityCorrection();
-    BOOST_LOG_TRIVIAL(debug) << "Speckle: intensity correction factor: " << mIntensityCorrectionFactor;
+    BOOST_LOG_TRIVIAL(trace) << "Speckle: intensity correction factor: " << mIntensityCorrectionFactor;
 
 }
 

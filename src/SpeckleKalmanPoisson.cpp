@@ -1,7 +1,7 @@
 #include "SpeckleKalmanPoisson.h"
 
-SpeckleKalmanPoisson::SpeckleKalmanPoisson(cv::Point2d pt, boost::property_tree::ptree &ptree):
-        SpeckleController(pt, ptree){
+SpeckleKalmanPoisson::SpeckleKalmanPoisson(cv::Point2d pt, boost::property_tree::ptree &ptree, cv::Mat apertureMask):
+        SpeckleController(pt, ptree, apertureMask){
     for(int i=0; i<NPHASES; i++)
         mPhaseList[i] = (double)2*M_PI*i/NPHASES;
      

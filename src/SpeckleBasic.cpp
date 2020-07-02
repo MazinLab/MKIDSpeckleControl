@@ -1,6 +1,6 @@
 #include "SpeckleBasic.h"
 
-SpeckleBasic::SpeckleBasic(cv::Point2d pt, boost::property_tree::ptree &cfgParams): SpeckleController(pt, cfgParams){
+SpeckleBasic::SpeckleBasic(cv::Point2d pt, boost::property_tree::ptree &cfgParams, cv::Mat apertureMask): SpeckleController(pt, cfgParams, apertureMask){
     for(int i=0; i<NPHASES; i++){
         mPhaseIntensities[i] = 0;
         mPhaseVars[i] = 0;
@@ -13,7 +13,7 @@ SpeckleBasic::SpeckleBasic(cv::Point2d pt, boost::property_tree::ptree &cfgParam
 
     mProbeAmp = 0;
 
-    BOOST_LOG_TRIVIAL(debug) << "DM Cal Factor: " << mDMCalFactor;
+    BOOST_LOG_TRIVIAL(trace) << "DM Cal Factor: " << mDMCalFactor;
 
 }
         
@@ -25,7 +25,7 @@ void SpeckleBasic::nonProbeMeasurementUpdate(double intensity, double variance){
         + std::sqrt(intensity)*mDMCalFactor/(nProbeIters + 1);
 
     if(nProbeIters%10 == 0)
-        BOOST_LOG_TRIVIAL(info) << "Iter: " << nProbeIters << "; Probing at: " << mProbeAmp;
+        BOOST_LOG_TRIVIAL(trace) << "Iter: " << nProbeIters << "; Probing at: " << mProbeAmp;
 
 }
 

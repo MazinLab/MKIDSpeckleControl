@@ -255,17 +255,20 @@ void SpeckleNuller::updateAndCutNulledSpeckles(std::vector<ImgPt> &maxImgPts){
 void SpeckleNuller::createSpeckleObjects(std::vector<ImgPt> &imgPts, bool update){ 
     BOOST_LOG_TRIVIAL(debug) << "SpeckleNuller: creating speckle objects...";
 
+    cv::Mat apertureMask = cv::Mat::zeros(2*mParams.get<int>("NullingParams.apertureRadius")+1, 2*mParams.get<int>("NullingParams.apertureRadius")+1, CV_32F);
+    cv::circle(apertureMask, cv::Point(mParams.get<int>("NullingParams.apertureRadius"), mParams.get<int>("NullingParams.apertureRadius")), mParams.get<int>("NullingParams.apertureRadius"), 1, -1);
+
     std::vector<ImgPt>::iterator it;
     cv::Point2d coordinates;
     SpeckleController *speck;
     for(it = imgPts.begin(); it < imgPts.end(); it++){
         coordinates = (*it).coordinates;
         if(mParams.get<std::string>("NullingParams.controller") == "kalman")
-            speck = new SpeckleKalman(coordinates, mParams); 
+            speck = new SpeckleKalman(coordinates, mParams, apertureMask); 
         else if(mParams.get<std::string>("NullingParams.controller") == "kalmanPoisson")
-            speck = new SpeckleKalmanPoisson(coordinates, mParams);
+            speck = new SpeckleKalmanPoisson(coordinates, mParams, apertureMask);
         else if(mParams.get<std::string>("NullingParams.controller") == "basic")
-            speck = new SpeckleBasic(coordinates, mParams);
+            speck = new SpeckleBasic(coordinates, mParams, apertureMask);
         else
             throw "Controller type not implemented";
         speck->updateBadPixMask(mBadPixMask);
