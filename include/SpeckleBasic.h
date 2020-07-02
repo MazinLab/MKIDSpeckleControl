@@ -20,7 +20,7 @@ class SpeckleBasic : public SpeckleController {
         dmspeck endOfProbeUpdate();
 
     public:
-        SpeckleBasic(cv::Point2d pt, boost::property_tree::ptree &cfgParams);
+        SpeckleBasic(cv::Point2d pt, boost::property_tree::ptree &cfgParams, cv::Mat apertureMask);
 
 };
 #endif

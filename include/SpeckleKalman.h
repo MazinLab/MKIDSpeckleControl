@@ -65,7 +65,7 @@ class SpeckleKalman : public SpeckleController
 
 
     public:
-        SpeckleKalman(cv::Point2d pt, boost::property_tree::ptree &ptree);
+        SpeckleKalman(cv::Point2d pt, boost::property_tree::ptree &ptree, cv::Mat apertureMask);
 
 };
 #endif

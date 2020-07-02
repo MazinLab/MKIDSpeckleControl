@@ -93,7 +93,7 @@ class SpeckleController
         * @param pt Speckle coordinates on the array
         * @param ptree Property tree of config parameters
         **/
-        SpeckleController(cv::Point2d pt, boost::property_tree::ptree &ptree);
+        SpeckleController(cv::Point2d pt, boost::property_tree::ptree &ptree, cv::Mat apertureMask);
 
         /**
          * Update controller state with new image. It is assumed that the previous control
