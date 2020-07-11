@@ -1,3 +1,5 @@
+#!/home/scexao/anaconda3/envs/mkids/bin/python
+
 import argparse
 import signal
 import numpy as np
@@ -25,10 +27,20 @@ if __name__=='__main__':
     else:
         shmImageCfg = None
     
+    if args.beammap:
+        bm = mko.Beammap(args.beammap, (nCols, nRows))
+    else:
+        bm = None
+
+    if args.wvl_coeffs:
+        wvl = np.load(args.wvl_coeffs)
+    else:
+        wvl = None
+
 
     pkm = pm.Packetmaster(args.num_roaches, args.port, nRows, nCols, useWriter=False, 
-            wvlCoeffs=args.wvl_coeffs, beammap=args.beammap, sharedImageCfg=shmImageCfg,
-            maximizePriority=args.max_priority, recreate_images=True)
+            wvlCoeffs=wvl, beammap=bm, sharedImageCfg=shmImageCfg,
+            maximizePriority=args.max_priority, recreate_images=False)
 
 
     def quitHandler(signum, frame):
