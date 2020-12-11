@@ -4,7 +4,18 @@ import matplotlib.pyplot as plt
 import pickle as pkl
 
 class GMat(object):
-    
+    """
+    Container for modal control/calibration matrix
+
+    Attributes:
+        mat: 2nPix x nMode control matrix. 
+            rows map to real, then imag E-field of flattened pix array (good pix mask applied)
+            ditto for columns/modes.
+        coordList: List of good pixel coordinates in control region, relative to center
+        modeList: List of pixel modes located in control region. not limited to good pixels
+            contains kVecs of modes; so 1/2 the size of actual list of modes (no phase value)
+    """
+
     def __init__(self, beta, cij, lOverD, corrWin, center, ctrlRegionStart, ctrlRegionEnd, badPixMask, yFlip=False):
         """
             ctrlRegionStart: r, c control region start boundary wrt to center
@@ -42,6 +53,7 @@ class GMat(object):
         self.coordImage = coordImage
         self.modeImage = modeImage
         self.coordList = coordList
+        self.modeCoordList = np.reshape(coordImage, (-1, 2))
         self.modeList = modeList
 
 

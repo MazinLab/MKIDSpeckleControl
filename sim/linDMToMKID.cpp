@@ -25,7 +25,7 @@ int main(int argc, char* argv[]){
     bool takingImage = false;
     int intCounter = 0;
 
-    boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::info);
+    boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::trace);
 
     //wrapper around shared memory data
     IMAGE dmShmIm;

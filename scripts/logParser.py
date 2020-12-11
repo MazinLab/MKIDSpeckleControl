@@ -95,10 +95,11 @@ if __name__=='__main__':
         #iterSteps.append(IterStep('exclusion zone cut', 'start exclusionZoneCut', 'done exclusionZoneCut'))
         iterSteps.append(IterStep('create speckle objects', 'SpeckleNuller: creating speckle objects...', 'done creating speckle objects'))
         while line:
-            if START_STATEMENT in line:
-                parseIter(iterLines, iterSteps)
-                iterLines = []
-            iterLines.append(line)
+            if 'debug' in line:
+                if START_STATEMENT in line:
+                    parseIter(iterLines, iterSteps)
+                    iterLines = []
+                iterLines.append(line)
             prevLine = line
             line = f.readline()
             if not line:
