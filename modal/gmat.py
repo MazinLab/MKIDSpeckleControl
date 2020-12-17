@@ -21,12 +21,15 @@ class GMat(object):
             ctrlRegionStart: r, c control region start boundary wrt to center
             ctrlRegionEnd: r, c control region end boundary wrt to center
         """
-        coordImage = np.mgrid[ctrlRegionStart[0]:ctrlRegionEnd[0], ctrlRegionStart[1]:ctrlRegionEnd[1]]
+        coordImage = np.mgrid[(0:ctrlRegionEnd[0] - ctrlRegionStart[0]), 0:(ctrlRegionEnd[1] -  ctrlRegionStart[1])]
         coordImage = np.transpose(coordImage, axes=(1, 2, 0)) # should be indexed r, c, coordAxis
         coordList = np.reshape(coordImage, (-1, 2))
 
-        modeImage = coordImage*lOverD*2*np.pi
+        modeImage = lOverD*2*np.pi*np.mgrid[ctrlRegionStart[0]:ctrlRegionEnd[0], ctrlRegionStart[1]:ctrlRegionEnd[1]]
+        modeImage = np.transpose(modeImage, axes=(1, 2, 0)) # should be indexed r, c, coordAxis
         modeList = np.reshape(modeImage, (-1, 2))
+
+        assert coordImage.shape == modeImage.shape
 
         #upper (and lower) initial diagonal for G (n_pix x n_modes)
         matBlock = np.diag(beta*np.ones(coordImage.shape[0]*coordImage.shape[1])) 
@@ -45,16 +48,37 @@ class GMat(object):
         #coordImage[badPixMask, :] = np.array([np.nan, np.nan])
         goodPixMaskList = ~badPixMaskList
 
-        coordList = coordList[goodPixMaskList]
+        coordList = coordList[goodPixMaskList] 
         matBlock = matBlock[goodPixMaskList, :]
 
         self.mat = scilin.block_diag(matBlock, matBlock)
         self.badPixMask = badPixMask
-        self.coordImage = coordImage
-        self.modeImage = modeImage
-        self.coordList = coordList
-        self.modeCoordList = np.reshape(coordImage, (-1, 2))
-        self.modeList = modeList
+        self.coordImage = coordImage #ctrl region image containing coordinate of each point, starting at 0,0
+        self.modeImage = modeImage #ctrl region image containing kvecs for that pixel
+        self.coordList = coordList #bad pix masked list of ctrl region coords starting at 0,0
+        self.modeCoordList = np.reshape(coordImage, (-1, 2)) #coordList but not bad pix masked (i.e. integer form of kVecs)
+        self.modeList = modeList #list of (real) kVec modes. Full mode list is 2x size
+
+    def getDMSpeckles(modeVec):
+        if len(modeVec) != 2*len(self.modeList):
+            raise Exception('mode vector should be {} elements'.format(2*len(self.modeList)))
+
+        modeVec = np.reshape(modeVec, (-1, 2))
+        #modeInds = np.where((modeVec[:len(self.modeList)] != 0)|(modeVec[len(self.modeList):] != 0)[0]
+        modeInds = np.unique(np.where(modeVec!=0)[0])
+
+        ampList = []
+        phaseList = []
+        kVecList = []
+
+        for ind in modeInds:
+            cxAmp = modeVec[ind]
+            ampList.append(np.sqrt(cxAmp[0]**2 + cxAmp[1]**2))
+            phaseList.append(np.arctan2(cxAmp[1], cxAmp[0]))
+            kVecList.append(modeList[ind])
+
+        return ampList, phaseList, kVecList
+
 
 
 
