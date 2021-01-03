@@ -59,6 +59,8 @@ class Calibrator(object):
             halfModeVec[modeInds] = dmAmpRange*np.random.random(len(modeInds))
             self._probeCycle(halfModeVec, intTime)
 
+        self._save()
+
     def runProbeCtrlProbe(self, nIters, maxModes, dmAmpRange, exclusionZone, intTime):
         for i in range(nIters):
             modeInds = self._pickRandomModes(maxProbes, exclusionZone)
