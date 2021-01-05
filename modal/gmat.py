@@ -21,7 +21,7 @@ class GMat(object):
             ctrlRegionStart: r, c control region start boundary wrt to center
             ctrlRegionEnd: r, c control region end boundary wrt to center
         """
-        coordImage = np.mgrid[(0:ctrlRegionEnd[0] - ctrlRegionStart[0]), 0:(ctrlRegionEnd[1] -  ctrlRegionStart[1])]
+        coordImage = np.mgrid[0:(ctrlRegionEnd[0] - ctrlRegionStart[0]), 0:(ctrlRegionEnd[1] -  ctrlRegionStart[1])]
         coordImage = np.transpose(coordImage, axes=(1, 2, 0)) # should be indexed r, c, coordAxis
         coordList = np.reshape(coordImage, (-1, 2))
 
@@ -30,6 +30,10 @@ class GMat(object):
         modeList = np.reshape(modeImage, (-1, 2))
 
         assert coordImage.shape == modeImage.shape
+
+        if badPixMask.shape != coordImage.shape[:2]:
+            badPixMask = badPixMask[(center[0] + ctrlRegionStart[0]):(center[0] + ctrlRegionEnd[0]), 
+                    (center[1] + ctrlRegionStart[1]):(center[1] + ctrlRegionEnd[1])]
 
         #upper (and lower) initial diagonal for G (n_pix x n_modes)
         matBlock = np.diag(beta*np.ones(coordImage.shape[0]*coordImage.shape[1])) 
@@ -59,7 +63,7 @@ class GMat(object):
         self.modeCoordList = np.reshape(coordImage, (-1, 2)) #coordList but not bad pix masked (i.e. integer form of kVecs)
         self.modeList = modeList #list of (real) kVec modes. Full mode list is 2x size
 
-    def getDMSpeckles(modeVec):
+    def getDMSpeckles(self, modeVec):
         if len(modeVec) != 2*len(self.modeList):
             raise Exception('mode vector should be {} elements'.format(2*len(self.modeList)))
 
@@ -75,9 +79,9 @@ class GMat(object):
             cxAmp = modeVec[ind]
             ampList.append(np.sqrt(cxAmp[0]**2 + cxAmp[1]**2))
             phaseList.append(np.arctan2(cxAmp[1], cxAmp[0]))
-            kVecList.append(modeList[ind])
+            kVecList.append(self.modeList[ind])
 
-        return ampList, phaseList, kVecList
+        return np.array(ampList), np.array(phaseList), np.array(kVecList)
 
 
 
