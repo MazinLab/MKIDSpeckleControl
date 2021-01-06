@@ -25,7 +25,7 @@ class GMat(object):
         coordImage = np.transpose(coordImage, axes=(1, 2, 0)) # should be indexed r, c, coordAxis
         coordList = np.reshape(coordImage, (-1, 2))
 
-        modeImage = lOverD*2*np.pi*np.mgrid[ctrlRegionStart[0]:ctrlRegionEnd[0], ctrlRegionStart[1]:ctrlRegionEnd[1]]
+        modeImage = 2*np.pi/lOverD*np.mgrid[ctrlRegionStart[0]:ctrlRegionEnd[0], ctrlRegionStart[1]:ctrlRegionEnd[1]]
         modeImage = np.transpose(modeImage, axes=(1, 2, 0)) # should be indexed r, c, coordAxis
         modeList = np.reshape(modeImage, (-1, 2))
 
@@ -67,7 +67,7 @@ class GMat(object):
         if len(modeVec) != 2*len(self.modeList):
             raise Exception('mode vector should be {} elements'.format(2*len(self.modeList)))
 
-        modeVec = np.reshape(modeVec, (-1, 2))
+        modeVec = np.reshape(modeVec, (2, -1)).T
         #modeInds = np.where((modeVec[:len(self.modeList)] != 0)|(modeVec[len(self.modeList):] != 0)[0]
         modeInds = np.unique(np.where(modeVec!=0)[0])
 
@@ -79,7 +79,8 @@ class GMat(object):
             cxAmp = modeVec[ind]
             ampList.append(np.sqrt(cxAmp[0]**2 + cxAmp[1]**2))
             phaseList.append(np.arctan2(cxAmp[1], cxAmp[0]))
-            kVecList.append(self.modeList[ind])
+            #switch kVecs from r, c to x, y indexing
+            kVecList.append([self.modeList[ind, 1], self.modeList[ind, 0]])
 
         return np.array(ampList), np.array(phaseList), np.array(kVecList)
 
