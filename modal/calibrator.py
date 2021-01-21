@@ -77,8 +77,16 @@ class Calibrator(object):
             self._probeCycle(halfModeVec, intTime)
 
 
-    def _save():
-        pass
+    def _save(self):
+        ts = time.localtime()
+        
+        with open('gmat_{}.p'.format(time.strftime("%Y%m%d-%H%M%S",ts))) as f:
+            pkl.dump(self.gMat, f)
+
+        np.savez('cal_data_{}.npz'.format(time.strftime("%Y%m%d-%H%M%S",ts)), 
+                ctrlVecs=self.ctrlVecs, reProbeVecs=self.reProbeVecs, imProbeVecs=self.imProbeVecs,
+                reProbeImgs=self.reProbeImgs, imProbeImgs=self.imProbeImgs)
+
 
     def _probeCycle(self, halfModeVec, intTime):
         probeImgs = []

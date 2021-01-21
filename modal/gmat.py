@@ -62,6 +62,8 @@ class GMat(object):
         self.coordList = coordList #bad pix masked list of ctrl region coords starting at 0,0
         self.modeCoordList = np.reshape(coordImage, (-1, 2)) #coordList but not bad pix masked (i.e. integer form of kVecs)
         self.modeList = modeList #list of (real) kVec modes. Full mode list is 2x size
+        self.nPix = np.sum(goodPixMaskList)
+        self.nHalfModes = len(self.modeList)
 
     def getDMSpeckles(self, modeVec):
         if len(modeVec) != 2*len(self.modeList):
@@ -83,6 +85,36 @@ class GMat(object):
             kVecList.append([self.modeList[ind, 1], self.modeList[ind, 0]])
 
         return np.array(ampList), np.array(phaseList), np.array(kVecList)
+
+    def getPixFromModeVec(modeVec):
+        """
+        get pixels in region of influence of nonzero elements of modeVec
+        modeVec can either be full or half
+        """
+        if len(modeVec) == self.nHalfModes:
+            modeMask = np.where(modeVec)[0]
+        else:
+            modeMask = np.where(modeVec[:self.nHalfModes])[0] | np.where(modeVec[self.nHalfModes:])[0]
+
+        pixMask = np.matmul(self.gMat[:self.nPix, :self.nHalfModes], modeMask.astype(int)).astype(bool)
+        coords = self.coordList[pixMask, :]
+        return coords
+
+    def checkPixModeVec(modeVec, pixInd):
+        """
+        get pixels in region of influence of nonzero elements of modeVec
+        modeVec can either be full or half
+        """
+        if len(modeVec) == self.nHalfModes:
+            modeMask = np.where(modeVec)[0]
+        else:
+            modeMask = np.where(modeVec[:self.nHalfModes])[0] | np.where(modeVec[self.nHalfModes:])[0]
+
+        pixMask = np.matmul(self.gMat[:self.nPix, :self.nHalfModes], modeMask.astype(int)).astype(bool)
+        return pixMask[pixInd]
+
+
+
 
 
 
