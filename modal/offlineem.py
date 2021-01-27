@@ -2,6 +2,7 @@ from gmat import GMat
 from calibrator import Calibrator
 
 import numpy as np
+import numpy.linalg as nlg
 import matplotlib.pyplot as plt
 import pickle as pkl
 
@@ -83,7 +84,6 @@ class OfflineEM(object):
                 #self.R[0] = self.r*np.ones((2,2))
                 gSlice = self.gMat[[pixInd, pixInd+nPix], :]
                 for i in range(len(self.reZs[pixInd])):
-                    self.Q[pixInd, i] = self.q*np.ones((2,2)) #just hardcode all of the Qs for now
                     if i == 0:
                         xpr = np.dot(gSlice, self.uCs[pixInd, 0])
                         Ppr = 1000*np.ones((2,2))
@@ -92,6 +92,26 @@ class OfflineEM(object):
                         Ppr = self.P[pixInd, i-1] + self.Q[pixInd, i]
                     self.R[pixInd, i] = self.r*np.diag(np.ones(2))
                     self.Q[pixInd, i] = self.q*np.diag(np.ones(2))
+
+                    Hre = 4*np.dot(gSlice, self.reUps[pixInd, i]).T
+                    Kre = np.dot(Ppr, np.dot(Hre.T, nlg.inv(np.dot(Hre, np.dot(Ppr, Hre.T)) + self.R[pixInd, i])))
+                    self.x[pixInd, i] = xpr + Kre*(self.reZs[pixInd, i] - np.dot(Hre, xpr))
+                    self.P[pixInd, i] = np.dot(np.diag(np.ones(2)) - np.dot(Kre, Hre), Ppr)
+                    
+                    Him = 4*np.dot(gSlice, self.imUps[pixInd, i]).T
+                    Kim = np.dot(Ppr, np.dot(Him.T, nlg.inv(np.dot(Him, np.dot(Ppr, Him.T)) + self.R[pixInd, i])))
+                    self.x[pixInd, i] += Kim*(self.imZs[pixInd, i] - np.dot(Him, xpr))
+                    self.P[pixInd, i] = np.dot(np.diag(np.ones(2)) - np.dot(Kim, Him), self.P[pixInd, i])
+
+        def applyMStep(batchSize=50, learningRate=0.01):
+            for i in range(batchSize):
+                pixInd = np.random.choice(self.gMat.nPix)
+                iterInd = np.random.choice(range(1, len(self.reZs[pixInd])))
+                x = np.zeros(2*self.gMat.nPix)
+                xprev = np.zeros(2*self.gMat.nPix)
+                
+
+
                     
 
 
