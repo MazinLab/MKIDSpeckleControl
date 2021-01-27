@@ -107,9 +107,30 @@ class OfflineEM(object):
             for i in range(batchSize):
                 pixInd = np.random.choice(self.gMat.nPix)
                 iterInd = np.random.choice(range(1, len(self.reZs[pixInd])))
+                prInd = np.random.choice(2)
+
                 x = np.zeros(2*self.gMat.nPix)
                 xprev = np.zeros(2*self.gMat.nPix)
+                x[pixInd] = self.x[pixInd, iterInd, 0]
+                x[pixInd + self.gMat.nPix] = self.x[pixInd, iterInd, 1]
+                xprev[pixInd] = self.x[pixInd, iterInd-1, 0]
+                xprev[pixInd + self.gMat.nPix] = self.x[pixInd, iterInd-1, 1]
+
+                if prInd==0:
+                    up = self.reUps[pixInd, iterInd]
+                    z = self.reZs[pixInd, iterInd]
+                else:
+                    up = self.imUps[pixInd, iterInd]
+                    z = self.imZs[pixInd, iterInd]
                 
+                q = self.Q[pixInd, iterInd, prInd, prInd]
+                r = self.R[pixInd, iterInd, prInd, prInd]
+                uc = self.uCs[pixInd, iterInd]
+
+                self.gMat.mat += learningRate/q*(np.dot(x - xprev, uc.T) - 2*np.dot(self.gMat.mat, np.dot(uc, uc.T)))
+                self.gMat.mat += learningRate/r*(4*z*np.dot(x, up.T) - 8*np.dot(np.dot(x, x.T), np.dot(self.gMat.mat, np.dot(up, up.T))))
+
+
 
 
                     
