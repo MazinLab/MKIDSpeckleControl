@@ -2,6 +2,7 @@ import numpy as np
 import scipy.linalg as scilin
 import matplotlib.pyplot as plt
 import pickle as pkl
+import time
 
 from gmat import GMat
 import speckpy as sp
@@ -80,7 +81,7 @@ class Calibrator(object):
     def _save(self):
         ts = time.localtime()
         
-        with open('gmat_{}.p'.format(time.strftime("%Y%m%d-%H%M%S",ts))) as f:
+        with open('gmat_{}.p'.format(time.strftime("%Y%m%d-%H%M%S",ts)), 'w') as f:
             pkl.dump(self.gMat, f)
 
         np.savez('cal_data_{}.npz'.format(time.strftime("%Y%m%d-%H%M%S",ts)), 
@@ -115,6 +116,7 @@ class Calibrator(object):
         modeVec = halfModeVec*np.cos(halfModePhaseVec)
         modeVec = np.append(modeVec, halfModeVec*np.sin(halfModePhaseVec))
         self._applyToDM(modeVec, 'null')
+        self.ctrlVecs.append(modeVec)
 
     def _pickRandomModes(self, nModes, exclusionZone):
         validModeMask = np.ones(len(self.gMat.modeList))

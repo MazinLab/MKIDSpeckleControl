@@ -86,31 +86,31 @@ class GMat(object):
 
         return np.array(ampList), np.array(phaseList), np.array(kVecList)
 
-    def getPixFromModeVec(modeVec):
+    def getPixFromModeVec(self, modeVec):
         """
         get pixels in region of influence of nonzero elements of modeVec
         modeVec can either be full or half
         """
         if len(modeVec) == self.nHalfModes:
-            modeMask = np.where(modeVec)[0]
+            modeMask = modeVec != 0
         else:
-            modeMask = np.where(modeVec[:self.nHalfModes])[0] | np.where(modeVec[self.nHalfModes:])[0]
+            modeMask = (modeVec[:self.nHalfModes] != 0) | (modeVec[self.nHalfModes:] != 0)
 
-        pixMask = np.matmul(self.gMat[:self.nPix, :self.nHalfModes], modeMask.astype(int)).astype(bool)
+        pixMask = np.matmul(self.mat[:self.nPix, :self.nHalfModes], modeMask.astype(int)).astype(bool)
         coords = self.coordList[pixMask, :]
         return coords
 
-    def checkPixModeVec(modeVec, pixInd):
+    def checkPixModeVec(self, modeVec, pixInd):
         """
         get pixels in region of influence of nonzero elements of modeVec
         modeVec can either be full or half
         """
         if len(modeVec) == self.nHalfModes:
-            modeMask = np.where(modeVec)[0]
+            modeMask = modeVec != 0
         else:
-            modeMask = np.where(modeVec[:self.nHalfModes])[0] | np.where(modeVec[self.nHalfModes:])[0]
+            modeMask = (modeVec[:self.nHalfModes] != 0) | (modeVec[self.nHalfModes:] != 0)
 
-        pixMask = np.matmul(self.gMat[:self.nPix, :self.nHalfModes], modeMask.astype(int)).astype(bool)
+        pixMask = np.matmul(self.mat[:self.nPix, :self.nHalfModes], modeMask.astype(int)).astype(bool)
         return pixMask[pixInd]
 
 
