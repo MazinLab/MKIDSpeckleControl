@@ -16,7 +16,7 @@ class Calibrator(object):
         Takes calibration data set
         """
         self.gMat = GMat(beta, cij, lOverD, corrWin, center, 
-                ctrlRegionStart, ctrlRegionEnd, badPixMask, yFlip=False)
+                ctrlRegionStart, ctrlRegionEnd, badPixMask, yFlip)
         self.reProbeImgs = [] #pairwise probe images
         self.imProbeImgs = []
         self.ctrlVecs = [] #vector of control offsets from probes (referenced to GMat.modelist)
@@ -38,11 +38,11 @@ class Calibrator(object):
         self.imgEnd = np.array(ctrlRegionEnd) + np.array(center)
 
 
-    def run(self, nIters, nInitProbeIters, nProbesPerCtrl, maxProbes, maxCtrl, dmAmpRange, exclusionZone, intTime):
+    def run(self, nIters, nInitProbeIters, nProbesPerCtrl, maxProbes, maxCtrl, dmAmpRangeProbe, dmAmpRangeCtrl, exclusionZone, intTime):
         for i in range(nInitProbeIters):
             modeInds = self._pickRandomModes(maxProbes, exclusionZone)
             halfModeVec = np.zeros(len(self.gMat.modeList))
-            halfModeVec[modeInds] = dmAmpRange*np.random.random(len(modeInds))
+            halfModeVec[modeInds] = dmAmpRangeProbe*np.random.random(len(modeInds))
             self._probeCycle(halfModeVec, intTime)
             self.ctrlVecs.append(np.zeros(2*len(halfModeVec)))
 
@@ -50,32 +50,34 @@ class Calibrator(object):
             #control then probe as per KF equations
             modeInds = self._pickRandomModes(maxProbes, exclusionZone)
             halfModeVec = np.zeros(len(self.gMat.modeList))
-            halfModeVec[modeInds] = dmAmpRange*np.random.random(len(modeInds))
+            halfModeVec[modeInds] = dmAmpRangeCtrl*np.random.random(len(modeInds))
             halfModePhaseVec = np.zeros(len(self.gMat.modeList))
             halfModePhaseVec[modeInds] = 2*np.pi*np.random.random(len(modeInds))
             self._addCtrlModes(halfModeVec, halfModePhaseVec)
 
             modeInds = self._pickRandomModes(maxProbes, exclusionZone)
             halfModeVec = np.zeros(len(self.gMat.modeList))
-            halfModeVec[modeInds] = dmAmpRange*np.random.random(len(modeInds))
+            halfModeVec[modeInds] = dmAmpRangeProbe*np.random.random(len(modeInds))
             self._probeCycle(halfModeVec, intTime)
 
         self._save()
 
-    def runProbeCtrlProbe(self, nIters, maxModes, dmAmpRange, exclusionZone, intTime):
+    def runProbeCtrlProbe(self, nIters, maxModes, dmAmpRangeProbe, dmAmpRangeCtrl, exclusionZone, intTime):
         for i in range(nIters):
             modeInds = self._pickRandomModes(maxModes, exclusionZone)
             halfModeVec = np.zeros(len(self.gMat.modeList))
-            halfModeVec[modeInds] = dmAmpRange*np.random.random(len(modeInds))
+            halfModeVec[modeInds] = dmAmpRangeProbe*np.random.random(len(modeInds))
             self._probeCycle(halfModeVec, intTime)
 
             halfModePhaseVec = np.zeros(len(self.gMat.modeList))
-            halfModeVec[modeInds] = dmAmpRange*np.random.random(len(modeInds))
+            halfModeVec[modeInds] = dmAmpRangeCtrl*np.random.random(len(modeInds))
             halfModePhaseVec[modeInds] = 2*np.pi*np.random.random(len(modeInds))
             self._addCtrlModes(halfModeVec, halfModePhaseVec)
 
-            halfModeVec[modeInds] = dmAmpRange*np.random.random(len(modeInds))
+            halfModeVec[modeInds] = dmAmpRangeProbe*np.random.random(len(modeInds))
             self._probeCycle(halfModeVec, intTime)
+
+        self._save()
 
 
     def _save(self):
@@ -103,7 +105,10 @@ class Calibrator(object):
 
             self._applyToDM(modeVec, 'probe')
             self.shmim.startIntegration(integrationTime=intTime)
-            probeImgs.append(self.shmim.receiveImage()[self.imgStart[0]:self.imgEnd[0], 
+            print 'recv img'
+            img = self.shmim.receiveImage()
+            print 'done'
+            probeImgs.append(img[self.imgStart[0]:self.imgEnd[0], 
                 self.imgStart[1]:self.imgEnd[1]])
 
         self.reProbeVecs.append(np.append(halfModeVec, np.zeros(len(halfModeVec))))

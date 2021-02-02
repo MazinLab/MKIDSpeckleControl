@@ -31,6 +31,11 @@ class GMat(object):
 
         assert coordImage.shape == modeImage.shape
 
+        if yFlip:
+            self.yFlip = -1
+        else:
+            self.yFlip = 1
+
         if badPixMask.shape != coordImage.shape[:2]:
             badPixMask = badPixMask[(center[0] + ctrlRegionStart[0]):(center[0] + ctrlRegionEnd[0]), 
                     (center[1] + ctrlRegionStart[1]):(center[1] + ctrlRegionEnd[1])]
@@ -82,7 +87,7 @@ class GMat(object):
             ampList.append(np.sqrt(cxAmp[0]**2 + cxAmp[1]**2))
             phaseList.append(np.arctan2(cxAmp[1], cxAmp[0]))
             #switch kVecs from r, c to x, y indexing
-            kVecList.append([self.modeList[ind, 1], self.modeList[ind, 0]])
+            kVecList.append([self.modeList[ind, 1], self.yFlip*self.modeList[ind, 0]])
 
         return np.array(ampList), np.array(phaseList), np.array(kVecList)
 

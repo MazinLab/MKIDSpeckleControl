@@ -38,9 +38,9 @@ if __name__=='__main__':
         wvl = None
 
 
-    pkm = pm.Packetmaster(args.num_roaches, args.port, nRows, nCols, useWriter=False, 
+    pkm = pm.Packetmaster(int(args.num_roaches), args.port, nRows, nCols, useWriter=False, 
             wvlCoeffs=wvl, beammap=bm, sharedImageCfg=shmImageCfg,
-            maximizePriority=args.max_priority, recreate_images=False)
+            maximizePriority=args.max_priority, recreate_images=True)
 
 
     def quitHandler(signum, frame):
