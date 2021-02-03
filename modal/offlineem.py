@@ -13,12 +13,13 @@ class OfflineEM(object):
             self.gMat = pkl.load(f)
 
         data = np.load(os.path.join(path, 'cal_data_{}.npz'.format(tsString)))
+        nIters = len(data['ctrlVecs'])
 
-        self.reZs = [np.array([]) for i in range(self.gMat.nPix)]
-        self.imZs = [np.array([]) for i in range(self.gMat.nPix)]
-        self.reUps = [np.zeros((0, 2*self.gMat.nHalfModes)) for i in range(self.gMat.nPix)]
-        self.imUps = [np.zeros((0, 2*self.gMat.nHalfModes)) for i in range(self.gMat.nPix)]
-        self.uCs = [np.zeros((0, 2*self.gMat.nHalfModes)) for i in range(self.gMat.nPix)] 
+        self.reZs = [np.zeros(nIters) for i in range(self.gMat.nPix)]
+        self.imZs = [np.zeros(nIters) for i in range(self.gMat.nPix)]
+        self.reUps = [np.zeros((nIters, 2*self.gMat.nHalfModes)) for i in range(self.gMat.nPix)]
+        self.imUps = [np.zeros((nIters, 2*self.gMat.nHalfModes)) for i in range(self.gMat.nPix)]
+        self.uCs = [np.zeros((nIters, 2*self.gMat.nHalfModes)) for i in range(self.gMat.nPix)] 
 
 
         reProbeZ = data['reProbeImgs']
@@ -32,36 +33,28 @@ class OfflineEM(object):
 
         for pixInd in range(self.gMat.nPix):
             curState = None
-            for i in range(len(data['ctrlVecs'])):
+            curIter = 0
+            for i in range(nIters):
                 if self.gMat.checkPixModeVec(data['ctrlVecs'][i], pixInd):
-                    if curState is None: #or curState == 'probe':
-                        curState = 'ctrl'
-                        self.uCs[pixInd] = data['ctrlVecs'][i]
-                    elif curState == 'ctrl':
-                        self.uCs[pixInd] += data['ctrlVecs'][i]
-                    else:
-                        curState = 'ctrl'
-                        self.uCs[pixInd] = np.vstack((self.uCs[pixInd], data['ctrlVecs'][i]))
+                    curState = 'ctrl'
+                    self.uCs[pixInd][curIter] += data['ctrlVecs'][i]
+
                 if self.gMat.checkPixModeVec(data['reProbeVecs'][i], pixInd):
-                    if curState is None:
-                        curState = 'probe'
-                        self.reUps[pixInd] = data['reProbeVecs'][i]
-                        self.imUps[pixInd] = data['imProbeVecs'][i]
-                        self.reZs[pixInd] = np.append(self.reZs[pixInd], reProbeZ[i, pixInd])
-                        self.imZs[pixInd] = np.append(self.imZs[pixInd], imProbeZ[i, pixInd])
-                        self.uCs[pixInd] = np.zeros(2*self.gMat.nHalfModes)
-                    elif curState == 'probe':
-                        self.uCs[pixInd] = np.vstack((self.uCs[pixInd], np.zeros(2*self.gMat.nHalfModes)))
-                        self.reUps[pixInd] = np.vstack((self.reUps[pixInd], data['reProbeVecs'][i]))
-                        self.imUps[pixInd] = np.vstack((self.imUps[pixInd], data['imProbeVecs'][i]))
-                        self.reZs[pixInd] = np.append(self.reZs[pixInd], reProbeZ[i, pixInd])
-                        self.imZs[pixInd] = np.append(self.imZs[pixInd], imProbeZ[i, pixInd])
-                    else:
-                        self.reUps[pixInd] = np.vstack((self.reUps[pixInd], data['reProbeVecs'][i]))
-                        self.imUps[pixInd] = np.vstack((self.imUps[pixInd], data['imProbeVecs'][i]))
-                        self.reZs[pixInd] = np.append(self.reZs[pixInd], reProbeZ[i, pixInd])
-                        self.imZs[pixInd] = np.append(self.imZs[pixInd], imProbeZ[i, pixInd])
-                        curState = 'probe'
+                    if curState is None or curState == 'probe':
+                        self.uCs[pixInd][curIter] = np.zeros(2*self.gMat.nHalfModes)
+                    self.reUps[pixInd][curIter] = data['reProbeVecs'][i]
+                    self.imUps[pixInd][curIter] = data['imProbeVecs'][i]
+                    self.reZs[pixInd][curIter] = reProbeZ[i, pixInd]
+                    self.imZs[pixInd][curIter] = imProbeZ[i, pixInd]
+                    curState = 'probe'
+                    curIter += 1
+
+            self.reUps[pixInd] = np.delete(self.reUps[pixInd], range(curIter, nIters), axis=0)
+            self.imUps[pixInd] = np.delete(self.imUps[pixInd], range(curIter, nIters), axis=0)
+            self.reZs[pixInd] = np.delete(self.reZs[pixInd], range(curIter, nIters), axis=0)
+            self.imZs[pixInd] = np.delete(self.imZs[pixInd], range(curIter, nIters), axis=0)
+
+
         
         self.r = np.sqrt(np.average(reProbeZ)) #set measurement noise to avg poisson noise
         self.q = 1 #just hardcode this for now

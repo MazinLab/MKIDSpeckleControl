@@ -39,6 +39,11 @@ class Calibrator(object):
 
 
     def run(self, nIters, nInitProbeIters, nProbesPerCtrl, maxProbes, maxCtrl, dmAmpRangeProbe, dmAmpRangeCtrl, exclusionZone, intTime):
+        self.reProbeImgs = [] #pairwise probe images
+        self.imProbeImgs = []
+        self.ctrlVecs = [] #vector of control offsets from probes (referenced to GMat.modelist)
+        self.reProbeVecs = []
+        self.imProbeVecs = []
         for i in range(nInitProbeIters):
             modeInds = self._pickRandomModes(maxProbes, exclusionZone)
             halfModeVec = np.zeros(len(self.gMat.modeList))
@@ -62,7 +67,12 @@ class Calibrator(object):
 
         self._save()
 
-    def runProbeCtrlProbe(self, nIters, maxModes, dmAmpRangeProbe, dmAmpRangeCtrl, exclusionZone, intTime):
+    def runProbeCtrlProbe(self, nIters, maxModes, dmAmpRangeProbe, dmAmpRangeCtrl, exclusionZone, intTime, clearCtrl=False):
+        self.reProbeImgs = [] #pairwise probe images
+        self.imProbeImgs = []
+        self.ctrlVecs = [] #vector of control offsets from probes (referenced to GMat.modelist)
+        self.reProbeVecs = []
+        self.imProbeVecs = []
         for i in range(nIters):
             modeInds = self._pickRandomModes(maxModes, exclusionZone)
             halfModeVec = np.zeros(len(self.gMat.modeList))
@@ -76,6 +86,10 @@ class Calibrator(object):
 
             halfModeVec[modeInds] = dmAmpRangeProbe*np.random.random(len(modeInds))
             self._probeCycle(halfModeVec, intTime)
+            if clearCtrl:
+                self.dmChan.clearNullingSpeckles()
+                self.dmChan.updateDM()
+
 
         self._save()
 
