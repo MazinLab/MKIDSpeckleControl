@@ -21,6 +21,7 @@ int main(int argc, char* argv[]){
     float nLDPerPix = 3;
     int nIntegrations = 1;
     int dmSemInd = 5;
+    int bkgCPS = 0;
 
     bool takingImage = false;
     int intCounter = 0;
@@ -71,7 +72,7 @@ int main(int argc, char* argv[]){
 
         if(takingImage){
             BOOST_LOG_TRIVIAL(debug) << "Grabbing data from DM...";
-            fpImMat += mkid.convertDMToFP(dmImMat, fpShmIm.md->integrationTime/(2*nIntegrations), true, 100);
+            fpImMat += mkid.convertDMToFP(dmImMat, fpShmIm.md->integrationTime/(2*nIntegrations), true, bkgCPS);
             intCounter++;
             if(intCounter==nIntegrations){
                 BOOST_LOG_TRIVIAL(debug) << "Done with image";
