@@ -43,7 +43,7 @@ class GMat(object):
         #upper (and lower) initial diagonal for G (n_pix x n_modes)
         matBlock = np.diag(beta*np.ones(coordImage.shape[0]*coordImage.shape[1])) 
         for i, coord in enumerate(coordList):
-            coordDiff = coordList - coord
+            coordDiff = np.abs(coordList - coord)
             withinRangeMask = (coordDiff[:, 0] <= corrWin) & (coordDiff[:, 1] <= corrWin) #cut box around coords
             matBlock[i, withinRangeMask] = beta*cij**np.sqrt(coordDiff[withinRangeMask, 0]**2 + coordDiff[withinRangeMask, 1]**2)
             #for j in range(corrWin+1):
