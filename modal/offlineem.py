@@ -80,6 +80,9 @@ class OfflineEM(object):
         self.Q = [np.array([]) for i in range(self.gMat.nPix)] 
         self.reExpZ = [np.array([]) for i in range(self.gMat.nPix)]
         self.imExpZ = [np.array([]) for i in range(self.gMat.nPix)]
+        self.reExpZCtrl = [np.array([]) for i in range(self.gMat.nPix)]
+        self.imExpZCtrl = [np.array([]) for i in range(self.gMat.nPix)]
+        self.expXCtrl = [np.array([]) for i in range(self.gMat.nPix)]
 
         for pixInd in range(self.gMat.nPix):
             assert self.reUpInds[pixInd].shape[0] == self.imUpInds[pixInd].shape[0] == len(self.uCInds[pixInd]) == self.reZs[pixInd].shape[0] == self.imZs[pixInd].shape[0] 
@@ -89,6 +92,9 @@ class OfflineEM(object):
             self.Q[pixInd] = np.zeros((len(self.reZs[pixInd]), 2, 2))
             self.reExpZ[pixInd] = np.zeros(len(self.reZs[pixInd]))
             self.imExpZ[pixInd] = np.zeros(len(self.reZs[pixInd]))
+            self.reExpZCtrl[pixInd] = np.zeros(len(self.reZs[pixInd]))
+            self.imExpZCtrl[pixInd] = np.zeros(len(self.reZs[pixInd]))
+            self.expXCtrl[pixInd] = np.zeros((len(self.reZs[pixInd]), 2))
 
     def applyKalman(self):
         for pixInd in range(self.gMat.nPix):
@@ -101,23 +107,28 @@ class OfflineEM(object):
                 if i == 0:
                     xpr = np.dot(gSlice, uc)
                     Ppr = 1000*np.ones((2,2))
+                    self.expXCtrl[pixInd][i] = np.dot(gSlice, uc)
                 else:
                     xpr = self.x[pixInd][i-1] + np.dot(gSlice, uc)
                     Ppr = self.P[pixInd][i-1] + self.Q[pixInd][i]
+                    self.expXCtrl[pixInd][i] = self.expXCtrl[pixInd][i-1] + np.dot(gSlice, uc)
                 self.R[pixInd][i] = self.r
                 self.Q[pixInd][i] = self.q*np.diag(np.ones(2))
+
 
                 Hre = np.expand_dims(4*np.dot(gSlice, self.reUps[self.reUpInds[pixInd][i]]), axis=1).T
                 Kre = np.dot(Ppr, np.dot(Hre.T, nlg.inv(np.dot(Hre, np.dot(Ppr, Hre.T)) + self.R[pixInd][i])))
                 self.x[pixInd][i] = xpr + np.squeeze(Kre*(self.reZs[pixInd][i] - np.dot(Hre, xpr)))
                 self.P[pixInd][i] = np.dot(np.diag(np.ones(2)) - np.dot(Kre, Hre), Ppr)
                 self.reExpZ[pixInd][i] = np.dot(Hre, xpr)
+                self.reExpZCtrl[pixInd][i] = np.dot(Hre, self.expXCtrl[pixInd][i])
                 
                 Him = np.expand_dims(4*np.dot(gSlice, self.imUps[self.imUpInds[pixInd][i]]), axis=1).T
                 Kim = np.dot(Ppr, np.dot(Him.T, nlg.inv(np.dot(Him, np.dot(Ppr, Him.T)) + self.R[pixInd][i])))
                 self.x[pixInd][i] += np.squeeze(Kim*(self.imZs[pixInd][i] - np.dot(Him, xpr)))
                 self.P[pixInd][i] = np.dot(np.diag(np.ones(2)) - np.dot(Kim, Him), self.P[pixInd][i])
                 self.imExpZ[pixInd][i] = np.dot(Him, xpr)
+                self.imExpZCtrl[pixInd][i] = np.dot(Him, self.expXCtrl[pixInd][i])
 
     def applyMStep(self, batchSize=50, learningRate=1.e-3):
         for i in range(batchSize):

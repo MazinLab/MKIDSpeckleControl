@@ -11,7 +11,7 @@ import mkidreadout.readout.sharedmem as shm
 class Calibrator(object):
 
     def __init__(self, shmImName, dmChanName,  beta, cij, lOverD, corrWin, center, 
-            ctrlRegionStart, ctrlRegionEnd, badPixMask, wvlRange=None, yFlip=False):
+            ctrlRegionStart, ctrlRegionEnd, badPixMask, wvlRange=None, yFlip=False, sim=True):
         """
         Takes calibration data set
         """
@@ -36,6 +36,7 @@ class Calibrator(object):
         # ctrl region boundaries in real image coordinates
         self.imgStart = np.array(ctrlRegionStart) + np.array(center)
         self.imgEnd = np.array(ctrlRegionEnd) + np.array(center)
+        self.sim = sim
 
 
     def run(self, nIters, nInitProbeIters, nProbesPerCtrl, maxProbes, maxCtrl, dmAmpRangeProbe, dmAmpRangeCtrl, exclusionZone, intTime):
@@ -134,7 +135,7 @@ class Calibrator(object):
     def _addCtrlModes(self, halfModeVec, halfModePhaseVec):
         modeVec = halfModeVec*np.cos(halfModePhaseVec)
         modeVec = np.append(modeVec, halfModeVec*np.sin(halfModePhaseVec))
-        self._applyToDM(modeVec, 'null')
+        self._applyToDM(modeVec, 'null', update=(not self.sim))
         self.ctrlVecs.append(modeVec)
 
     def _pickRandomModes(self, nModes, exclusionZone):
@@ -149,7 +150,7 @@ class Calibrator(object):
 
         return np.array(modeInds)
 
-    def _applyToDM(self, modeVec, modeType, clearProbes=True):
+    def _applyToDM(self, modeVec, modeType, clearProbes=True, update=True):
         modeType = modeType.lower()
         if modeType != 'probe' and modeType != 'null':
             raise Exception('modeType must be probe or null')
@@ -165,7 +166,8 @@ class Calibrator(object):
             else:
                 self.dmChan.addNullingSpeckle(kVecs[i,0], kVecs[i,1], amps[i], phases[i])
 
-        self.dmChan.updateDM()
+        if update:  
+            self.dmChan.updateDM()
 
 
 
