@@ -70,6 +70,21 @@ class GMat(object):
         self.nPix = np.sum(goodPixMaskList)
         self.nHalfModes = len(self.modeList)
 
+    def recomputeMat(self, beta, cij, corrWin):
+        matBlock = np.diag(beta*np.ones(self.coordImage.shape[0]*self.coordImage.shape[1])) 
+        coordList = np.reshape(self.coordImage, (-1, 2))
+        for i, coord in enumerate(coordList):
+            coordDiff = np.abs(coordList - coord)
+            withinRangeMask = (coordDiff[:, 0] <= corrWin) & (coordDiff[:, 1] <= corrWin) #cut box around coords
+            matBlock[i, withinRangeMask] = beta*cij**np.sqrt(coordDiff[withinRangeMask, 0]**2 + coordDiff[withinRangeMask, 1]**2)
+
+        badPixMaskList = self.badPixMask.flatten()
+        #coordImage[badPixMask, :] = np.array([np.nan, np.nan])
+        goodPixMaskList = ~badPixMaskList
+        matBlock = matBlock[goodPixMaskList, :]
+        self.mat = scilin.block_diag(matBlock, matBlock)
+
+
     def getDMSpeckles(self, modeVec):
         if len(modeVec) != 2*len(self.modeList):
             raise Exception('mode vector should be {} elements'.format(2*len(self.modeList)))

@@ -6,6 +6,7 @@ import os
 import numpy.linalg as nlg
 import matplotlib.pyplot as plt
 import pickle as pkl
+import ipdb
 
 class OfflineEM(object):
     def __init__(self, tsString, path='.'):
@@ -71,8 +72,8 @@ class OfflineEM(object):
 
 
         
-        self.r = 100 #np.sqrt(np.average(reProbeZ)) #set measurement noise to avg poisson noise
-        self.q = 1 #just hardcode this for now
+        self.r = 200 #np.sqrt(np.average(reProbeZ)) #set measurement noise to avg poisson noise
+        self.q = 0.2 #just hardcode this for now
 
         self.x = [np.array([]) for i in range(self.gMat.nPix)] 
         self.P = [np.array([]) for i in range(self.gMat.nPix)] 
@@ -96,8 +97,13 @@ class OfflineEM(object):
             self.imExpZCtrl[pixInd] = np.zeros(len(self.reZs[pixInd]))
             self.expXCtrl[pixInd] = np.zeros((len(self.reZs[pixInd]), 2))
 
-    def applyKalman(self):
-        for pixInd in range(self.gMat.nPix):
+    def applyKalman(self, initPixInd=None):
+        if initPixInd is None:
+            pixRange = range(self.gMat.nPix)
+        else:
+            pixRange = [initPixInd]
+
+        for pixInd in pixRange:
             #self.x[0] = np.array([0, 0])
             #self.P[0] = 1000*np.ones((2,2))
             #self.R[0] = self.r*np.ones((2,2))
@@ -106,7 +112,7 @@ class OfflineEM(object):
                 uc = self._getUc(self.uCInds[pixInd][i])
                 if i == 0:
                     xpr = np.dot(gSlice, uc)
-                    Ppr = 1000*np.ones((2,2))
+                    Ppr = 100000*np.diag(np.ones(2))
                     self.expXCtrl[pixInd][i] = np.dot(gSlice, uc)
                 else:
                     xpr = self.x[pixInd][i-1] + np.dot(gSlice, uc)
@@ -130,9 +136,12 @@ class OfflineEM(object):
                 self.imExpZ[pixInd][i] = np.dot(Him, xpr)
                 self.imExpZCtrl[pixInd][i] = np.dot(Him, self.expXCtrl[pixInd][i])
 
-    def applyMStep(self, batchSize=50, learningRate=1.e-3):
+    def applyMStep(self, batchSize=50, learningRate=1.e-3, initPixInd=None):
         for i in range(batchSize):
-            pixInd = np.random.choice(self.gMat.nPix)
+            if initPixInd is None:
+                pixInd = np.random.choice(self.gMat.nPix)
+            else:
+                pixInd = initPixInd
             iterInd = np.random.choice(range(1, len(self.reZs[pixInd])))
             prInd = np.random.choice(2)
 
@@ -158,12 +167,17 @@ class OfflineEM(object):
             uc = np.expand_dims(self._getUc(self.uCInds[pixInd][iterInd]), axis=1)
 
             gSlice = self.gMat.mat[[pixInd, pixInd + self.gMat.nPix]] #add restrict nonzero
-            gsMask = np.abs(gSlice) > 1.e-3
+            gsMask = gSlice != 0
 
             self.gMat.mat[[pixInd, pixInd + self.gMat.nPix]] += learningRate/q*(np.dot(x - xprev, uc.T) 
                     - np.dot(gSlice, np.dot(uc, uc.T)))*gsMask
             self.gMat.mat[[pixInd, pixInd + self.gMat.nPix]] += learningRate/r*(4*z*np.dot(x, up.T) 
                     - 16*np.dot(np.dot(x, x.T), np.dot(gSlice, np.dot(up, up.T))))*gsMask
+
+            if np.any(np.abs(self.gMat.mat[[pixInd, pixInd + self.gMat.nPix]]) > 30): #todo: change this hardcode and make gSlice more accessible
+                ipdb.set_trace()
+
+            pass
 
     def _getUc(self, inds):
         if inds[0] == -1:
