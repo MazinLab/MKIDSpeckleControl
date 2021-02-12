@@ -84,6 +84,8 @@ class OfflineEM(object):
         self.reExpZCtrl = [np.array([]) for i in range(self.gMat.nPix)]
         self.imExpZCtrl = [np.array([]) for i in range(self.gMat.nPix)]
         self.expXCtrl = [np.array([]) for i in range(self.gMat.nPix)]
+        self.reZResid = [np.array([]) for i in range(self.gMat.nPix)] 
+        self.imZResid = [np.array([]) for i in range(self.gMat.nPix)] 
 
         for pixInd in range(self.gMat.nPix):
             assert self.reUpInds[pixInd].shape[0] == self.imUpInds[pixInd].shape[0] == len(self.uCInds[pixInd]) == self.reZs[pixInd].shape[0] == self.imZs[pixInd].shape[0] 
@@ -178,6 +180,27 @@ class OfflineEM(object):
                 ipdb.set_trace()
 
             pass
+    
+    def runEM(self, learningRate=5.e-4, batchSize=50, nIters=1000, initPixInd=None):
+        if initPixInd is None:
+            pixRange = range(self.gMat.nPix)
+        else:
+            pixRange = [initPixInd]
+
+        for pixInd in pixRange:
+            self.reZResid[pixInd] = np.zeros(nIters)
+            self.imZResid[pixInd] = np.zeros(nIters)
+            for i in range(nIters):
+                self.applyKalman(pixInd)
+                r = 10**(i/float(nIters))
+                self.applyMStep(batchSize, learningRate/r, pixInd)
+                self.reZResid[pixInd][i] = np.mean((self.reZs[pixInd] - self.reExpZ[pixInd])**2)
+                self.imZResid[pixInd][i] = np.mean((self.imZs[pixInd] - self.imExpZ[pixInd])**2)
+                print 'pixInd: {}; iter: {}'.format(pixInd, i)
+                print '    reResid:', self.reZResid[pixInd][i]
+                print '    imResid:', self.imZResid[pixInd][i]
+
+
 
     def _getUc(self, inds):
         if inds[0] == -1:
