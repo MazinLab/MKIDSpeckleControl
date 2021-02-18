@@ -99,6 +99,9 @@ class OfflineEM(object):
             self.imExpZCtrl[pixInd] = np.zeros(len(self.reZs[pixInd]))
             self.expXCtrl[pixInd] = np.zeros((len(self.reZs[pixInd]), 2))
 
+    def __getitem__(self, inds):
+        pass
+
     def applyKalman(self, initPixInd=None):
         if initPixInd is None:
             pixRange = range(self.gMat.nPix)
@@ -171,17 +174,21 @@ class OfflineEM(object):
             gSlice = self.gMat.mat[[pixInd, pixInd + self.gMat.nPix]] #add restrict nonzero
             gsMask = gSlice != 0
 
+            #self.gMat.mat[[pixInd, pixInd + self.gMat.nPix]] += learningRate/q*(np.dot(x - xprev, uc.T) 
+            #        - np.dot(gSlice, np.dot(uc, uc.T)))*gsMask
+            #self.gMat.mat[[pixInd, pixInd + self.gMat.nPix]] += learningRate/r*(4*z*np.dot(x, up.T) 
+            #        - 16*np.dot(np.dot(x, x.T), np.dot(gSlice, np.dot(up, up.T))))*gsMask
             self.gMat.mat[[pixInd, pixInd + self.gMat.nPix]] += learningRate/q*(np.dot(x - xprev, uc.T) 
-                    - np.dot(gSlice, np.dot(uc, uc.T)))*gsMask
+                    - np.dot(np.dot(gSlice, uc), uc.T))*gsMask
             self.gMat.mat[[pixInd, pixInd + self.gMat.nPix]] += learningRate/r*(4*z*np.dot(x, up.T) 
-                    - 16*np.dot(np.dot(x, x.T), np.dot(gSlice, np.dot(up, up.T))))*gsMask
+                    - 16*np.dot(x, np.dot(x.T, np.dot(np.dot(gSlice, up), up.T))))*gsMask
 
             if np.any(np.abs(self.gMat.mat[[pixInd, pixInd + self.gMat.nPix]]) > 30): #todo: change this hardcode and make gSlice more accessible
                 ipdb.set_trace()
 
             pass
     
-    def runEM(self, learningRate=5.e-4, batchSize=50, nIters=1000, initPixInd=None):
+    def runEM(self, learningRate=5.e-4, batchSize=50, nIters=1000, lrDecay=10, initPixInd=None):
         if initPixInd is None:
             pixRange = range(self.gMat.nPix)
         else:
@@ -192,7 +199,7 @@ class OfflineEM(object):
             self.imZResid[pixInd] = np.zeros(nIters)
             for i in range(nIters):
                 self.applyKalman(pixInd)
-                r = 10**(i/float(nIters))
+                r = lrDecay**(i/float(nIters))
                 self.applyMStep(batchSize, learningRate/r, pixInd)
                 self.reZResid[pixInd][i] = np.mean((self.reZs[pixInd] - self.reExpZ[pixInd])**2)
                 self.imZResid[pixInd][i] = np.mean((self.imZs[pixInd] - self.imExpZ[pixInd])**2)

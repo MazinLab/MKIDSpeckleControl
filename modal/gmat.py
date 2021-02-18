@@ -2,6 +2,7 @@ import numpy as np
 import scipy.linalg as scilin
 import matplotlib.pyplot as plt
 import pickle as pkl
+import copy
 
 class GMat(object):
     """
@@ -69,6 +70,23 @@ class GMat(object):
         self.modeList = modeList #list of (real) kVec modes. Full mode list is 2x size
         self.nPix = np.sum(goodPixMaskList)
         self.nHalfModes = len(self.modeList)
+
+    def __getitem__(self, inds):
+        gMat = copy.copy(self)
+        gMat.badPixMask = None
+        gMat.coordImage = None
+        gMat.modeImage = np.copy(self.modeImage)
+        gMat.modeCoordList = np.copy(self.modeCoordList)
+        gMat.nHalfModes = self.nHalfModes
+
+        if isinstance(inds, int):
+            gMat.mat = np.copy(self.mat[[inds, inds+self.nPix]])
+            gMat.nPix = 1
+        elif isinstance(inds, slice):
+            gMat.mat = np.append(self.mat[inds], self.mat[(inds.start+self.nPix):(inds.stop+self.nPix)], axis=0)
+            gMat.nPix = inds.stop - inds.start
+
+        return gMat
 
     def recomputeMat(self, beta, cij, corrWin):
         matBlock = np.diag(beta*np.ones(self.coordImage.shape[0]*self.coordImage.shape[1])) 
