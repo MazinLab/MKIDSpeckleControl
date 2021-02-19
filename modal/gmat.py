@@ -85,8 +85,24 @@ class GMat(object):
         elif isinstance(inds, slice):
             gMat.mat = np.append(self.mat[inds], self.mat[(inds.start+self.nPix):(inds.stop+self.nPix)], axis=0)
             gMat.nPix = inds.stop - inds.start
+        else:
+            raise Exception('index must be int or slice')
 
         return gMat
+
+    def __setitem__(self, inds, gMat):
+        if isinstance(inds, int):
+            if gMat.nPix != 1:
+                raise Exception('Cannot copy {} pixels to 1 pixel dest slice'.format(gMat.nPix))
+            self.mat[[inds, inds+self.nPix]] = gMat.mat
+        elif isinstance(inds, slice):
+            nPixSlice = inds.stop - inds.start
+            if gMat.nPix != nPixSlice:
+                raise Exception('Cannot copy {} pixels to {} pixel dest slice'.format(gMat.nPix, nPixSlice))
+            self.mat[inds] = np.copy(gMat.mat[:nPixSlice])
+            self.mat[inds.start + self.nPix: inds.stop + self.nPix] = np.copy(gMat.mat[nPixSlice:])
+        else:
+            raise Exception('index must be int or slice')
 
     def recomputeMat(self, beta, cij, corrWin):
         matBlock = np.diag(beta*np.ones(self.coordImage.shape[0]*self.coordImage.shape[1])) 

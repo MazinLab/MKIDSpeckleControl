@@ -1,5 +1,4 @@
 from gmat import GMat
-from calibrator import Calibrator
 
 import numpy as np
 import os
@@ -7,6 +6,7 @@ import numpy.linalg as nlg
 import matplotlib.pyplot as plt
 import pickle as pkl
 import ipdb
+import copy
 
 class OfflineEM(object):
     def __init__(self, tsString, path='.'):
@@ -100,7 +100,60 @@ class OfflineEM(object):
             self.expXCtrl[pixInd] = np.zeros((len(self.reZs[pixInd]), 2))
 
     def __getitem__(self, inds):
-        pass
+        emOpt = copy.copy(self)
+        emOpt.x = copy.deepcopy(self.x[inds])
+        emOpt.P = copy.deepcopy(self.P[inds])
+        emOpt.R = copy.deepcopy(self.R[inds])
+        emOpt.Q = copy.deepcopy(self.Q[inds])
+        emOpt.reExpZ = copy.deepcopy(self.reExpZ[inds])
+        emOpt.imExpZ = copy.deepcopy(self.imExpZ[inds])
+        emOpt.imExpZCtrl = copy.deepcopy(self.imExpZCtrl[inds])
+        emOpt.reExpZCtrl = copy.deepcopy(self.reExpZCtrl[inds])
+        emOpt.expXCtrl = copy.deepcopy(self.expXCtrl[inds])
+        emOpt.reZResid = copy.deepcopy(self.reZResid[inds])
+        emOpt.imZResid = copy.deepcopy(self.imZResid[inds])
+
+        emOpt.reZs = copy.deepcopy(self.reZs[inds])
+        emOpt.imZs = copy.deepcopy(self.imZs[inds])
+        emOpt.reUpInds = copy.deepcopy(self.reUpInds[inds])
+        emOpt.imUpInds = copy.deepcopy(self.imUpInds[inds])
+        emOpt.uCInds = copy.deepcopy(self.uCInds[inds])
+
+        emOpt.reUps = copy.deepcopy(self.reUps)
+        emOpt.imUps = copy.deepcopy(self.imUps)
+        emOpt.uCs = copy.deepcopy(self.uCs)
+
+        emOpt.gMat = self.gMat[inds]
+
+        return emOpt
+
+    def __setitem__(self, inds, emOpt):
+        if isinstance(inds, int):
+            if emOpt.gMat.nPix != 1:
+                raise Exception('Cannot copy {} pixels to 1 pixel dest slice'.format(emOpt.gMat.nPix))
+        elif isinstance(inds, slice):
+            nPixSlice = inds.stop - inds.start
+            if emOpt.gMat.nPix != nPixSlice:
+                raise Exception('Cannot copy {} pixels to {} pixel dest slice'.format(emOpt.gMat.nPix, nPixSlice))
+        self.x[inds] = copy.deepcopy(emOpt.x)
+        self.P[inds] = copy.deepcopy(emOpt.P)
+        self.R[inds] = copy.deepcopy(emOpt.R)
+        self.Q[inds] = copy.deepcopy(emOpt.Q)
+        self.reExpZ[inds] = copy.deepcopy(emOpt.reExpZ)
+        self.imExpZ[inds] = copy.deepcopy(emOpt.imExpZ)
+        self.imExpZCtrl[inds] = copy.deepcopy(emOpt.imExpZCtrl)
+        self.reExpZCtrl[inds] = copy.deepcopy(emOpt.reExpZCtrl)
+        self.expXCtrl[inds] = copy.deepcopy(emOpt.expXCtrl)
+        self.reZResid[inds] = copy.deepcopy(emOpt.reZResid)
+        self.imZResid[inds] = copy.deepcopy(emOpt.imZResid)
+
+        self.reZs[inds] = copy.deepcopy(emOpt.reZs)
+        self.imZs[inds] = copy.deepcopy(emOpt.imZs)
+        self.reUpInds[inds] = copy.deepcopy(emOpt.reUpInds)
+        self.imUpInds[inds] = copy.deepcopy(emOpt.imUpInds)
+        self.uCInds[inds] = copy.deepcopy(emOpt.uCInds)
+
+        self.gMat[inds] = emOpt.gMat
 
     def applyKalman(self, initPixInd=None):
         if initPixInd is None:
