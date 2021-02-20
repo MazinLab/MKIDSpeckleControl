@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import pickle as pkl
 import ipdb
 import copy
+from multiprocessing import Process
 
 class OfflineEM(object):
     def __init__(self, tsString, path='.'):
@@ -266,4 +267,24 @@ class OfflineEM(object):
         if inds[0] == -1:
             return np.zeros(2*self.gMat.nHalfModes)
         return np.sum(self.uCs[inds], axis=0)
+
+def runEMMultProc(emOpt, ncpu, learningRate=5.e-4, batchSize=50, nIters=1000, lrDecay=10):
+    chunkSize = int(emOpt.gMat.nPix/ncpu)
+    emOptList = []
+    procList = []
+
+    for i in range(ncpu):
+        emOptList.append(emOpt[i*chunkSize:(i+1)*chunkSize])
+        proc = Process(target=emOptList[i].runEM, args=(learningRate, batchSize, nIters, lrDecay))
+        proc.start()
+        procList.append(proc)
+
+    for i in range(ncpu):
+        procList[i].join()
+
+    for i in range(ncpu):
+        emOpt[i*chunkSize:(i+1)*chunkSize] = emOptList[i]
+
+    return emOpt
+
 
