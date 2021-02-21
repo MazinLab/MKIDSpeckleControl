@@ -7,7 +7,8 @@ import matplotlib.pyplot as plt
 import pickle as pkl
 import ipdb
 import copy
-from multiprocessing import Process
+import multiprocessing
+from functools import partial
 
 class OfflineEM(object):
     def __init__(self, tsString, path='.'):
@@ -257,9 +258,11 @@ class OfflineEM(object):
                 self.applyMStep(batchSize, learningRate/r, pixInd)
                 self.reZResid[pixInd][i] = np.mean((self.reZs[pixInd] - self.reExpZ[pixInd])**2)
                 self.imZResid[pixInd][i] = np.mean((self.imZs[pixInd] - self.imExpZ[pixInd])**2)
-                print 'pixInd: {}; iter: {}'.format(pixInd, i)
-                print '    reResid:', self.reZResid[pixInd][i]
-                print '    imResid:', self.imZResid[pixInd][i]
+                #print 'pixInd: {}; iter: {}'.format(pixInd, i)
+                #print '    reResid:', self.reZResid[pixInd][i]
+                #print '    imResid:', self.imZResid[pixInd][i]
+
+            print 'done pix {}/{}'.format(pixInd, self.gMat.nPix-1)
 
 
 
@@ -268,6 +271,11 @@ class OfflineEM(object):
             return np.zeros(2*self.gMat.nHalfModes)
         return np.sum(self.uCs[inds], axis=0)
 
+def _runEM(emOpt, learningRate=5.e-4, batchSize=50, nIters=1000, lrDecay=10):
+    #wrapper function for multiprocessing
+    emOpt.runEM(learningRate, batchSize, nIters, lrDecay)
+    return emOpt
+
 def runEMMultProc(emOpt, ncpu, learningRate=5.e-4, batchSize=50, nIters=1000, lrDecay=10):
     chunkSize = int(emOpt.gMat.nPix/ncpu)
     emOptList = []
@@ -275,15 +283,15 @@ def runEMMultProc(emOpt, ncpu, learningRate=5.e-4, batchSize=50, nIters=1000, lr
 
     for i in range(ncpu):
         emOptList.append(emOpt[i*chunkSize:(i+1)*chunkSize])
-        proc = Process(target=emOptList[i].runEM, args=(learningRate, batchSize, nIters, lrDecay))
-        proc.start()
-        procList.append(proc)
+
+    pool = multiprocessing.Pool(processes=ncpu)
+
+    runEMChunk = partial(_runEM, learningRate=learningRate, batchSize=batchSize, 
+            nIters=nIters, lrDecay=lrDecay)
+    emOptListDone = pool.map(runEMChunk, emOptList)
 
     for i in range(ncpu):
-        procList[i].join()
-
-    for i in range(ncpu):
-        emOpt[i*chunkSize:(i+1)*chunkSize] = emOptList[i]
+        emOpt[i*chunkSize:(i+1)*chunkSize] = emOptListDone[i]
 
     return emOpt
 
