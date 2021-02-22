@@ -2,12 +2,14 @@ from gmat import GMat
 
 import numpy as np
 import os
+import time
 import numpy.linalg as nlg
 import matplotlib.pyplot as plt
 import pickle as pkl
 import ipdb
 import copy
 import multiprocessing
+import traceback
 from functools import partial
 
 class OfflineEM(object):
@@ -196,7 +198,7 @@ class OfflineEM(object):
                 self.imExpZ[pixInd][i] = np.dot(Him, xpr)
                 self.imExpZCtrl[pixInd][i] = np.dot(Him, self.expXCtrl[pixInd][i])
 
-    def applyMStep(self, batchSize=50, learningRate=1.e-3, initPixInd=None):
+    def applyMStep(self, batchSize=50, learningRate=1.e-3, initPixInd=None, reg=1.e-1):
         for i in range(batchSize):
             if initPixInd is None:
                 pixInd = np.random.choice(self.gMat.nPix)
@@ -229,21 +231,16 @@ class OfflineEM(object):
             gSlice = self.gMat.mat[[pixInd, pixInd + self.gMat.nPix]] #add restrict nonzero
             gsMask = gSlice != 0
 
-            #self.gMat.mat[[pixInd, pixInd + self.gMat.nPix]] += learningRate/q*(np.dot(x - xprev, uc.T) 
-            #        - np.dot(gSlice, np.dot(uc, uc.T)))*gsMask
-            #self.gMat.mat[[pixInd, pixInd + self.gMat.nPix]] += learningRate/r*(4*z*np.dot(x, up.T) 
-            #        - 16*np.dot(np.dot(x, x.T), np.dot(gSlice, np.dot(up, up.T))))*gsMask
             self.gMat.mat[[pixInd, pixInd + self.gMat.nPix]] += learningRate/q*(np.dot(x - xprev, uc.T) 
-                    - np.dot(np.dot(gSlice, uc), uc.T))*gsMask
+                    - np.dot(np.dot(gSlice, uc), uc.T))*gsMask 
             self.gMat.mat[[pixInd, pixInd + self.gMat.nPix]] += learningRate/r*(4*z*np.dot(x, up.T) 
-                    - 16*np.dot(x, np.dot(x.T, np.dot(np.dot(gSlice, up), up.T))))*gsMask
+                    - 16*np.dot(x, np.dot(x.T, np.dot(np.dot(gSlice, up), up.T))))*gsMask - learningRate*reg*gSlice
 
-            if np.any(np.abs(self.gMat.mat[[pixInd, pixInd + self.gMat.nPix]]) > 30): #todo: change this hardcode and make gSlice more accessible
-                ipdb.set_trace()
+            #if np.any(np.abs(self.gMat.mat[[pixInd, pixInd + self.gMat.nPix]]) > 30): #todo: change this hardcode and make gSlice more accessible
+            #    ipdb.set_trace()
 
-            pass
     
-    def runEM(self, learningRate=5.e-4, batchSize=50, nIters=1000, lrDecay=10, initPixInd=None):
+    def runEM(self, learningRate=5.e-4, batchSize=50, nIters=1000, lrDecay=10, initPixInd=None, queue=None):
         if initPixInd is None:
             pixRange = range(self.gMat.nPix)
         else:
@@ -262,7 +259,10 @@ class OfflineEM(object):
                 #print '    reResid:', self.reZResid[pixInd][i]
                 #print '    imResid:', self.imZResid[pixInd][i]
 
-            print 'done pix {}/{}'.format(pixInd, self.gMat.nPix-1)
+            if queue is not None:
+                queue.put(1)
+            else:
+                print 'done pix {}/{}'.format(pixInd, self.gMat.nPix-1)
 
 
 
@@ -271,27 +271,50 @@ class OfflineEM(object):
             return np.zeros(2*self.gMat.nHalfModes)
         return np.sum(self.uCs[inds], axis=0)
 
-def _runEM(emOpt, learningRate=5.e-4, batchSize=50, nIters=1000, lrDecay=10):
+def _runEM(emOpt, learningRate=5.e-4, batchSize=50, nIters=1000, lrDecay=10, queue=None):
     #wrapper function for multiprocessing
-    emOpt.runEM(learningRate, batchSize, nIters, lrDecay)
+    try:
+        emOpt.runEM(learningRate, batchSize, nIters, lrDecay, queue=queue)
+    except Exception as e:
+        traceback.print_exc()
+        raise e
     return emOpt
 
 def runEMMultProc(emOpt, ncpu, learningRate=5.e-4, batchSize=50, nIters=1000, lrDecay=10):
-    chunkSize = int(emOpt.gMat.nPix/ncpu)
+    cpuFactor = 5
+    chunkSize = int(np.ceil(emOpt.gMat.nPix/float(cpuFactor*ncpu)))
+    nChunks = int(cpuFactor*ncpu)
     emOptList = []
     procList = []
 
-    for i in range(ncpu):
-        emOptList.append(emOpt[i*chunkSize:(i+1)*chunkSize])
+    for i in range(nChunks):
+        endInd = min(emOpt.gMat.nPix, (i+1)*chunkSize)
+        emOptList.append(emOpt[i*chunkSize:endInd])
 
     pool = multiprocessing.Pool(processes=ncpu)
+    man = multiprocessing.Manager()
+    q = man.Queue()
 
     runEMChunk = partial(_runEM, learningRate=learningRate, batchSize=batchSize, 
-            nIters=nIters, lrDecay=lrDecay)
-    emOptListDone = pool.map(runEMChunk, emOptList)
+            nIters=nIters, lrDecay=lrDecay, queue=q)
+    asyncRes = pool.map_async(runEMChunk, emOptList, chunksize=1)
 
-    for i in range(ncpu):
-        emOpt[i*chunkSize:(i+1)*chunkSize] = emOptListDone[i]
+    nPixDone = 0
+    while not asyncRes.ready():
+        if not q.empty():
+            nPixDone += q.get()
+            print 'done {}/{} pixels'.format(nPixDone, emOpt.gMat.nPix)
+        time.sleep(0.1)
+
+    print 'done!'
+
+    asyncRes.wait()
+    emOptListDone = asyncRes.get()
+
+
+    for i in range(nChunks):
+        endInd = min(emOpt.gMat.nPix, (i+1)*chunkSize)
+        emOpt[i*chunkSize:endInd] = emOptListDone[i]
 
     return emOpt
 
