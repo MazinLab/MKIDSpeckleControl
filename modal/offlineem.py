@@ -10,6 +10,7 @@ import ipdb
 import copy
 import multiprocessing
 import traceback
+import tqdm
 from functools import partial
 
 class OfflineEM(object):
@@ -198,7 +199,7 @@ class OfflineEM(object):
                 self.imExpZ[pixInd][i] = np.dot(Him, xpr)
                 self.imExpZCtrl[pixInd][i] = np.dot(Him, self.expXCtrl[pixInd][i])
 
-    def applyMStep(self, batchSize=50, learningRate=1.e-3, initPixInd=None, reg=1.e-1):
+    def applyMStep(self, batchSize=50, learningRate=1.e-3, initPixInd=None, reg=5.e-1):
         for i in range(batchSize):
             if initPixInd is None:
                 pixInd = np.random.choice(self.gMat.nPix)
@@ -299,14 +300,14 @@ def runEMMultProc(emOpt, ncpu, learningRate=5.e-4, batchSize=50, nIters=1000, lr
             nIters=nIters, lrDecay=lrDecay, queue=q)
     asyncRes = pool.map_async(runEMChunk, emOptList, chunksize=1)
 
-    nPixDone = 0
+    pbar = tqdm.tqdm(total=emOpt.gMat.nPix)
     while not asyncRes.ready():
         if not q.empty():
-            nPixDone += q.get()
-            print 'done {}/{} pixels'.format(nPixDone, emOpt.gMat.nPix)
+            pbar.update(q.get())
         time.sleep(0.1)
 
-    print 'done!'
+    if not q.empty():
+        pbar.update(q.get())
 
     asyncRes.wait()
     emOptListDone = asyncRes.get()
