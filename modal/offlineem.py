@@ -241,7 +241,7 @@ class OfflineEM(object):
             #    ipdb.set_trace()
 
     
-    def runEM(self, learningRate=5.e-4, batchSize=50, nIters=1000, lrDecay=10, initPixInd=None, queue=None):
+    def runEM(self, learningRate=5.e-4, batchSize=50, nIters=1000, lrDecay=10, stopFactor=0.02, stopNIters=50, initPixInd=None, queue=None):
         if initPixInd is None:
             pixRange = range(self.gMat.nPix)
         else:
@@ -256,6 +256,20 @@ class OfflineEM(object):
                 self.applyMStep(batchSize, learningRate/r, pixInd)
                 self.reZResid[pixInd][i] = np.mean((self.reZs[pixInd] - self.reExpZ[pixInd])**2)
                 self.imZResid[pixInd][i] = np.mean((self.imZs[pixInd] - self.imExpZ[pixInd])**2)
+                if i % stopNIters == 0 and i > stopNIters:
+                    reCurResid = np.mean(self.reZResid[pixInd][i-10:i])
+                    rePrevResid = np.mean(self.reZResid[pixInd][i-stopNIters-10:i-stopNIters])
+
+                    imCurResid = np.mean(self.imZResid[pixInd][i-10:i])
+                    imPrevResid = np.mean(self.imZResid[pixInd][i-stopNIters-10:i-stopNIters])
+
+                    print 'iter {}'.format(i), reCurResid, rePrevResid, imCurResid, imPrevResid
+
+                    if ((rePrevResid - reCurResid)/float(reCurResid) < stopFactor) and ((imPrevResid - imCurResid)/float(imCurResid) < stopFactor):
+                        self.reZResid[pixInd] = np.delete(self.reZResid[pixInd], range(i+1, nIters))
+                        self.imZResid[pixInd] = np.delete(self.imZResid[pixInd], range(i+1, nIters))
+                        print 'stopping early after {} iters'.format(i)
+                        break
                 #print 'pixInd: {}; iter: {}'.format(pixInd, i)
                 #print '    reResid:', self.reZResid[pixInd][i]
                 #print '    imResid:', self.imZResid[pixInd][i]
@@ -272,19 +286,18 @@ class OfflineEM(object):
             return np.zeros(2*self.gMat.nHalfModes)
         return np.sum(self.uCs[inds], axis=0)
 
-def _runEM(emOpt, learningRate=5.e-4, batchSize=50, nIters=1000, lrDecay=10, queue=None):
+def _runEM(emOpt, learningRate=5.e-4, batchSize=50, nIters=1000, lrDecay=10, stopFactor=0.02, stopNIters=50, queue=None):
     #wrapper function for multiprocessing
     try:
-        emOpt.runEM(learningRate, batchSize, nIters, lrDecay, queue=queue)
+        emOpt.runEM(learningRate, batchSize, nIters, lrDecay, stopFactor, stopNIters, queue=queue)
     except Exception as e:
         traceback.print_exc()
         raise e
     return emOpt
 
-def runEMMultProc(emOpt, ncpu, learningRate=5.e-4, batchSize=50, nIters=1000, lrDecay=10):
-    cpuFactor = 5
-    chunkSize = int(np.ceil(emOpt.gMat.nPix/float(cpuFactor*ncpu)))
-    nChunks = int(cpuFactor*ncpu)
+def runEMMultProc(emOpt, ncpu, learningRate=5.e-4, batchSize=50, nIters=1000, lrDecay=10, stopFactor=0.02, stopNIters=50):
+    chunkSize = 4
+    nChunks = int(np.ceil(emOpt.gMat.nPix/float(chunkSize)))
     emOptList = []
     procList = []
 
@@ -297,7 +310,7 @@ def runEMMultProc(emOpt, ncpu, learningRate=5.e-4, batchSize=50, nIters=1000, lr
     q = man.Queue()
 
     runEMChunk = partial(_runEM, learningRate=learningRate, batchSize=batchSize, 
-            nIters=nIters, lrDecay=lrDecay, queue=q)
+            nIters=nIters, lrDecay=lrDecay, stopFactor=stopFactor, stopNIters=stopNIters, queue=q)
     asyncRes = pool.map_async(runEMChunk, emOptList, chunksize=1)
 
     pbar = tqdm.tqdm(total=emOpt.gMat.nPix)
