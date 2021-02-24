@@ -70,6 +70,17 @@ class GMat(object):
         self.modeList = modeList #list of (real) kVec modes. Full mode list is 2x size
         self.nPix = np.sum(goodPixMaskList)
         self.nHalfModes = len(self.modeList)
+        self.pixIndImage = self._getPixIndImage()
+        self.center = center
+        self.ctrlRegionStart = ctrlRegionStart
+        self.ctrlRegionEnd = ctrlRegionEnd
+
+    def _getPixIndImage(self):
+        pixIndImage = np.nan*np.zeros(self.badPixMask.shape, dtype=int)
+        for i in range(self.nPix):
+            pixIndImage[self.coordList[i, 0], self.coordList[i, 1]] = i
+        return pixIndImage
+        
 
     def __getitem__(self, inds):
         gMat = copy.copy(self)
