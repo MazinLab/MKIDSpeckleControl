@@ -74,8 +74,9 @@ class GMat(object):
         self.center = center
         self.ctrlRegionStart = ctrlRegionStart
         self.ctrlRegionEnd = ctrlRegionEnd
+        self.pixIndImage = self._genPixIndImage()
 
-    def _getPixIndImage(self):
+    def _genPixIndImage(self):
         pixIndImage = np.nan*np.zeros(self.badPixMask.shape, dtype=int)
         for i in range(self.nPix):
             pixIndImage[self.coordList[i, 0], self.coordList[i, 1]] = i

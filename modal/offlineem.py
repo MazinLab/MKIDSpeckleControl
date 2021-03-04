@@ -10,6 +10,7 @@ import ipdb
 import copy
 import multiprocessing
 import traceback
+
 import tqdm
 from functools import partial
 
@@ -95,6 +96,7 @@ class OfflineEM(object):
         for pixInd in range(self.gMat.nPix):
             assert self.reUpInds[pixInd].shape[0] == self.imUpInds[pixInd].shape[0] == len(self.uCInds[pixInd]) == self.reZs[pixInd].shape[0] == self.imZs[pixInd].shape[0] 
             self.x[pixInd] = np.zeros((len(self.reZs[pixInd]), 2))
+            self.xpr[pixInd] = np.zeros((len(self.reZs[pixInd]), 2))
             self.P[pixInd] = np.zeros((len(self.reZs[pixInd]), 2, 2))
             self.R[pixInd] = np.zeros(len(self.reZs[pixInd]))
             self.Q[pixInd] = np.zeros((len(self.reZs[pixInd]), 2, 2))
@@ -107,6 +109,7 @@ class OfflineEM(object):
     def __getitem__(self, inds):
         emOpt = copy.copy(self)
         emOpt.x = copy.deepcopy(self.x[inds])
+        emOpt.xpr = copy.deepcopy(self.xpr[inds])
         emOpt.P = copy.deepcopy(self.P[inds])
         emOpt.R = copy.deepcopy(self.R[inds])
         emOpt.Q = copy.deepcopy(self.Q[inds])
@@ -141,6 +144,7 @@ class OfflineEM(object):
             if emOpt.gMat.nPix != nPixSlice:
                 raise Exception('Cannot copy {} pixels to {} pixel dest slice'.format(emOpt.gMat.nPix, nPixSlice))
         self.x[inds] = copy.deepcopy(emOpt.x)
+        self.xpr[inds] = copy.deepcopy(emOpt.xpr)
         self.P[inds] = copy.deepcopy(emOpt.P)
         self.R[inds] = copy.deepcopy(emOpt.R)
         self.Q[inds] = copy.deepcopy(emOpt.Q)
@@ -198,6 +202,7 @@ class OfflineEM(object):
                 self.P[pixInd][i] = np.dot(np.diag(np.ones(2)) - np.dot(Kim, Him), self.P[pixInd][i])
                 self.imExpZ[pixInd][i] = np.dot(Him, xpr)
                 self.imExpZCtrl[pixInd][i] = np.dot(Him, self.expXCtrl[pixInd][i])
+                self.xpr[pixInd][i] = xpr
 
     def applyMStep(self, batchSize=50, learningRate=1.e-3, initPixInd=None, reg=0):#5.e-1):
         for i in range(batchSize):
