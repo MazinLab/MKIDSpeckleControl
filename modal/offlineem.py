@@ -199,7 +199,7 @@ class OfflineEM(object):
                 self.imExpZ[pixInd][i] = np.dot(Him, xpr)
                 self.imExpZCtrl[pixInd][i] = np.dot(Him, self.expXCtrl[pixInd][i])
 
-    def applyMStep(self, batchSize=50, learningRate=1.e-3, initPixInd=None, reg=5.e-1):
+    def applyMStep(self, batchSize=50, learningRate=1.e-3, initPixInd=None, reg=0):#5.e-1):
         for i in range(batchSize):
             if initPixInd is None:
                 pixInd = np.random.choice(self.gMat.nPix)
@@ -250,29 +250,82 @@ class OfflineEM(object):
         for pixInd in pixRange:
             self.reZResid[pixInd] = np.zeros(nIters)
             self.imZResid[pixInd] = np.zeros(nIters)
+            initGSlice = self.gMat.mat[[pixInd, pixInd + self.gMat.nPix]]
+            restartCount = 0
             for i in range(nIters):
                 self.applyKalman(pixInd)
                 r = lrDecay**(i/float(nIters))
                 self.applyMStep(batchSize, learningRate/r, pixInd)
                 self.reZResid[pixInd][i] = np.mean((self.reZs[pixInd] - self.reExpZ[pixInd])**2)
                 self.imZResid[pixInd][i] = np.mean((self.imZs[pixInd] - self.imExpZ[pixInd])**2)
-                if i % stopNIters == 0 and i > stopNIters:
-                    reCurResid = np.mean(self.reZResid[pixInd][i-10:i])
-                    rePrevResid = np.mean(self.reZResid[pixInd][i-stopNIters-10:i-stopNIters])
+                if i==10:
+                    reCurResid = np.mean(self.reZResid[pixInd][:10])
+                    imCurResid = np.mean(self.imZResid[pixInd][:10])
+                    reBestResid = reCurResid
+                    imBestResid = imCurResid
+                    reBestG = initGSlice[0]
+                    imBestG = initGSlice[1]
 
+                if i % stopNIters == 0 and i > stopNIters:
+                    rePrevResid = reCurResid
+                    reCurResid = np.mean(self.reZResid[pixInd][i-10:i])
+                    if reCurResid < reBestResid:
+                        reBestResid = reCurResid
+                        reBestG = self.gMat.mat[pixInd]
+
+                    imPrevResid = imCurResid
                     imCurResid = np.mean(self.imZResid[pixInd][i-10:i])
-                    imPrevResid = np.mean(self.imZResid[pixInd][i-stopNIters-10:i-stopNIters])
+                    if imCurResid < imBestResid:
+                        imBestResid = imCurResid
+                        imBestG = self.gMat.mat[pixInd + self.gMat.nPix]
 
                     print 'iter {}'.format(i), reCurResid, rePrevResid, imCurResid, imPrevResid
 
-                    if ((rePrevResid - reCurResid)/float(reCurResid) < stopFactor) and ((imPrevResid - imCurResid)/float(imCurResid) < stopFactor):
-                        self.reZResid[pixInd] = np.delete(self.reZResid[pixInd], range(i+1, nIters))
-                        self.imZResid[pixInd] = np.delete(self.imZResid[pixInd], range(i+1, nIters))
-                        print 'stopping early after {} iters'.format(i)
-                        break
+                    if np.isnan(reCurResid) or np.isnan(imCurResid):
+                        self.gMat.mat[pixInd] = initGSlice[0]
+                        self.gMat.mat[pixInd + self.gMat.nPix] = initGSlice[1]
+                        reCurResid = np.mean(self.reZResid[pixInd][:10])
+                        imCurResid = np.mean(self.imZResid[pixInd][:10])
+                        print 'iter {}: nan restart'.format(i)
+
+
+                    elif ((rePrevResid - reCurResid)/float(reCurResid) < stopFactor) and ((imPrevResid - imCurResid)/float(imCurResid) < stopFactor):# and (reCurResid/self.reZResid[pixInd][0] < 0.7) and (imCurResid/self.imZResid[pixInd][0] < 0.7):
+                        #if reCurResid/self.reZResid[pixInd][0] > 0.75 and imCurResid/self.imZResid[pixInd][0] < 0.3:
+                        #    self.gMat.mat[pixInd, :self.gMat.nHalfModes] = self.gMat.mat[pixInd, self.gMat.nHalfModes:]
+                        #    print 'iter {} reopt re'.format(i)
+                        #elif imCurResid/self.imZResid[pixInd][0] > 0.75 and reCurResid/self.reZResid[pixInd][0] < 0.3:
+                        #    self.gMat.mat[pixInd, self.gMat.nHalfModes:] = self.gMat.mat[pixInd, :self.gMat.nHalfModes]
+                        #    print 'iter {} reopt im'.format(i)
+                        stop = True
+                        if (reCurResid/self.reZResid[pixInd][0] > 0.5) and restartCount < 3: 
+                            self.gMat.mat[pixInd] = initGSlice[0]
+                            self.gMat.mat[pixInd + self.gMat.nPix] = initGSlice[1]
+                            print 'iter {} restart re'.format(i)
+                            reCurResid = np.mean(self.reZResid[pixInd][:10])
+                            imCurResid = np.mean(self.imZResid[pixInd][:10])
+                            stop = False
+                        if(imCurResid/self.imZResid[pixInd][0] > 0.5) and restartCount < 3:
+                            self.gMat.mat[pixInd] = initGSlice[0]
+                            self.gMat.mat[pixInd + self.gMat.nPix] = initGSlice[1]
+                            print 'iter {} restart im'.format(i)
+                            reCurResid = np.mean(self.reZResid[pixInd][:10])
+                            imCurResid = np.mean(self.imZResid[pixInd][:10])
+                            stop = False
+                        if stop:
+                            self.reZResid[pixInd] = np.delete(self.reZResid[pixInd], range(i+1, nIters))
+                            self.imZResid[pixInd] = np.delete(self.imZResid[pixInd], range(i+1, nIters))
+                            print 'stopping early after {} iters and {} restarts'.format(i, restartCount)
+                            break
+                        else:
+                            restartCount += 1
                 #print 'pixInd: {}; iter: {}'.format(pixInd, i)
                 #print '    reResid:', self.reZResid[pixInd][i]
                 #print '    imResid:', self.imZResid[pixInd][i]
+
+            self.gMat.mat[pixInd] = reBestG
+            self.gMat.mat[pixInd + self.gMat.nPix] = imBestG
+            self.reZResid[pixInd][-1] = reBestResid
+            self.imZResid[pixInd][-1] = imBestResid
 
             if queue is not None:
                 queue.put(1)
