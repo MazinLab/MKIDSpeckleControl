@@ -82,6 +82,7 @@ class OfflineEM(object):
         self.q = 0.2 #just hardcode this for now
 
         self.x = [np.array([]) for i in range(self.gMat.nPix)] 
+        self.xpr = [np.array([]) for i in range(self.gMat.nPix)] 
         self.P = [np.array([]) for i in range(self.gMat.nPix)] 
         self.R = [np.array([]) for i in range(self.gMat.nPix)] 
         self.Q = [np.array([]) for i in range(self.gMat.nPix)] 
@@ -246,7 +247,9 @@ class OfflineEM(object):
             #    ipdb.set_trace()
 
     
-    def runEM(self, learningRate=5.e-4, batchSize=50, nIters=1000, lrDecay=10, stopFactor=0.02, stopNIters=50, initPixInd=None, queue=None):
+    def runEM(self, learningRate=5.e-4, batchSize=50, nIters=1000, lrDecay=10, stopFactor=0.02, stopNIters=50, measVar=200, procVar=0.2, initPixInd=None, queue=None):
+        self.r = measVar
+        self.q = procVar
         if initPixInd is None:
             pixRange = range(self.gMat.nPix)
         else:
@@ -344,16 +347,16 @@ class OfflineEM(object):
             return np.zeros(2*self.gMat.nHalfModes)
         return np.sum(self.uCs[inds], axis=0)
 
-def _runEM(emOpt, learningRate=5.e-4, batchSize=50, nIters=1000, lrDecay=10, stopFactor=0.02, stopNIters=50, queue=None):
+def _runEM(emOpt, learningRate=5.e-4, batchSize=50, nIters=1000, lrDecay=10, stopFactor=0.02, stopNIters=50, measVar=200, procVar=0.2, queue=None):
     #wrapper function for multiprocessing
     try:
-        emOpt.runEM(learningRate, batchSize, nIters, lrDecay, stopFactor, stopNIters, queue=queue)
+        emOpt.runEM(learningRate, batchSize, nIters, lrDecay, stopFactor, stopNIters, measVar=measVar, procVar=procVar, queue=queue)
     except Exception as e:
         traceback.print_exc()
         raise e
     return emOpt
 
-def runEMMultProc(emOpt, ncpu, learningRate=5.e-4, batchSize=50, nIters=1000, lrDecay=10, stopFactor=0.02, stopNIters=50):
+def runEMMultProc(emOpt, ncpu, learningRate=5.e-4, batchSize=50, nIters=1000, lrDecay=10, stopFactor=0.02, stopNIters=50, measVar=200, procVar=0.2):
     chunkSize = 4
     nChunks = int(np.ceil(emOpt.gMat.nPix/float(chunkSize)))
     emOptList = []
@@ -368,7 +371,7 @@ def runEMMultProc(emOpt, ncpu, learningRate=5.e-4, batchSize=50, nIters=1000, lr
     q = man.Queue()
 
     runEMChunk = partial(_runEM, learningRate=learningRate, batchSize=batchSize, 
-            nIters=nIters, lrDecay=lrDecay, stopFactor=stopFactor, stopNIters=stopNIters, queue=q)
+            nIters=nIters, lrDecay=lrDecay, stopFactor=stopFactor, stopNIters=stopNIters, measVar=measVar, procVar=procVar, queue=q)
     asyncRes = pool.map_async(runEMChunk, emOptList, chunksize=1)
 
     pbar = tqdm.tqdm(total=emOpt.gMat.nPix)
