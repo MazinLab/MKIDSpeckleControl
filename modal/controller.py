@@ -7,8 +7,34 @@ from gmat import GMat
 import speckpy as sp
 import mkidreadout.readout.sharedmem as shm
 
+class Speckle(object):
+    def __init__(self, gMat, coords, radius, initImage, intTime, snrThresh): 
+        """
+        coords are r,c indexed wrt to ctrl region origin (0, 0)
+        """
+        self.centerCoords = coords
+        self.coordList = np.mgrid[(coords[0] - radius):(coords[0] + radius + 1), 
+                (coords[1] - radius):(coords[1] + radius + 1)]
+        self.coordList = np.reshape(np.transpose(self.coordList, (1, 2, 0)), (-1, 2)) #shape: [i, (x or y)]
+        self.pixIndList = gMat.pixIndImage[self.coordList] #check this statement for correctness
+        gpm = ~np.isnan(self.pixIndList)
+        self.pixIndList = self.pixIndList[gpm]
+        self.coordList = self.coordList[gpm]
+
+        #slice of gMat corresponding to pixIndList
+        self.mat = np.append(gMat.mat[self.pixIndList], gMat.mat[self.pixIndList + gMat.nPix])
+
+    def update(self, image):
+        pass
+
+    def getNextSpeckle(self):
+        pass
+
+    def _computeControl(self):
+        pass
+
 class Controller(object):
-    def __init__(self, shmImName, dmChanName, gMat, wvlRange=None):
+    def __init__(self, shmImName, dmChanName, gMat, wvlRange=None, intTime=None): #intTime for backwards comp
         self.shmim = shm.ImageCube(shmImName)
         self.dmChan = sp.SpeckleToDM(dmChanName)
 

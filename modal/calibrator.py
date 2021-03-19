@@ -45,6 +45,7 @@ class Calibrator(object):
         self.ctrlVecs = [] #vector of control offsets from probes (referenced to GMat.modelist)
         self.reProbeVecs = []
         self.imProbeVecs = []
+        self.gMat.intTime = intTime
         for i in range(nInitProbeIters):
             modeInds = self._pickRandomModes(maxProbes, exclusionZone)
             halfModeVec = np.zeros(len(self.gMat.modeList))
@@ -74,6 +75,7 @@ class Calibrator(object):
         self.ctrlVecs = [] #vector of control offsets from probes (referenced to GMat.modelist)
         self.reProbeVecs = []
         self.imProbeVecs = []
+        self.gMat.intTime = intTime
         for i in range(nIters):
             modeInds = self._pickRandomModes(maxModes, exclusionZone)
             halfModeVec = np.zeros(len(self.gMat.modeList))

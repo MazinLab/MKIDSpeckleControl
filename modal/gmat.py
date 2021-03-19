@@ -12,7 +12,8 @@ class GMat(object):
         mat: 2nPix x nMode control matrix. 
             rows map to real, then imag E-field of flattened pix array (good pix mask applied)
             ditto for columns/modes.
-        coordList: List of good pixel coordinates in control region, relative to center
+        coordList: List of good pixel coordinates in control region, relative to top left (i.e. 
+            start at [0, 0])
         modeList: List of pixel modes located in control region. not limited to good pixels
             contains kVecs of modes; so 1/2 the size of actual list of modes (no phase value)
     """
@@ -21,6 +22,7 @@ class GMat(object):
         """
             ctrlRegionStart: r, c control region start boundary wrt to center
             ctrlRegionEnd: r, c control region end boundary wrt to center
+            corrWin: single sided, inclusive window size (e.g. corrWin = 5 will have 11 valid adjacent modes
         """
         coordImage = np.mgrid[0:(ctrlRegionEnd[0] - ctrlRegionStart[0]), 0:(ctrlRegionEnd[1] -  ctrlRegionStart[1])]
         coordImage = np.transpose(coordImage, axes=(1, 2, 0)) # should be indexed r, c, coordAxis
@@ -75,6 +77,8 @@ class GMat(object):
         self.ctrlRegionStart = ctrlRegionStart
         self.ctrlRegionEnd = ctrlRegionEnd
         self.pixIndImage = self._genPixIndImage()
+        self.intTime = None
+        self.corrWin = corrWin
 
     def _genPixIndImage(self):
         pixIndImage = np.nan*np.zeros(self.badPixMask.shape, dtype=int)
@@ -129,6 +133,7 @@ class GMat(object):
         goodPixMaskList = ~badPixMaskList
         matBlock = matBlock[goodPixMaskList, :]
         self.mat = scilin.block_diag(matBlock, matBlock)
+        self.corrWin = corrWin
 
 
     def getDMSpeckles(self, modeVec):
