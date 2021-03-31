@@ -1,4 +1,5 @@
 import numpy as np
+import numpy.linalg as nlg
 import matplotlib.pyplot as plt
 import os, time
 import pickle as pkl
@@ -8,10 +9,12 @@ import speckpy as sp
 import mkidreadout.readout.sharedmem as shm
 
 class Speckle(object):
-    def __init__(self, gMat, coords, radius, initImage, intTime, snrThresh): 
+    def __init__(self, gMat, coords, radius, initImage, snrThresh): 
         """
         coords are r,c indexed wrt to ctrl region origin (0, 0)
+        assume gMat.mat is in cps
         """
+
         self.centerCoords = coords
         self.coordList = np.mgrid[(coords[0] - radius):(coords[0] + radius + 1), 
                 (coords[1] - radius):(coords[1] + radius + 1)]
@@ -20,18 +23,56 @@ class Speckle(object):
         gpm = ~np.isnan(self.pixIndList)
         self.pixIndList = self.pixIndList[gpm]
         self.coordList = self.coordList[gpm]
+        self.nPix = len(self.pixIndList)
 
         #slice of gMat corresponding to pixIndList
         self.mat = np.append(gMat.mat[self.pixIndList], gMat.mat[self.pixIndList + gMat.nPix])
+        self.iter = 0 #number of complete probe/ctrl cycles 
+        self.state = 'reprobe' #reprobe, improbe, or null
 
-    def update(self, image):
-        pass
+        self.reProbeZ = np.zeros(len(pixIndList))
+        self.imProbeZ = np.zeros(len(pixIndList))
+        self.reProbeVar = np.zeros(len(pixIndList))
+        self.imProbeVar = np.zeros(len(pixIndList))
 
-    def getNextSpeckle(self):
-        pass
+        self.halfModeProbeVec = np.zeros(gMat.nHalfModes)
+        probeModeInd = np.argmax(gMat.mat[gMat.pixIndImage[coords]])
+        self.halfModeProbeVec[probeModeInd] = np.sqrt(initImage[coords])/gMat.mat[gMat.pixIndImage[coords], probeModeInd]
+
+    def update(self, ctrlRegionImage, ctrlRegionImageVar):
+        vec = ctrlRegionImage[self.coordList].flatten()
+        varVec = ctrlRegionImageVar[self.coordList].flatten()
+        if self.state == 'reprobe':
+            self.reProbeZ = (self.iter*self.reProbeZ + vec)/(self.iter + 1)
+            self.reProbeZVar = (self.iter*self.reProbeZ + vec)/(self.iter + 1)**2
+            self.state == 'improbe'
+        elif self.state == 'improbe':
+            self.imProbeZ = (self.iter*self.imProbeZ + vec)/(self.iter + 1)
+            self.imProbeZVar = (self.iter*self.imProbeZ + vec)/(self.iter + 1)**2
+            self.state == 'null'
+        elif self.state == 'null':
+            self.state = 'reprobe'
+            self.iter += 1
+            #maybe recentroid/recompute probe here?
+
+
+
+
+    def getNextModeVec(self):
+        """
+        return next pairwise probe modeVec OR nulling modeVec
+        returns a modeVec followed by 'probe' or 'null'
+        """
+        if self.state == 'reprobe':
+            return np.append(self.halfModeProbeVec, np.zeros(len(self.halfModeProbeVec)))
+        elif self.state == 'improbe':
+            return np.append(np.zeros(len(self.halfModeProbeVec)), self.halfModeProbeVec)
+        elif self.state == 'null':
+            return self._computeControl()
 
     def _computeControl(self):
-        pass
+        Hre = 4*np.dot(self.mat[:self.nPix, :len(self.halfModeProbeVec)], self.halfModeProbeVec).T
+        Him = 4*np.dot(self.mat[self.nPix:, len(self.halfModeProbeVec):], self.halfModeProbeVec).T
 
 class Controller(object):
     def __init__(self, shmImName, dmChanName, gMat, wvlRange=None, intTime=None): #intTime for backwards comp
