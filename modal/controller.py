@@ -1,5 +1,6 @@
 import numpy as np
 import numpy.linalg as nlg
+import scipy.linalg as scilin
 import matplotlib.pyplot as plt
 import os, time
 import pickle as pkl
@@ -9,7 +10,7 @@ import speckpy as sp
 import mkidreadout.readout.sharedmem as shm
 
 class Speckle(object):
-    def __init__(self, gMat, coords, radius, initImage, snrThresh): 
+    def __init__(self, gMat, coords, radius, initImage, snrThresh, reg): 
         """
         coords are r,c indexed wrt to ctrl region origin (0, 0)
         assume gMat.mat is in cps
@@ -29,11 +30,13 @@ class Speckle(object):
         self.mat = np.append(gMat.mat[self.pixIndList], gMat.mat[self.pixIndList + gMat.nPix])
         self.iter = 0 #number of complete probe/ctrl cycles 
         self.state = 'reprobe' #reprobe, improbe, or null
+        self.snrThresh = snrThresh
+        self.reg = reg
 
         self.reProbeZ = np.zeros(len(pixIndList))
         self.imProbeZ = np.zeros(len(pixIndList))
-        self.reProbeVar = np.zeros(len(pixIndList))
-        self.imProbeVar = np.zeros(len(pixIndList))
+        self.reProbeZVar = np.zeros(len(pixIndList))
+        self.imProbeZVar = np.zeros(len(pixIndList))
 
         self.halfModeProbeVec = np.zeros(gMat.nHalfModes)
         probeModeInd = np.argmax(gMat.mat[gMat.pixIndImage[coords]])
@@ -73,6 +76,24 @@ class Speckle(object):
     def _computeControl(self):
         Hre = 4*np.dot(self.mat[:self.nPix, :len(self.halfModeProbeVec)], self.halfModeProbeVec).T
         Him = 4*np.dot(self.mat[self.nPix:, len(self.halfModeProbeVec):], self.halfModeProbeVec).T
+
+        xre = np.dot(nlg.inv(Hre), self.reProbeZ)
+        xim = np.dot(nlg.inv(Him), self.imProbeZ)
+        Xrecov = np.dot(nlg.inv(Hre), np.dot(np.diag(self.reProbeZVar), nlg.inv(Hre).T))
+        Ximcov = np.dot(nlg.inv(Him), np.dot(np.diag(self.imProbeZVar), nlg.inv(Him).T))
+        
+        x = np.append(xre, xim)
+        xCov = scillin.block_diag(Xrecov, Ximcov)
+        ctrlMat = -np.dot(nlg.inv(np.dot(self.mat.T, self.mat) + self.reg*np.diag(np.ones(2*len(self.halfModeProbeVec)))), self.mat.T)
+        ctrlModeVec = np.dot(ctrlMat, x)
+        ctrlModeCov = np.dot(ctrlMat, np.dot(xCov, ctrlMat.T))
+        snrVec = ctrlModeVec/np.sqrt(np.diag(ctrlModeCov)) #SNR of each element of ctrlModeVec
+        meanSNR = np.average(snrVec, weights=ctrlModeVec)
+
+        if meanSNR >= self.snrThresh:
+            return ctrlModeVec
+        else:
+            return np.zeros(ctrlModeVec)
 
 class Controller(object):
     def __init__(self, shmImName, dmChanName, gMat, wvlRange=None, intTime=None): #intTime for backwards comp
