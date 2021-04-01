@@ -6,6 +6,7 @@ import os, time
 import pickle as pkl
 
 from gmat import GMat
+import imageUtils as imu
 import speckpy as sp
 import mkidreadout.readout.sharedmem as shm
 
@@ -38,6 +39,7 @@ class Speckle(object):
         self.reProbeZVar = np.zeros(len(pixIndList))
         self.imProbeZVar = np.zeros(len(pixIndList))
 
+        #TODO: what if coords are on a bad pix?
         self.halfModeProbeVec = np.zeros(gMat.nHalfModes)
         probeModeInd = np.argmax(gMat.mat[gMat.pixIndImage[coords]])
         self.halfModeProbeVec[probeModeInd] = np.sqrt(initImage[coords])/gMat.mat[gMat.pixIndImage[coords], probeModeInd]
@@ -96,7 +98,7 @@ class Speckle(object):
             return np.zeros(ctrlModeVec)
 
 class Controller(object):
-    def __init__(self, shmImName, dmChanName, gMat, wvlRange=None, intTime=None): #intTime for backwards comp
+    def __init__(self, shmImName, dmChanName, gMat, wvlRange=None): #intTime for backwards comp
         self.shmim = shm.ImageCube(shmImName)
         self.dmChan = sp.SpeckleToDM(dmChanName)
 
@@ -111,9 +113,39 @@ class Controller(object):
         self.imgStart = np.array(ctrlRegionStart) + np.array(center)
         self.imgEnd = np.array(ctrlRegionEnd) + np.array(center)
         self.sim = sim
+        
+        self.gMat = gMat
+        self.gMat.mat /= np.sqrt(self.gMat.intTime) #convert gMat to cps
+        self.imgStart = np.array(gmat.ctrlRegionStart) + np.array(gmat.center)
+        self.imgEnd = np.array(gmat.ctrlRegionEnd) + np.array(gmat.center)
+        self.badPixMaskCtrl = gMat.badPixMask
 
-    def _getSpeckleProbes(self, ctrlRegionImage, maxSpecks, exclusionZone):
-        pass
+    def runLoop(self, nIters, intTime, maxSpecks, exclusionsZone):
+        self.speckles = []
+        for i in range(nIters):
+            for j in range(3): #detect + re probe + im probe
+                self.shmim.startIntegration(integrationTime=intTime)
+                ctrlRegionImage = self.shmim.receiveImage()[self.imgStart[0]:self.imgEnd[0], 
+                        self.imgStart[1]:self.imgEnd[1])
+                ctrlRegionImage[self.badPixMaskCtrl] = 0
+
+    def _detectSpeckles(self, ctrlRegionImage, maxSpecks, exclusionZone):
+        speckleCoords = imu.identify_bright_points(ctrlRegionImage)
+        speckleCoords = imu.filterpoints(speckleCoords, exclusionZone, maxSpecks)
+
+        for i, coord in enumerate(speckleCoords):
+            addSpeckle = True
+            for speck in self.speckles:
+                if np.sqrt((speck.centerCoords[0] - coord[0])**2 + (speck.centerCoords[1] - coord[1])**2) < exclusionZone:
+                    addSpeckle = False
+                    break
+            if addSpeckle:
+                speckle = Speckle(self.gMat, coords)
+                if len(self.specklesList) < self.paramDict['maxSpeckles']:
+                    self.speckles.append(speckle)
+                    print 'Detected speckle at', coord
+                else:
+                    break
 
     def _probeCycle(self, halfModeVec, intTime):
         probeImgs = []
@@ -133,6 +165,7 @@ class Controller(object):
             img = self.shmim.receiveImage()
             print 'done'
             probeImgs.append(img[self.imgStart[0]:self.imgEnd[0], 
+
                 self.imgStart[1]:self.imgEnd[1]])
 
         return probeImgs #order is real, -real, im, -im
