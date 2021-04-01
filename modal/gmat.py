@@ -31,6 +31,7 @@ class GMat(object):
         modeImage = 2*np.pi/lOverD*np.mgrid[ctrlRegionStart[0]:ctrlRegionEnd[0], ctrlRegionStart[1]:ctrlRegionEnd[1]]
         modeImage = np.transpose(modeImage, axes=(1, 2, 0)) # should be indexed r, c, coordAxis
         modeList = np.reshape(modeImage, (-1, 2))
+        self.intTime = None
 
         assert coordImage.shape == modeImage.shape
 
@@ -39,6 +40,7 @@ class GMat(object):
         else:
             self.yFlip = 1
 
+        #ensure badPixMask covers only control region
         if badPixMask.shape != coordImage.shape[:2]:
             badPixMask = badPixMask[(center[0] + ctrlRegionStart[0]):(center[0] + ctrlRegionEnd[0]), 
                     (center[1] + ctrlRegionStart[1]):(center[1] + ctrlRegionEnd[1])]
@@ -94,6 +96,7 @@ class GMat(object):
         gMat.modeImage = np.copy(self.modeImage)
         gMat.modeCoordList = np.copy(self.modeCoordList)
         gMat.nHalfModes = self.nHalfModes
+        gMat.intTime = self.intTime
 
         if isinstance(inds, int):
             gMat.mat = np.copy(self.mat[[inds, inds+self.nPix]])
