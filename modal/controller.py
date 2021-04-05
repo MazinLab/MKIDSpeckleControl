@@ -57,7 +57,6 @@ class Speckle(object):
             self.state == 'null'
         elif self.state == 'null':
             self.state = 'reprobe'
-            self.iter += 1
             #maybe recentroid/recompute probe here?
 
 
@@ -73,6 +72,7 @@ class Speckle(object):
         elif self.state == 'improbe':
             return np.append(np.zeros(len(self.halfModeProbeVec)), self.halfModeProbeVec)
         elif self.state == 'null':
+            self.iter += 1
             return self._computeControl()
 
     def _computeControl(self):
@@ -120,14 +120,40 @@ class Controller(object):
         self.imgEnd = np.array(gmat.ctrlRegionEnd) + np.array(gmat.center)
         self.badPixMaskCtrl = gMat.badPixMask
 
-    def runLoop(self, nIters, intTime, maxSpecks, exclusionsZone):
+    def runLoop(self, nIters, intTime, maxSpecks, exclusionsZone, maxProbeIters):
         self.speckles = []
         for i in range(nIters):
-            for j in range(3): #detect + re probe + im probe
-                self.shmim.startIntegration(integrationTime=intTime)
-                ctrlRegionImage = self.shmim.receiveImage()[self.imgStart[0]:self.imgEnd[0], 
-                        self.imgStart[1]:self.imgEnd[1])
-                ctrlRegionImage[self.badPixMaskCtrl] = 0
+            #detect + re probe + im probe/null
+            self.shmim.startIntegration(integrationTime=intTime)
+            ctrlRegionImage = self.shmim.receiveImage()[self.imgStart[0]:self.imgEnd[0], 
+                    self.imgStart[1]:self.imgEnd[1])
+            ctrlRegionImage[self.badPixMaskCtrl] = 0
+            ctrlRegionImage /= intTime
+            self._detectSpeckles(ctrlRegionImage, maxSpecks, exclusionZone)
+
+            for j in range(2): #re and im probes
+                modeVec = np.zeros(2*len(self.gMat.nHalfModes))
+                for speck in self.speckles:
+                    modeVec += speck.getNextModeVec()
+                probeZ, probeVar = self._probePair(modeVec, intTime)
+                for speck in self.speckles:
+                    speck.update(probeZ, probeVar)
+
+            specksToDelete = []
+            modeVec = np.zeros(2*len(self.gMat.nHalfModes))
+            for j, speck in enumerate(self.speckles):
+                smv = speck.getNextModeVec()
+                modeVec += smv
+                if np.any(smv > 0):
+                    print 'Nulling speckle at: ', speck.centerCoords
+                    specksToDelete.append(j)
+                elif speck.iter >= maxProbeIters:
+                    print 'Deleting speckle at: ', speck.centerCoords
+                    specksToDelete.append(j)
+            
+            for j, ind in enumerate(specksToDelete):
+                del self.speckles[ind - j]
+
 
     def _detectSpeckles(self, ctrlRegionImage, maxSpecks, exclusionZone):
         speckleCoords = imu.identify_bright_points(ctrlRegionImage)
@@ -147,18 +173,11 @@ class Controller(object):
                 else:
                     break
 
-    def _probeCycle(self, halfModeVec, intTime):
+    def _probePair(self, modeVec, intTime):
         probeImgs = []
-        for i in range(4): #2x real probes followed by 2x imag
-            if i%2 == 1:
-                modeVec = -halfModeVec
-            else:
-                modeVec = halfModeVec
-            if i < 2:
-                modeVec = np.append(modeVec, np.zeros(len(modeVec)))
-            else:
-                modeVec = np.append(np.zeros(len(modeVec)), modeVec)
-
+        for i in range(2): #2x real probes followed by 2x imag
+            if i == 1:
+                modeVec *= -1
             self._applyToDM(modeVec, 'probe')
             self.shmim.startIntegration(integrationTime=intTime)
             print 'recv img'
@@ -168,7 +187,9 @@ class Controller(object):
 
                 self.imgStart[1]:self.imgEnd[1]])
 
-        return probeImgs #order is real, -real, im, -im
+        probeZ = (probeImgs[0] - probeImgs[1])/intTime
+        probeVar = (probeImgs[0] + probeImgs[1])/intTime**2
+        return probeZ, probeVar #order is real, -real, im, -im
 
     def _addCtrlModes(self, halfModeVec, halfModePhaseVec):
         modeVec = halfModeVec*np.cos(halfModePhaseVec)
