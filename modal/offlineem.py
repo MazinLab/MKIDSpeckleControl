@@ -274,7 +274,7 @@ class OfflineEM(object):
                     reBestG = initGSlice[0]
                     imBestG = initGSlice[1]
 
-                if i % stopNIters == 0 and i > stopNIters:
+                if i % 50 == 0 and i > 50:
                     rePrevResid = reCurResid
                     reCurResid = np.mean(self.reZResid[pixInd][i-10:i])
                     if reCurResid < reBestResid:
@@ -288,6 +288,8 @@ class OfflineEM(object):
                         imBestG = self.gMat.mat[pixInd + self.gMat.nPix]
 
                     print 'iter {}'.format(i), reCurResid, rePrevResid, imCurResid, imPrevResid
+
+                if i % stopNIters == 0 and i > stopNIters:
 
                     if np.isnan(reCurResid) or np.isnan(imCurResid):
                         self.gMat.mat[pixInd] = initGSlice[0]
