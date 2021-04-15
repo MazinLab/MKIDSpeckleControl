@@ -15,15 +15,16 @@ class Speckle(object):
         """
         coords are r,c indexed wrt to ctrl region origin (0, 0)
         assume gMat.mat is in cps
+        reg: controller regularization parameter
         """
 
-        self.centerCoords = coords
+        self.centerCoords = np.array(coords).astype(int)
         self.coordList = np.mgrid[(coords[0] - radius):(coords[0] + radius + 1), 
-                (coords[1] - radius):(coords[1] + radius + 1)]
+                (coords[1] - radius):(coords[1] + radius + 1)].astype(int)
         self.coordList = np.reshape(np.transpose(self.coordList, (1, 2, 0)), (-1, 2)) #shape: [i, (x or y)]
-        self.pixIndList = gMat.pixIndImage[self.coordList] #check this statement for correctness
+        self.pixIndList = gMat.pixIndImage[self.coordList[:,0], self.coordList[:,1]] #check this statement for correctness
         gpm = ~np.isnan(self.pixIndList)
-        self.pixIndList = self.pixIndList[gpm]
+        self.pixIndList = self.pixIndList[gpm].astype(int)
         self.coordList = self.coordList[gpm]
         self.nPix = len(self.pixIndList)
 
@@ -34,27 +35,27 @@ class Speckle(object):
         self.snrThresh = snrThresh
         self.reg = reg
 
-        self.reProbeZ = np.zeros(len(pixIndList))
-        self.imProbeZ = np.zeros(len(pixIndList))
-        self.reProbeZVar = np.zeros(len(pixIndList))
-        self.imProbeZVar = np.zeros(len(pixIndList))
+        self.reProbeZ = np.zeros(len(self.pixIndList))
+        self.imProbeZ = np.zeros(len(self.pixIndList))
+        self.reProbeZVar = np.zeros(len(self.pixIndList))
+        self.imProbeZVar = np.zeros(len(self.pixIndList))
 
         #TODO: what if coords are on a bad pix?
         self.halfModeProbeVec = np.zeros(gMat.nHalfModes)
-        probeModeInd = np.argmax(gMat.mat[gMat.pixIndImage[coords]])
-        self.halfModeProbeVec[probeModeInd] = np.sqrt(initImage[coords])/gMat.mat[gMat.pixIndImage[coords], probeModeInd]
+        probeModeInd = np.argmax(gMat.mat[gMat.pixIndImage[self.centerCoords[0], self.centerCoords[1]].astype(int)])
+        self.halfModeProbeVec[probeModeInd] = np.sqrt(initImage[self.centerCoords[0], self.centerCoords[1]])/gMat.mat[gMat.pixIndImage[self.centerCoords[0], self.centerCoords[1]].astype(int), probeModeInd]
 
     def update(self, ctrlRegionImage, ctrlRegionImageVar):
-        vec = ctrlRegionImage[self.coordList].flatten()
-        varVec = ctrlRegionImageVar[self.coordList].flatten()
+        vec = ctrlRegionImage[self.coordList[:, 0], self.coordList[:, 1]].flatten()
+        varVec = ctrlRegionImageVar[self.coordList[:, 0], self.coordList[:, 1]].flatten()
         if self.state == 'reprobe':
             self.reProbeZ = (self.iter*self.reProbeZ + vec)/(self.iter + 1)
             self.reProbeZVar = (self.iter*self.reProbeZ + vec)/(self.iter + 1)**2
-            self.state == 'improbe'
+            self.state = 'improbe'
         elif self.state == 'improbe':
             self.imProbeZ = (self.iter*self.imProbeZ + vec)/(self.iter + 1)
             self.imProbeZVar = (self.iter*self.imProbeZ + vec)/(self.iter + 1)**2
-            self.state == 'null'
+            self.state = 'null'
         elif self.state == 'null':
             self.state = 'reprobe'
             #maybe recentroid/recompute probe here?
@@ -92,13 +93,17 @@ class Speckle(object):
         snrVec = ctrlModeVec/np.sqrt(np.diag(ctrlModeCov)) #SNR of each element of ctrlModeVec
         meanSNR = np.average(snrVec, weights=ctrlModeVec)
 
+        print 'xre', xre
+        print 'xim', xim
+        print 'ctrlModeVec', ctrlModeVec
+
         if meanSNR >= self.snrThresh:
             return ctrlModeVec
         else:
             return np.zeros(ctrlModeVec)
 
 class Controller(object):
-    def __init__(self, shmImName, dmChanName, gMat, wvlRange=None): #intTime for backwards comp
+    def __init__(self, shmImName, dmChanName, gMat, wvlRange=None, sim=False): #intTime for backwards comp
         self.shmim = shm.ImageCube(shmImName)
         self.dmChan = sp.SpeckleToDM(dmChanName)
 
@@ -110,39 +115,41 @@ class Controller(object):
             self.shmim.set_useWvl(False)
 
         # ctrl region boundaries in real image coordinates
-        self.imgStart = np.array(ctrlRegionStart) + np.array(center)
-        self.imgEnd = np.array(ctrlRegionEnd) + np.array(center)
+        self.imgStart = np.array(gMat.ctrlRegionStart) + np.array(gMat.center)
+        self.imgEnd = np.array(gMat.ctrlRegionEnd) + np.array(gMat.center)
         self.sim = sim
         
         self.gMat = gMat
         self.gMat.mat /= np.sqrt(self.gMat.intTime) #convert gMat to cps
-        self.imgStart = np.array(gmat.ctrlRegionStart) + np.array(gmat.center)
-        self.imgEnd = np.array(gmat.ctrlRegionEnd) + np.array(gmat.center)
+        self.imgStart = np.array(gMat.ctrlRegionStart) + np.array(gMat.center)
+        self.imgEnd = np.array(gMat.ctrlRegionEnd) + np.array(gMat.center)
         self.badPixMaskCtrl = gMat.badPixMask
 
-    def runLoop(self, nIters, intTime, maxSpecks, exclusionsZone, maxProbeIters):
+    def runLoop(self, nIters, intTime, maxSpecks, exclusionZone, maxProbeIters, speckleRad=4, reg=0.1, snrThresh=3):
         self.speckles = []
         for i in range(nIters):
             #detect + re probe + im probe/null
             self.shmim.startIntegration(integrationTime=intTime)
             ctrlRegionImage = self.shmim.receiveImage()[self.imgStart[0]:self.imgEnd[0], 
-                    self.imgStart[1]:self.imgEnd[1])
+                    self.imgStart[1]:self.imgEnd[1]]
             ctrlRegionImage[self.badPixMaskCtrl] = 0
-            ctrlRegionImage /= intTime
-            self._detectSpeckles(ctrlRegionImage, maxSpecks, exclusionZone)
+            ctrlRegionImage = ctrlRegionImage.astype(float)/intTime
+            self._detectSpeckles(ctrlRegionImage, maxSpecks, exclusionZone, speckleRad, reg, snrThresh)
 
             for j in range(2): #re and im probes
-                modeVec = np.zeros(2*len(self.gMat.nHalfModes))
+                modeVec = np.zeros(2*self.gMat.nHalfModes)
                 for speck in self.speckles:
                     modeVec += speck.getNextModeVec()
+                    print speck.state
                 probeZ, probeVar = self._probePair(modeVec, intTime)
                 for speck in self.speckles:
                     speck.update(probeZ, probeVar)
 
             specksToDelete = []
-            modeVec = np.zeros(2*len(self.gMat.nHalfModes))
+            modeVec = np.zeros(2*self.gMat.nHalfModes)
             for j, speck in enumerate(self.speckles):
                 smv = speck.getNextModeVec()
+                print speck.state
                 modeVec += smv
                 if np.any(smv > 0):
                     print 'Nulling speckle at: ', speck.centerCoords
@@ -151,23 +158,28 @@ class Controller(object):
                     print 'Deleting speckle at: ', speck.centerCoords
                     specksToDelete.append(j)
             
+            self._applyToDM(modeVec, 'null')
+
             for j, ind in enumerate(specksToDelete):
                 del self.speckles[ind - j]
 
 
-    def _detectSpeckles(self, ctrlRegionImage, maxSpecks, exclusionZone):
-        speckleCoords = imu.identify_bright_points(ctrlRegionImage)
+    def _detectSpeckles(self, ctrlRegionImage, maxSpecks, exclusionZone, speckleRad, reg, snrThresh):
+        speckleCoords = imu.identify_bright_points(ctrlRegionImage, exclusionZone)
         speckleCoords = imu.filterpoints(speckleCoords, exclusionZone, maxSpecks)
 
         for i, coord in enumerate(speckleCoords):
             addSpeckle = True
+            if np.any(coord < speckleRad) or (coord[0] >= ctrlRegionImage.shape[0] - speckleRad) or (coord[1] >= ctrlRegionImage.shape[1] - speckleRad):
+                addSpeckle = False
+                continue
             for speck in self.speckles:
                 if np.sqrt((speck.centerCoords[0] - coord[0])**2 + (speck.centerCoords[1] - coord[1])**2) < exclusionZone:
                     addSpeckle = False
                     break
             if addSpeckle:
-                speckle = Speckle(self.gMat, coords)
-                if len(self.specklesList) < self.paramDict['maxSpeckles']:
+                speckle = Speckle(self.gMat, coord, speckleRad, ctrlRegionImage, snrThresh, reg)
+                if len(self.speckles) < maxSpecks:
                     self.speckles.append(speckle)
                     print 'Detected speckle at', coord
                 else:
@@ -190,11 +202,6 @@ class Controller(object):
         probeZ = (probeImgs[0] - probeImgs[1])/intTime
         probeVar = (probeImgs[0] + probeImgs[1])/intTime**2
         return probeZ, probeVar #order is real, -real, im, -im
-
-    def _addCtrlModes(self, halfModeVec, halfModePhaseVec):
-        modeVec = halfModeVec*np.cos(halfModePhaseVec)
-        modeVec = np.append(modeVec, halfModeVec*np.sin(halfModePhaseVec))
-        self._applyToDM(modeVec, 'null', update=(not self.sim))
 
     def _applyToDM(self, modeVec, modeType, clearProbes=True, update=True):
         modeType = modeType.lower()
