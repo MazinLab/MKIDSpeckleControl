@@ -78,8 +78,8 @@ class OfflineEM(object):
 
 
         
-        self.r = 200 #np.sqrt(np.average(reProbeZ)) #set measurement noise to avg poisson noise
-        self.q = 0.2 #just hardcode this for now
+        r = 200 #np.sqrt(np.average(reProbeZ)) #set measurement noise to avg poisson noise
+        q = 0.2 #just hardcode this for now
 
         self.x = [np.array([]) for i in range(self.gMat.nPix)] 
         self.xpr = [np.array([]) for i in range(self.gMat.nPix)] 
@@ -99,8 +99,8 @@ class OfflineEM(object):
             self.x[pixInd] = np.zeros((len(self.reZs[pixInd]), 2))
             self.xpr[pixInd] = np.zeros((len(self.reZs[pixInd]), 2))
             self.P[pixInd] = np.zeros((len(self.reZs[pixInd]), 2, 2))
-            self.R[pixInd] = np.zeros(len(self.reZs[pixInd]))
-            self.Q[pixInd] = np.zeros((len(self.reZs[pixInd]), 2, 2))
+            self.R[pixInd] = r*np.ones(len(self.reZs[pixInd]))
+            self.Q[pixInd] = q*np.tile(np.diag(np.ones(2)), (len(self.reZs[pixInd]), 1, 1))
             self.reExpZ[pixInd] = np.zeros(len(self.reZs[pixInd]))
             self.imExpZ[pixInd] = np.zeros(len(self.reZs[pixInd]))
             self.reExpZCtrl[pixInd] = np.zeros(len(self.reZs[pixInd]))
@@ -165,6 +165,14 @@ class OfflineEM(object):
 
         self.gMat[inds] = emOpt.gMat
 
+    def initR(self, r):
+        for pixInd in range(self.gMat.nPix):
+            self.R[pixInd] = r*np.ones(len(self.reZs[pixInd]))
+
+    def initQ(self, q):
+        for pixInd in range(self.gMat.nPix):
+            self.Q[pixInd] = q*np.tile(np.diag(np.ones(2)), (len(self.reZs[pixInd]), 1, 1))
+
     def applyKalman(self, initPixInd=None):
         if initPixInd is None:
             pixRange = range(self.gMat.nPix)
@@ -186,8 +194,6 @@ class OfflineEM(object):
                     xpr = self.x[pixInd][i-1] + np.dot(gSlice, uc)
                     Ppr = self.P[pixInd][i-1] + self.Q[pixInd][i]
                     self.expXCtrl[pixInd][i] = self.expXCtrl[pixInd][i-1] + np.dot(gSlice, uc)
-                self.R[pixInd][i] = self.r
-                self.Q[pixInd][i] = self.q*np.diag(np.ones(2))
 
 
                 Hre = np.expand_dims(4*np.dot(gSlice, self.reUps[self.reUpInds[pixInd][i]]), axis=1).T
@@ -205,7 +211,7 @@ class OfflineEM(object):
                 self.imExpZCtrl[pixInd][i] = np.dot(Him, self.expXCtrl[pixInd][i])
                 self.xpr[pixInd][i] = xpr
 
-    def applyMStep(self, batchSize=50, learningRate=1.e-3, initPixInd=None, reg=0):#5.e-1):
+    def applyMStep(self, batchSize=50, learningRate=1.e-3, initPixInd=None, reg=0, optimizeVar=False):
         for i in range(batchSize):
             if initPixInd is None:
                 pixInd = np.random.choice(self.gMat.nPix)
@@ -243,13 +249,17 @@ class OfflineEM(object):
             self.gMat.mat[[pixInd, pixInd + self.gMat.nPix]] += learningRate/r*(4*z*np.dot(x, up.T) 
                     - 16*np.dot(x, np.dot(x.T, np.dot(np.dot(gSlice, up), up.T))))*gsMask - learningRate*reg*gSlice
 
+            if optimizeVar:
+                self.R[pixInd][iterInd] += learningRate/2*((z - np.dot(4*np.dot(gSlice, up).T, x))/r**2 - 1/r)
+                self.Q[pixInd][iterInd, prInd, prInd] += learningRate/2*(np.sum((x - xprev - np.dot(gSlice, uc))**2)/q**2 - 1/q)
+
             #if np.any(np.abs(self.gMat.mat[[pixInd, pixInd + self.gMat.nPix]]) > 30): #todo: change this hardcode and make gSlice more accessible
             #    ipdb.set_trace()
 
     
-    def runEM(self, learningRate=5.e-4, batchSize=50, nIters=1000, lrDecay=10, stopFactor=0.02, stopNIters=50, measVar=200, procVar=0.2, initPixInd=None, queue=None):
-        self.r = measVar
-        self.q = procVar
+    def runEM(self, learningRate=5.e-4, batchSize=50, nIters=1000, lrDecay=10, stopFactor=0.02, stopNIters=50, measVar=200, procVar=0.2, initPixInd=None, optimizeVar=False, queue=None):
+        self.initR(measVar)
+        self.initQ(procVar)
         if initPixInd is None:
             pixRange = range(self.gMat.nPix)
         else:
@@ -263,7 +273,7 @@ class OfflineEM(object):
             for i in range(nIters):
                 self.applyKalman(pixInd)
                 r = lrDecay**(i/float(nIters))
-                self.applyMStep(batchSize, learningRate/r, pixInd)
+                self.applyMStep(batchSize, learningRate/r, pixInd, optimizeVar=optimizeVar)
                 self.reZResid[pixInd][i] = np.mean((self.reZs[pixInd] - self.reExpZ[pixInd])**2)
                 self.imZResid[pixInd][i] = np.mean((self.imZs[pixInd] - self.imExpZ[pixInd])**2)
                 if i==10:
@@ -349,16 +359,16 @@ class OfflineEM(object):
             return np.zeros(2*self.gMat.nHalfModes)
         return np.sum(self.uCs[inds], axis=0)
 
-def _runEM(emOpt, learningRate=5.e-4, batchSize=50, nIters=1000, lrDecay=10, stopFactor=0.02, stopNIters=50, measVar=200, procVar=0.2, queue=None):
+def _runEM(emOpt, learningRate=5.e-4, batchSize=50, nIters=1000, lrDecay=10, stopFactor=0.02, stopNIters=50, measVar=200, procVar=0.2, optimizeVar=False, queue=None):
     #wrapper function for multiprocessing
     try:
-        emOpt.runEM(learningRate, batchSize, nIters, lrDecay, stopFactor, stopNIters, measVar=measVar, procVar=procVar, queue=queue)
+        emOpt.runEM(learningRate, batchSize, nIters, lrDecay, stopFactor, stopNIters, measVar=measVar, procVar=procVar, optimizeVar=optimizeVar, queue=queue)
     except Exception as e:
         traceback.print_exc()
         raise e
     return emOpt
 
-def runEMMultProc(emOpt, ncpu, learningRate=5.e-4, batchSize=50, nIters=1000, lrDecay=10, stopFactor=0.02, stopNIters=50, measVar=200, procVar=0.2):
+def runEMMultProc(emOpt, ncpu, learningRate=5.e-4, batchSize=50, nIters=1000, lrDecay=10, stopFactor=0.02, stopNIters=50, measVar=200, procVar=0.2, optimizeVar=False):
     chunkSize = 4
     nChunks = int(np.ceil(emOpt.gMat.nPix/float(chunkSize)))
     emOptList = []
@@ -373,7 +383,7 @@ def runEMMultProc(emOpt, ncpu, learningRate=5.e-4, batchSize=50, nIters=1000, lr
     q = man.Queue()
 
     runEMChunk = partial(_runEM, learningRate=learningRate, batchSize=batchSize, 
-            nIters=nIters, lrDecay=lrDecay, stopFactor=stopFactor, stopNIters=stopNIters, measVar=measVar, procVar=procVar, queue=q)
+            nIters=nIters, lrDecay=lrDecay, stopFactor=stopFactor, stopNIters=stopNIters, measVar=measVar, procVar=procVar, optimizeVar=optimizeVar, queue=q)
     asyncRes = pool.map_async(runEMChunk, emOptList, chunksize=1)
 
     pbar = tqdm.tqdm(total=emOpt.gMat.nPix)

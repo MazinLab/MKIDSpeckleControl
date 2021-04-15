@@ -96,7 +96,10 @@ class GMat(object):
         gMat.modeImage = np.copy(self.modeImage)
         gMat.modeCoordList = np.copy(self.modeCoordList)
         gMat.nHalfModes = self.nHalfModes
-        gMat.intTime = self.intTime
+        try:
+            gMat.intTime = self.intTime
+        except AttributeError:
+            gMat.intTime = None
 
         if isinstance(inds, int):
             gMat.mat = np.copy(self.mat[[inds, inds+self.nPix]])
