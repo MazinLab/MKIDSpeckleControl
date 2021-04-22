@@ -29,7 +29,7 @@ class Speckle(object):
         self.nPix = len(self.pixIndList)
 
         #slice of gMat corresponding to pixIndList
-        self.mat = np.append(gMat.mat[self.pixIndList], gMat.mat[self.pixIndList + gMat.nPix])
+        self.mat = np.append(gMat.mat[self.pixIndList], gMat.mat[self.pixIndList + gMat.nPix], axis=0)
         self.iter = 0 #number of complete probe/ctrl cycles 
         self.state = 'reprobe' #reprobe, improbe, or null
         self.snrThresh = snrThresh
@@ -80,16 +80,21 @@ class Speckle(object):
         Hre = 4*np.dot(self.mat[:self.nPix, :len(self.halfModeProbeVec)], self.halfModeProbeVec).T
         Him = 4*np.dot(self.mat[self.nPix:, len(self.halfModeProbeVec):], self.halfModeProbeVec).T
 
-        xre = np.dot(nlg.inv(Hre), self.reProbeZ)
-        xim = np.dot(nlg.inv(Him), self.imProbeZ)
-        Xrecov = np.dot(nlg.inv(Hre), np.dot(np.diag(self.reProbeZVar), nlg.inv(Hre).T))
-        Ximcov = np.dot(nlg.inv(Him), np.dot(np.diag(self.imProbeZVar), nlg.inv(Him).T))
+        xre = 1/Hre*self.reProbeZ
+        xim = 1/Him*self.imProbeZ
+        Xrecov = np.dot(np.diag(1/Hre), np.dot(np.diag(self.reProbeZVar), np.diag(1/Hre)))
+        Ximcov = np.dot(np.diag(1/Him), np.dot(np.diag(self.imProbeZVar), np.diag(1/Him)))
         
         x = np.append(xre, xim)
-        xCov = scillin.block_diag(Xrecov, Ximcov)
+        xCov = scilin.block_diag(Xrecov, Ximcov)
         ctrlMat = -np.dot(nlg.inv(np.dot(self.mat.T, self.mat) + self.reg*np.diag(np.ones(2*len(self.halfModeProbeVec)))), self.mat.T)
+
         ctrlModeVec = np.dot(ctrlMat, x)
         ctrlModeCov = np.dot(ctrlMat, np.dot(xCov, ctrlMat.T))
+
+        ctrlModeVec[np.isnan(ctrlModeVec)] = 0
+        ctrlModeCov[np.isnan(ctrlModeCov)] = 10000
+
         snrVec = ctrlModeVec/np.sqrt(np.diag(ctrlModeCov)) #SNR of each element of ctrlModeVec
         meanSNR = np.average(snrVec, weights=ctrlModeVec)
 
@@ -100,7 +105,7 @@ class Speckle(object):
         if meanSNR >= self.snrThresh:
             return ctrlModeVec
         else:
-            return np.zeros(ctrlModeVec)
+            return np.zeros(len(ctrlModeVec))
 
 class Controller(object):
     def __init__(self, shmImName, dmChanName, gMat, wvlRange=None, sim=False): #intTime for backwards comp
