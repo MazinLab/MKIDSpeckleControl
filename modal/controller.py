@@ -125,13 +125,16 @@ class Controller(object):
         self.sim = sim
         
         self.gMat = gMat
-        self.gMat.mat /= np.sqrt(self.gMat.intTime) #convert gMat to cps
+        self.gMat.changeIntTime(1)
         self.imgStart = np.array(gMat.ctrlRegionStart) + np.array(gMat.center)
         self.imgEnd = np.array(gMat.ctrlRegionEnd) + np.array(gMat.center)
         self.badPixMaskCtrl = gMat.badPixMask
 
     def runLoop(self, nIters, intTime, maxSpecks, exclusionZone, maxProbeIters, speckleRad=4, reg=0.1, snrThresh=3):
         self.speckles = []
+        self.dmChan.clearProbeSpeckles()
+        self.dmChan.clearNullingSpeckles()
+        self.dmChan.updateDM()
         for i in range(nIters):
             #detect + re probe + im probe/null
             self.shmim.startIntegration(integrationTime=intTime)
@@ -139,6 +142,8 @@ class Controller(object):
                     self.imgStart[1]:self.imgEnd[1]]
             ctrlRegionImage[self.badPixMaskCtrl] = 0
             ctrlRegionImage = ctrlRegionImage.astype(float)/intTime
+            for speck in self.speckles:
+                speck.update(ctrlRegionImage, ctrlRegionImage)
             self._detectSpeckles(ctrlRegionImage, maxSpecks, exclusionZone, speckleRad, reg, snrThresh)
 
             for j in range(2): #re and im probes

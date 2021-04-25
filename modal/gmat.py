@@ -190,6 +190,13 @@ class GMat(object):
         pixMask = np.matmul(self.mat[:self.nPix, :self.nHalfModes], modeMask.astype(int)).astype(bool)
         return pixMask[pixInd]
 
+    def changeIntTime(self, newIntTime):
+        if self.intTime is None:
+            raise Exception('gMat has no initial intTime!')
+
+        self.mat *= np.sqrt(newIntTime/self.intTime)
+        self.intTime = newIntTime
+
 
 
 
