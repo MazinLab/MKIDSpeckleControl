@@ -4,6 +4,7 @@ import scipy.linalg as scilin
 import matplotlib.pyplot as plt
 import os, time
 import pickle as pkl
+import copy
 
 from gmat import GMat
 import imageUtils as imu
@@ -50,11 +51,11 @@ class Speckle(object):
         varVec = ctrlRegionImageVar[self.coordList[:, 0], self.coordList[:, 1]].flatten()
         if self.state == 'reprobe':
             self.reProbeZ = (self.iter*self.reProbeZ + vec)/(self.iter + 1)
-            self.reProbeZVar = (self.iter*self.reProbeZ + vec)/(self.iter + 1)**2
+            self.reProbeZVar = (self.iter*self.reProbeZVar + varVec)/(self.iter + 1)**2
             self.state = 'improbe'
         elif self.state == 'improbe':
             self.imProbeZ = (self.iter*self.imProbeZ + vec)/(self.iter + 1)
-            self.imProbeZVar = (self.iter*self.imProbeZ + vec)/(self.iter + 1)**2
+            self.imProbeZVar = (self.iter*self.imProbeZVar + varVec)/(self.iter + 1)**2
             self.state = 'null'
         elif self.state == 'null':
             self.state = 'reprobe'
@@ -124,7 +125,7 @@ class Controller(object):
         self.imgEnd = np.array(gMat.ctrlRegionEnd) + np.array(gMat.center)
         self.sim = sim
         
-        self.gMat = gMat
+        self.gMat = copy.deepcopy(gMat)
         self.gMat.changeIntTime(1)
         self.imgStart = np.array(gMat.ctrlRegionStart) + np.array(gMat.center)
         self.imgEnd = np.array(gMat.ctrlRegionEnd) + np.array(gMat.center)
