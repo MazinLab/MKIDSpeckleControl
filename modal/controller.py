@@ -12,7 +12,7 @@ import speckpy as sp
 import mkidreadout.readout.sharedmem as shm
 
 class Speckle(object):
-    def __init__(self, gMat, coords, radius, initImage, snrThresh, reg): 
+    def __init__(self, gMat, coords, radius, initImage, snrThresh, reg, modeThresh=0.5): 
         """
         coords are r,c indexed wrt to ctrl region origin (0, 0)
         assume gMat.mat is in cps
@@ -28,6 +28,7 @@ class Speckle(object):
         self.pixIndList = self.pixIndList[gpm].astype(int)
         self.coordList = self.coordList[gpm]
         self.nPix = len(self.pixIndList)
+        self.centerCoordInd = np.where((self.coordList[:,0] == self.centerCoords[0]) & (self.coordList[:, 1] == self.centerCoords[1]))[0][0]
 
         #slice of gMat corresponding to pixIndList
         self.mat = np.append(gMat.mat[self.pixIndList], gMat.mat[self.pixIndList + gMat.nPix], axis=0)
@@ -45,6 +46,31 @@ class Speckle(object):
         self.halfModeProbeVec = np.zeros(gMat.nHalfModes)
         probeModeInd = np.argmax(gMat.mat[gMat.pixIndImage[self.centerCoords[0], self.centerCoords[1]].astype(int)])
         self.halfModeProbeVec[probeModeInd] = np.sqrt(initImage[self.centerCoords[0], self.centerCoords[1]])/gMat.mat[gMat.pixIndImage[self.centerCoords[0], self.centerCoords[1]].astype(int), probeModeInd]
+
+        self.nTotalHalfModes = len(self.halfModeProbeVec) #nHalfModes for FULL gMat
+
+        #self.modeInds index local modes in full mode vector
+        if modeThresh > 0:
+            modeThresh *= np.max(np.append(self.mat[self.centerCoordInd], self.mat[self.centerCoordInd + self.nPix]))
+            self.modeInds = np.where(self.mat[self.centerCoordInd] >= modeThresh)[0]
+            self.modeInds = np.append(self.modeInds, self.modeInds + self.nTotalHalfModes)
+            imModeInds = np.where(self.mat[self.centerCoordInd + self.nPix] >= modeThresh)[0]
+            self.modeInds = np.append(self.modeInds, imModeInds)
+            self.modeInds = np.append(self.modeInds, imModeInds - self.nTotalHalfModes)
+            self.modeInds = np.unique(np.sort(self.modeInds))
+            assert probeModeInd in self.modeInds 
+            assert np.all(self.modeInds > 0)
+            assert len(self.modeInds)%2 == 0
+            self.nHalfModes = len(self.modeInds)/2
+
+            self.halfModeProbeVec = self.halfModeProbeVec[self.modeInds[:self.nHalfModes]]
+            self.mat = self.mat[:, self.modeInds]
+
+        else:
+            self.modeInds = np.arange(2*len(self.nTotalHalfModes)).astype(int)
+            self.nHalfModes = self.nTotalHalfModes
+
+
 
     def update(self, ctrlRegionImage, ctrlRegionImageVar):
         vec = ctrlRegionImage[self.coordList[:, 0], self.coordList[:, 1]].flatten()
@@ -69,13 +95,17 @@ class Speckle(object):
         return next pairwise probe modeVec OR nulling modeVec
         returns a modeVec followed by 'probe' or 'null'
         """
+        modeVec = np.zeros(2*self.nTotalHalfModes)
         if self.state == 'reprobe':
-            return np.append(self.halfModeProbeVec, np.zeros(len(self.halfModeProbeVec)))
+            partialMV = np.append(self.halfModeProbeVec, np.zeros(len(self.halfModeProbeVec)))
         elif self.state == 'improbe':
-            return np.append(np.zeros(len(self.halfModeProbeVec)), self.halfModeProbeVec)
+            partialMV = np.append(np.zeros(len(self.halfModeProbeVec)), self.halfModeProbeVec)
         elif self.state == 'null':
             self.iter += 1
-            return self._computeControl()
+            partialMV = self._computeControl()
+
+        modeVec[self.modeInds] = partialMV
+        return modeVec
 
     def _computeControl(self):
         Hre = 4*np.dot(self.mat[:self.nPix, :len(self.halfModeProbeVec)], self.halfModeProbeVec).T
@@ -96,8 +126,16 @@ class Speckle(object):
         ctrlModeVec[np.isnan(ctrlModeVec)] = 0
         ctrlModeCov[np.isnan(ctrlModeCov)] = 10000
 
-        snrVec = ctrlModeVec/np.sqrt(np.diag(ctrlModeCov)) #SNR of each element of ctrlModeVec
+        snrVec = np.abs(ctrlModeVec)/np.sqrt(np.diag(ctrlModeCov)) #SNR of each element of ctrlModeVec
         meanSNR = np.average(snrVec, weights=ctrlModeVec)
+
+
+        #debug image
+        coords = self.coordList - self.coordList[0]
+        reImg = np.zeros((coords[-1, 0] + 1, np.max(coords[-1, :]) + 1))
+        reImg[coords[:, 0], coords[:, 1]] = xre
+        imImg = np.zeros(reImg.shape)
+        imImg[coords[:, 0], coords[:, 1]] = xim
 
         print 'xre', xre
         print 'xim', xim
@@ -131,7 +169,7 @@ class Controller(object):
         self.imgEnd = np.array(gMat.ctrlRegionEnd) + np.array(gMat.center)
         self.badPixMaskCtrl = gMat.badPixMask
 
-    def runLoop(self, nIters, intTime, maxSpecks, exclusionZone, maxProbeIters, speckleRad=4, reg=0.1, snrThresh=3):
+    def runLoop(self, nIters, intTime, maxSpecks, exclusionZone, maxProbeIters, speckleRad=4, reg=0.1, snrThresh=3, plot=True):
         self.speckles = []
         self.dmChan.clearProbeSpeckles()
         self.dmChan.clearNullingSpeckles()
@@ -146,6 +184,10 @@ class Controller(object):
             for speck in self.speckles:
                 speck.update(ctrlRegionImage, ctrlRegionImage)
             self._detectSpeckles(ctrlRegionImage, maxSpecks, exclusionZone, speckleRad, reg, snrThresh)
+            
+            if plot:
+                plt.imshow(ctrlRegionImage)
+                plt.show()
 
             for j in range(2): #re and im probes
                 modeVec = np.zeros(2*self.gMat.nHalfModes)
