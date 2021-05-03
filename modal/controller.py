@@ -127,7 +127,7 @@ class Speckle(object):
         ctrlModeCov[np.isnan(ctrlModeCov)] = 10000
 
         snrVec = np.abs(ctrlModeVec)/np.sqrt(np.diag(ctrlModeCov)) #SNR of each element of ctrlModeVec
-        meanSNR = np.average(snrVec, weights=ctrlModeVec)
+        meanSNR = np.average(snrVec, weights=np.abs(ctrlModeVec))
 
 
         #debug image
@@ -137,9 +137,11 @@ class Speckle(object):
         imImg = np.zeros(reImg.shape)
         imImg[coords[:, 0], coords[:, 1]] = xim
 
-        print 'xre', xre
-        print 'xim', xim
-        print 'ctrlModeVec', ctrlModeVec
+        #print 'xre', reImg
+        #print 'xim', imImg
+        #print 'ctrlModeVec', ctrlModeVec
+        #print 'snr', snrVec
+        print 'mean SNR', meanSNR
 
         if meanSNR >= self.snrThresh:
             return ctrlModeVec
@@ -174,20 +176,25 @@ class Controller(object):
         self.dmChan.clearProbeSpeckles()
         self.dmChan.clearNullingSpeckles()
         self.dmChan.updateDM()
+        lc = []
+        dt = np.arange(0, nIters*intTime*5, intTime*5)
         for i in range(nIters):
             #detect + re probe + im probe/null
             self.shmim.startIntegration(integrationTime=intTime)
             ctrlRegionImage = self.shmim.receiveImage()[self.imgStart[0]:self.imgEnd[0], 
                     self.imgStart[1]:self.imgEnd[1]]
+
             ctrlRegionImage[self.badPixMaskCtrl] = 0
+            lc.append(np.sum(ctrlRegionImage))
+            if plot:
+                plt.imshow(ctrlRegionImage)
+                plt.show()
+
             ctrlRegionImage = ctrlRegionImage.astype(float)/intTime
             for speck in self.speckles:
                 speck.update(ctrlRegionImage, ctrlRegionImage)
             self._detectSpeckles(ctrlRegionImage, maxSpecks, exclusionZone, speckleRad, reg, snrThresh)
             
-            if plot:
-                plt.imshow(ctrlRegionImage)
-                plt.show()
 
             for j in range(2): #re and im probes
                 modeVec = np.zeros(2*self.gMat.nHalfModes)
@@ -216,13 +223,16 @@ class Controller(object):
             for j, ind in enumerate(specksToDelete):
                 del self.speckles[ind - j]
 
+        return dt, lc
+
 
     def _detectSpeckles(self, ctrlRegionImage, maxSpecks, exclusionZone, speckleRad, reg, snrThresh):
         speckleCoords = imu.identify_bright_points(ctrlRegionImage, exclusionZone)
-        speckleCoords = imu.filterpoints(speckleCoords, exclusionZone, maxSpecks)
+        #speckleCoords = imu.filterpoints(speckleCoords, exclusionZone, maxSpecks)
 
         for i, coord in enumerate(speckleCoords):
             addSpeckle = True
+            coord = np.array(coord)
             if np.any(coord < speckleRad) or (coord[0] >= ctrlRegionImage.shape[0] - speckleRad) or (coord[1] >= ctrlRegionImage.shape[1] - speckleRad):
                 addSpeckle = False
                 continue
@@ -231,8 +241,8 @@ class Controller(object):
                     addSpeckle = False
                     break
             if addSpeckle:
-                speckle = Speckle(self.gMat, coord, speckleRad, ctrlRegionImage, snrThresh, reg)
                 if len(self.speckles) < maxSpecks:
+                    speckle = Speckle(self.gMat, coord, speckleRad, ctrlRegionImage, snrThresh, reg)
                     self.speckles.append(speckle)
                     print 'Detected speckle at', coord
                 else:
