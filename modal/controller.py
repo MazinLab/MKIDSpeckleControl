@@ -149,7 +149,7 @@ class Speckle(object):
             return np.zeros(len(ctrlModeVec))
 
 class Controller(object):
-    def __init__(self, shmImName, dmChanName, gMat, wvlRange=None, sim=False): #intTime for backwards comp
+    def __init__(self, shmImName, dmChanName, gMat, wvlRange=None, sim=False, hpm=None): #intTime for backwards comp
         self.shmim = shm.ImageCube(shmImName)
         self.dmChan = sp.SpeckleToDM(dmChanName)
 
@@ -170,6 +170,12 @@ class Controller(object):
         self.imgStart = np.array(gMat.ctrlRegionStart) + np.array(gMat.center)
         self.imgEnd = np.array(gMat.ctrlRegionEnd) + np.array(gMat.center)
         self.badPixMaskCtrl = gMat.badPixMask
+
+        if hpm:
+            hpm = hpm[(gMat.center[0] + gMat.ctrlRegionStart[0]):(gMat.center[0] + gMat.ctrlRegionEnd[0]), 
+                    (gMat.center[1] + gMat.ctrlRegionStart[1]):(gMat.center[1] + gMat.ctrlRegionEnd[1])]
+            self.badPixMaskCtrl |= hpm
+        
 
     def runLoop(self, nIters, intTime, maxSpecks, exclusionZone, maxProbeIters, speckleRad=4, reg=0.1, snrThresh=3, plot=True):
         self.speckles = []
