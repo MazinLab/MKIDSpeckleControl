@@ -211,6 +211,44 @@ class OfflineEM(object):
                 self.imExpZCtrl[pixInd][i] = np.dot(Him, self.expXCtrl[pixInd][i])
                 self.xpr[pixInd][i] = xpr
 
+    def runPCP(self, learningRate, nIters, pixInd=None):
+        if pixInd is None:
+            pixRange = range(0, self.gMat.nPix)
+        else:
+            pixRange = [pixInd]
+
+        for pixInd in pixRange:
+            for i in range(nIters):
+                iterInd = np.random.choice(range(1, len(self.reZs[pixInd])))
+                prInd = np.random.choice(2)
+
+                if prInd==0:
+                    up = np.expand_dims(self.reUps[self.reUpInds[pixInd][iterInd]], axis=1)
+                    dz = self.reZs[pixInd][iterInd] - self.reZs[pixInd][iterInd-1]
+                else:
+                    up = np.expand_dims(self.imUps[self.imUpInds[pixInd][iterInd]], axis=1)
+                    dz = self.imZs[pixInd][iterInd] - self.imZs[pixInd][iterInd-1]
+                
+                uc = np.expand_dims(self._getUc(self.uCInds[pixInd][iterInd]), axis=1)
+
+                gSlice = self.gMat.mat[[pixInd, pixInd + self.gMat.nPix]] #add restrict nonzero
+                gsMask = gSlice != 0
+
+                Guc = np.dot(gSlice, uc)
+                Gup = np.dot(gSlice, up)
+                df = np.dot(Guc, up.T) + np.dot(Gup, uc.T)
+
+                self.gMat.mat[[pixInd, pixInd + self.gMat.nPix]] += gsMask*learningRate*(-8*dz*df 
+                        + 32*np.dot(Gup.T, Guc)*df)
+
+                if i%100 == 0:
+                    self.applyKalman(pixInd)
+                    print np.mean((self.reZs[pixInd] - self.reExpZ[pixInd])**2)
+                    print np.mean((self.imZs[pixInd] - self.imExpZ[pixInd])**2)
+                    print ''
+
+
+
     def applyMStep(self, batchSize=50, learningRate=1.e-3, initPixInd=None, reg=0, optimizeVar=False):
         for i in range(batchSize):
             if initPixInd is None:
