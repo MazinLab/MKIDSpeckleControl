@@ -197,6 +197,12 @@ class GMat(object):
         self.mat *= np.sqrt(newIntTime/self.intTime)
         self.intTime = newIntTime
 
+    def rescalePixels(self, newNorm):
+        for i in range(self.nPix):
+            maxInd = np.argmax(np.abs(self.mat[i]))
+            maxVal = self.mat[i, maxInd]
+            self.mat[i] *= newNorm/maxVal
+
 
 
 
