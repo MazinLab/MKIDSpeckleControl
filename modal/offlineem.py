@@ -84,6 +84,7 @@ class OfflineEM(object):
         self.x = [np.array([]) for i in range(self.gMat.nPix)] 
         self.xpr = [np.array([]) for i in range(self.gMat.nPix)] 
         self.P = [np.array([]) for i in range(self.gMat.nPix)] 
+        self.Ppr = [np.array([]) for i in range(self.gMat.nPix)] 
         self.R = [np.array([]) for i in range(self.gMat.nPix)] 
         self.Q = [np.array([]) for i in range(self.gMat.nPix)] 
         self.reExpZ = [np.array([]) for i in range(self.gMat.nPix)]
@@ -99,6 +100,7 @@ class OfflineEM(object):
             self.x[pixInd] = np.zeros((len(self.reZs[pixInd]), 2))
             self.xpr[pixInd] = np.zeros((len(self.reZs[pixInd]), 2))
             self.P[pixInd] = np.zeros((len(self.reZs[pixInd]), 2, 2))
+            self.Ppr[pixInd] = np.zeros((len(self.reZs[pixInd]), 2, 2))
             self.R[pixInd] = r*np.ones(len(self.reZs[pixInd]))
             self.Q[pixInd] = q*np.tile(np.diag(np.ones(2)), (len(self.reZs[pixInd]), 1, 1))
             self.reExpZ[pixInd] = np.zeros(len(self.reZs[pixInd]))
@@ -112,6 +114,7 @@ class OfflineEM(object):
         emOpt.x = copy.deepcopy(self.x[inds])
         emOpt.xpr = copy.deepcopy(self.xpr[inds])
         emOpt.P = copy.deepcopy(self.P[inds])
+        emOpt.Ppr = copy.deepcopy(self.Ppr[inds])
         emOpt.R = copy.deepcopy(self.R[inds])
         emOpt.Q = copy.deepcopy(self.Q[inds])
         emOpt.reExpZ = copy.deepcopy(self.reExpZ[inds])
@@ -147,6 +150,7 @@ class OfflineEM(object):
         self.x[inds] = copy.deepcopy(emOpt.x)
         self.xpr[inds] = copy.deepcopy(emOpt.xpr)
         self.P[inds] = copy.deepcopy(emOpt.P)
+        self.Ppr[inds] = copy.deepcopy(emOpt.Ppr)
         self.R[inds] = copy.deepcopy(emOpt.R)
         self.Q[inds] = copy.deepcopy(emOpt.Q)
         self.reExpZ[inds] = copy.deepcopy(emOpt.reExpZ)
@@ -173,7 +177,7 @@ class OfflineEM(object):
         for pixInd in range(self.gMat.nPix):
             self.Q[pixInd] = q*np.tile(np.diag(np.ones(2)), (len(self.reZs[pixInd]), 1, 1))
 
-    def applyKalman(self, initPixInd=None):
+    def applyKalman(self, initPixInd=None, useRauch=True):
         if initPixInd is None:
             pixRange = range(self.gMat.nPix)
         else:
@@ -210,6 +214,13 @@ class OfflineEM(object):
                 self.imExpZ[pixInd][i] = np.dot(Him, xpr)
                 self.imExpZCtrl[pixInd][i] = np.dot(Him, self.expXCtrl[pixInd][i])
                 self.xpr[pixInd][i] = xpr
+                self.Ppr[pixInd][i] = Ppr
+
+            if useRauch:
+                for i in range(len(self.reZs[pixInd])-2, -1, -1):
+                    L = np.dot(self.P[pixInd][i], nlg.inv(self.Ppr[pixInd][i+1]))
+                    self.x[pixInd][i] = self.x[pixInd][i] + np.dot(L, self.x[pixInd][i+1] - self.xpr[pixInd][i+1])
+                    self.P[pixInd][i] = self.P[pixInd][i] + np.dot(L, np.dot(self.P[pixInd][i+1] - self.Ppr[pixInd][i+1], L.T))
 
     def runPCP(self, learningRate, nIters, pixInd=None):
         if pixInd is None:
