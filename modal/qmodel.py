@@ -38,6 +38,12 @@ class QModel(object):
         self.corrWin = corrWin
         self.filtSize = 2*corrWin+1
 
+        self.zData = []
+        self.upInvData = []
+        self.iInData = []
+        self.rInData = [] 
+        self.ucInData = []
+
     def _genPixIndImage(self):
         pixIndImage = np.zeros(self.coordImage.shape, dtype=int)
         for i in range(self.nPix):
@@ -52,21 +58,51 @@ class QModel(object):
         self.ucIn = tf.keras.Input(shape=(self.nRows, self.nCols, 2), name='ucIn')
 
         self.zFilt = tf.keras.layers.LocallyConnected2D(2, (self.filtSize, self.filtSize), 
-                implementation=2, padding='same')(zIn)
-        self.pInvFilt = tf.keras.layers.LocallyConnected2D(2, (self.filtSize, self.filtSize), 
-                implementation=2, padding='same')(upFilt)
-        self.policyOut = tf.keras.Layers.Multiply()(zFilt, upInvFilt) #output is uc
+                implementation=2, padding='same')(self.zIn)
+        self.upInvFilt = tf.keras.layers.LocallyConnected2D(2, (self.filtSize, self.filtSize), 
+                implementation=2, padding='same')(self.upInvIn)
+        self.policyOut = tf.keras.layers.Multiply(name='policyOut')([self.zFilt, self.upInvFilt]) #output is uc
 
         self.ucPolDiff = tf.keras.layers.add([self.policyOut, -1*self.ucIn])
 
         #square PolDiff and multiply w/ locally connected
         self.ucPDSqSc = tf.keras.layers.LocallyConnected2D(1, (self.filtSize, self.filtSize),
-                implementation=2, padding='same')(tf.math.square(self.ucPolicyDiff)) 
-        self.qOut = tf.math.reduce_sum(tf.keras.layers.add([self.iIn, -1*ucPDSqSc]))
+                implementation=2, padding='same')(tf.math.square(self.ucPolDiff)) 
+        self.qInt = tf.keras.layers.add([self.iIn, -1*tf.squeeze(self.ucPDSqSc, axis=3)])
+        self.qOut = tf.keras.layers.Lambda(lambda x: tf.math.reduce_sum(x), name='qOut')(self.qInt)
 
-        self.policyModel = tf.keras.Model(inputs=[self.zIn, self.upInvIn], outputs=self.policyOut)
+        #self.policyModel = tf.keras.Model(inputs=[self.zIn, self.upInvIn], outputs=self.policyOut)
         self.qModel = tf.keras.Model(inputs=[self.zIn, self.upInvIn, self.iIn, self.rIn, self.ucIn], 
-                outputs=self.qOut)
+                outputs=[self.policyOut, self.qOut])
+
+        #self.opt = tf.keras.optimizers.Adam(learning_rate=0.001)
+        #self.lossModel = tf.keras.losses.Huber()
+        self.qModel.compile(
+                optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
+                loss={'qOut':tf.keras.losses.Huber()})
+
+        def addIter(self, z, up, uc, i0, i1):
+            """
+            z - 2 color image of probe measurements
+            up - 2 color image of probes
+            uc - image of control
+            i0 - speckle det image
+            i1 - speckle det image after uc applied
+            """
+            pass
+
+        def getUc(self, z, up, i0, eps=0):
+            """
+            explore w/ probability epsilon
+            """
+            pass
+
+        def runTrainStep(self, nEpochs, learningRate=0.001):
+            pass
+
+
+
+        
 
 
 
