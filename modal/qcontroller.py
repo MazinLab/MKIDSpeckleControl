@@ -24,8 +24,12 @@ class Speckle(object):
         self.zImg = np.zeros(probeImg.shape+(2,))
         self.zCovImg = np.zeros(probeImg.shape+(2,))
         self.nIters = 0
+        self.i1Img = None
 
     def addProbeCycle(self, z, zCov):
+        pass
+
+    def getProbeSNR(self):
         pass
 
 class Controller(object):
@@ -63,7 +67,7 @@ class Controller(object):
         self.probeApRad = probeApRad
         self.probeFiltSize = 2*probeApRad + 1
 
-    def runLoop(self, nIters, intTime, maxSpecks, exclusionZone, maxProbeIters, reg=0.1, snrThresh=3, plot=True):
+    def runLoop(self, nIters, intTime, maxSpecks, exclusionZone, maxProbeIters, snrThresh=3, plot=True):
         self.speckles = []
         self.dmChan.clearProbeSpeckles()
         self.dmChan.clearNullingSpeckles()
@@ -83,34 +87,44 @@ class Controller(object):
                 plt.show()
 
             ctrlRegionImage = ctrlRegionImage.astype(float)/intTime
-            for speck in self.speckles:
-                speck.update(ctrlRegionImage, ctrlRegionImage)
+            #for speck in self.speckles:
+            #    speck.update(ctrlRegionImage, ctrlRegionImage)
             self._detectSpeckles(ctrlRegionImage, maxSpecks, exclusionZone)
+
+            if i > 0:
+                for speck in doneSpecks:
+                    speck.i1Img = ctrlRegionImage
+                    self.qModel.addIter()
             
 
+            #probing
+            probeZ = np.zeros(self.qModel.imgShape + (2,))
+            probeVar = np.zeros(self.qModel.imgShape + (2,))
             for j in range(2): #re and im probes
-                modeVec = np.zeros(2*self.gMat.nHalfModes)
+                modeImg = np.zeros(self.qModel.imgShape + (2,))
                 for speck in self.speckles:
-                    modeVec += speck.getNextModeVec()
-                    print speck.state
-                probeZ, probeVar = self._probePair(modeVec, intTime)
-                for speck in self.speckles:
-                    speck.update(probeZ, probeVar)
+                    modeImg[:,:,j] += speck.upImg
+                probeZ[:, :, j], probeVar[:, :, j] = self._probePair(modeImg, intTime)
 
+            for speck in self.speckles:
+                speck.addProbeCycle(probeZ, probeVar)
+
+            #nulling
             specksToDelete = []
-            modeVec = np.zeros(2*self.gMat.nHalfModes)
+            doneSpecks = []
+            modeImg = np.zeros(self.qModel.imgShape + (2,))
             for j, speck in enumerate(self.speckles):
-                smv = speck.getNextModeVec()
-                print speck.state
-                modeVec += smv
-                if np.any(smv > 0):
-                    print 'Nulling speckle at: ', speck.centerCoords
+                snr = speck.getProbeSNR()
+                speck.iter += 1
+                if snr >= snrThresh
+                    print 'Nulling speckle at: ', speck.coords
                     specksToDelete.append(j)
+                    modeImg += self.qModel.getUc(speck.zImg, speck.upImg, speck.i0Img, self.eps)
+                    doneSpecks.append(speck)
                 elif speck.iter >= maxProbeIters:
-                    print 'Deleting speckle at: ', speck.centerCoords
+                    print 'Deleting speckle at: ', speck.coords
                     specksToDelete.append(j)
             
-            self._applyToDM(modeVec, 'null')
 
             for j, ind in enumerate(specksToDelete):
                 del self.speckles[ind - j]
@@ -182,6 +196,9 @@ class Controller(object):
             self.dmChan.updateDM()
 
     def _getProbeImg(self, coords, i0Img):
+        """
+        scales speckle aperture intensity by self.probeBeta and returns nRows x nCol image w/ up
+        """
         filtImg = imu.smartBadPixFilt(i0Img, self.badPixMaskCtrl)
         i0 = np.sum(filtImg[coords[0] - self.probeApRad:coords[0] + self.probeApRad + 1, coords[1] - self.probeApRad:coords[1] + self.probeApRad + 1])
         up = np.sqrt(i0)/self.probeBeta
