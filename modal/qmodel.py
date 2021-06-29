@@ -41,7 +41,7 @@ class QModel(object):
         self.intTime = None
         self.corrWin = corrWin
         self.filtSize = 2*corrWin+1
-        self.imgShape = tuple(ctrlRegionEnd - ctrlRegionStart)
+        self.imgShape = tuple(np.array(ctrlRegionEnd) - np.array(ctrlRegionStart))
 
 
         self.zData = []
@@ -55,6 +55,8 @@ class QModel(object):
         else:
             self.yFlip = 1
 
+        self._initNetworks()
+
     def _genPixIndImage(self):
         pixIndImage = np.zeros(self.coordImage.shape, dtype=int)
         for i in range(self.nPix):
@@ -64,8 +66,8 @@ class QModel(object):
     def _initNetworks(self):
         self.zIn = tf.keras.Input(shape=(self.nRows, self.nCols, 2), name='zIn')
         self.upInvIn = tf.keras.Input(shape=(self.nRows, self.nCols, 1), name='upInvIn') #1/up
-        self.iIn = tf.keras.Input(shape=(self.nRows, self.nCols), name='intensity') #initial intensity image
-        self.rIn = tf.keras.Input(shape=(1,), name='reward') #diff between initial and final speck intensities
+        self.iIn = tf.keras.Input(shape=(self.nRows, self.nCols), name='iIn') #initial intensity image
+        #self.rIn = tf.keras.Input(shape=(1,), name='rIn') #diff between initial and final speck intensities
         self.ucIn = tf.keras.Input(shape=(self.nRows, self.nCols, 2), name='ucIn')
 
         self.zFilt = tf.keras.layers.LocallyConnected2D(2, (self.filtSize, self.filtSize), 
@@ -83,7 +85,7 @@ class QModel(object):
         self.qOut = tf.keras.layers.Lambda(lambda x: tf.math.reduce_sum(x), name='qOut')(self.qInt)
 
         #self.policyModel = tf.keras.Model(inputs=[self.zIn, self.upInvIn], outputs=self.policyOut)
-        self.qModel = tf.keras.Model(inputs=[self.zIn, self.upInvIn, self.iIn, self.rIn, self.ucIn], 
+        self.qModel = tf.keras.Model(inputs=[self.zIn, self.upInvIn, self.iIn, self.ucIn], 
                 outputs=[self.policyOut, self.qOut])
 
         #self.opt = tf.keras.optimizers.Adam(learning_rate=0.001)
@@ -100,7 +102,7 @@ class QModel(object):
         i0Img - speckle det image
         i1Img - speckle det image after uc applied
         """
-        probeCoords = np.asarray(np.where(upImg))
+        probeCoords = np.asarray(np.where(upImg)).T
         for coord in probeCoords:
             probeMask = np.zeros(upImg.shape)
             probeMask[coord] = 1
@@ -123,14 +125,38 @@ class QModel(object):
             self.rData.append(rIn)
             self.ucData.append(ucIn)
 
-    def getUc(self, z, up, i0, eps=0):
+    def getUc(self, zImg, upImg, i0Img, eps=0):
         """
         explore w/ probability epsilon
         """
-        pass
+        e = np.random.random_sample()
+        coords = np.squeeze(np.array(np.where(upImg)))
+        assert coords.shape == (2,)
+        up = upImg[coords[0], coords[1]]
 
-    def runTrainStep(self, nEpochs, learningRate=0.001):
-        pass
+        if e < eps:
+            ucImg = np.zeros(self.imgShape + (2,))
+            amp = 2*np.random.random_sample()*up
+            phase = 2*np.pi*np.random.random_sample()
+            coords += ((2*self.corrWin + 1)*np.random.random_sample(2)).astype(int) - self.corrWin
+
+            ucImg[coords[0], coords[1], 0] = amp*np.cos(phase)
+            ucImg[coords[0], coords[1], 1] = amp*np.sin(phase)
+            return ucImg
+
+        else:
+            upInvImg = np.zeros(upImg.shape)
+            upInvImg[coords[0], coords[1]] = 1/up
+            upInvImg = np.expand_dims(upInvImg, 2)
+            return self.qModel([np.expand_dims(zImg, 0), np.expand_dims(upInvImg, 0), np.expand_dims(i0Img, 0), np.zeros((1,) + upImg.shape + (2,))])['policyOut']
+
+
+    def runTrainStep(self, nEpochs=10):
+        self.qModel.fit({'zIn': self.zData, 'upInvIn': self.upInvData, 'ucIn': self.ucData, 
+            'iIn': self.iData},
+            {'qOut': self.rData},
+            epochs=nEpochs,
+            batchSize=30)
 
     def getDMSpeckles(self, modeImage):
         """
@@ -138,23 +164,23 @@ class QModel(object):
             first color channel is re probes, second is im probes
         self.modeImage - row x col x coord_axis (0 is row coord, 1 is col coord)
         """
-        if modeImage.shape != self.modeImage.shape 
+        if modeImage.shape != self.modeImage.shape :
             raise Exception('mode image should be {} image'.format(self.modeImage.shape + (2,)))
 
         #modeVec = np.reshape(modeVec, (2, -1)).T
         #modeInds = np.where((modeVec[:len(self.modeList)] != 0)|(modeVec[len(self.modeList):] != 0)[0]
-        modeCoords = np.asarray(np.where(np.sum(np.abs(modeImage), axis=2) != 0))
+        modeCoords = np.asarray(np.where(np.sum(np.abs(modeImage), axis=2) != 0)).T
 
         ampList = []
         phaseList = []
         kVecList = []
 
-        for coord in modeInds:
+        for coord in modeCoords:
             cxAmp = modeImage[coord[0], coord[1]]
             ampList.append(np.sqrt(cxAmp[0]**2 + cxAmp[1]**2))
             phaseList.append(np.arctan2(cxAmp[1], cxAmp[0]))
             #switch kVecs from r, c to x, y indexing
-            kVecList.append([self.modeImage[coords[0], coords[1], 1], self.yFlip*self.modeList[coords[1], coords[0], 0]])
+            kVecList.append([self.modeImage[coord[0], coord[1], 1], self.yFlip*self.modeImage[coord[0], coord[1], 0]])
 
         return np.array(ampList), np.array(phaseList), np.array(kVecList)
 

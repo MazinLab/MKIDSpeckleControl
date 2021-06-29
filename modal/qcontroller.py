@@ -10,6 +10,8 @@ import imageUtils as imu
 import speckpy as sp
 import mkidreadout.readout.sharedmem as shm
 
+EPSILON = 0.2
+
 class Speckle(object):
     
     def __init__(self, coords, initImage, probeImg): 
@@ -18,19 +20,30 @@ class Speckle(object):
         coords - coords in control region
         probeImg - ctrlRegion.shape dim image w/ up
         """
-        self.coords = coords
+        self.coords = coords.astype(int)
         self.i0Img = initImage
         self.upImg = probeImg
         self.zImg = np.zeros(probeImg.shape+(2,))
         self.zCovImg = np.zeros(probeImg.shape+(2,))
-        self.nIters = 0
+        self.iter = 0
         self.i1Img = None
 
     def addProbeCycle(self, z, zCov):
-        pass
+        self.iter += 1
+        self.zImg = (self.zImg + z)/self.iter
+        self.zCovImg = (self.zCovImg + zCov)/self.iter**2
 
-    def getProbeSNR(self):
-        pass
+    def getProbeSNR(self, speckRad):
+        """
+        SNR across aperture defined by speckRad, weighted by 
+        zImg
+        """
+        snrImg = np.abs(self.zImg)/np.sqrt(self.zCovImg)
+        snrImg[np.isnan(snrImg)] = 0
+        coordMask = np.zeros(self.i0Img.shape)
+        coordMask[self.coords[0]-speckRad:self.coords[0]+speckRad+1, self.coords[1]-speckRad:self.coords[1]+speckRad+1] = 1
+        coordMask = np.dstack((coordMask, coordMask))
+        return np.average(snrImg*coordMask, weights=np.abs(self.zImg)*coordMask)
 
 class Controller(object):
     
@@ -49,20 +62,21 @@ class Controller(object):
             self.shmim.set_useWvl(False)
 
         # ctrl region boundaries in real image coordinates
-        self.imgStart = np.array(gMat.ctrlRegionStart) + np.array(gMat.center)
-        self.imgEnd = np.array(gMat.ctrlRegionEnd) + np.array(gMat.center)
+        self.imgStart = np.array(qModel.ctrlRegionStart) + np.array(qModel.center)
+        self.imgEnd = np.array(qModel.ctrlRegionEnd) + np.array(qModel.center)
         self.sim = sim
         self.qModel = qModel
 
         if badPixMask is not None:
-            self.badPixMaskCtrl = badPixMask[(qModel.center[0] + gMat.ctrlRegionStart[0]):(gMat.center[0] + gMat.ctrlRegionEnd[0]), 
-                    (qModel.center[1] + gMat.ctrlRegionStart[1]):(gMat.center[1] + gMat.ctrlRegionEnd[1])]
+            self.badPixMaskCtrl = badPixMask[(qModel.center[0] + 
+                    qModel.ctrlRegionStart[0]):(qModel.center[0] + qModel.ctrlRegionEnd[0]), 
+                    (qModel.center[1] + qModel.ctrlRegionStart[1]):(qModel.center[1] + qModel.ctrlRegionEnd[1])]
         else:
             self.badPixMaskCtrl = np.zeros(qModel.imgShape)
 
         self.setProbeParams(probeBeta, probeApRad)
 
-    def setProbeParams(self, probeBeta, probeApRad)
+    def setProbeParams(self, probeBeta, probeApRad):
         self.probeBeta = probeBeta
         self.probeApRad = probeApRad
         self.probeFiltSize = 2*probeApRad + 1
@@ -94,7 +108,7 @@ class Controller(object):
             if i > 0:
                 for speck in doneSpecks:
                     speck.i1Img = ctrlRegionImage
-                    self.qModel.addIter()
+                    self.qModel.addIter(speck.zImg, speck.upImg, speck.ucImg, speck.i0Img, speck.i1Img)
             
 
             #probing
@@ -114,17 +128,24 @@ class Controller(object):
             doneSpecks = []
             modeImg = np.zeros(self.qModel.imgShape + (2,))
             for j, speck in enumerate(self.speckles):
-                snr = speck.getProbeSNR()
-                speck.iter += 1
-                if snr >= snrThresh
+                snr = speck.getProbeSNR(self.probeApRad)
+                print 'speckle at ', speck.coords, 'snr:', snr
+                if snr >= snrThresh:
                     print 'Nulling speckle at: ', speck.coords
                     specksToDelete.append(j)
-                    modeImg += self.qModel.getUc(speck.zImg, speck.upImg, speck.i0Img, self.eps)
+                    uc = self.qModel.getUc(speck.zImg, speck.upImg, speck.i0Img, EPSILON)
+                    modeImg += uc
+                    speck.ucImg = uc
                     doneSpecks.append(speck)
                 elif speck.iter >= maxProbeIters:
                     print 'Deleting speckle at: ', speck.coords
                     specksToDelete.append(j)
             
+            if plot and np.any(modeImg):
+                plt.imshow(modeImg[:,:,0])
+                plt.show()
+            
+            self._applyToDM(modeImg, 'null')
 
             for j, ind in enumerate(specksToDelete):
                 del self.speckles[ind - j]
@@ -139,17 +160,17 @@ class Controller(object):
         for i, coord in enumerate(speckleCoords):
             addSpeckle = True
             coord = np.array(coord)
-            if np.any(coord < self.probeApRad) or (coord[0] >= ctrlRegionImage.shape[0] - self.probeApRad) 
-                    or (coord[1] >= ctrlRegionImage.shape[1] - self.probeApRad):
+            if (np.any(coord < self.probeApRad) or (coord[0] >= ctrlRegionImage.shape[0] - self.probeApRad)
+                    or (coord[1] >= ctrlRegionImage.shape[1] - self.probeApRad)):
                 addSpeckle = False
                 continue
             for speck in self.speckles:
-                if np.sqrt((speck.centerCoords[0] - coord[0])**2 + (speck.centerCoords[1] - coord[1])**2) < exclusionZone:
+                if np.sqrt((speck.coords[0] - coord[0])**2 + (speck.coords[1] - coord[1])**2) < exclusionZone:
                     addSpeckle = False
                     break
             if addSpeckle:
                 if len(self.speckles) < maxSpecks:
-                    upImg = self._getProbeImg(coords, ctrlRegionImage)
+                    upImg = self._getProbeImg(coord, ctrlRegionImage)
                     speckle = Speckle(coord, ctrlRegionImage, upImg)
                     self.speckles.append(speckle)
                     print 'Detected speckle at', coord
@@ -199,6 +220,7 @@ class Controller(object):
         """
         scales speckle aperture intensity by self.probeBeta and returns nRows x nCol image w/ up
         """
+        coords = coords.astype(int)
         filtImg = imu.smartBadPixFilt(i0Img, self.badPixMaskCtrl)
         i0 = np.sum(filtImg[coords[0] - self.probeApRad:coords[0] + self.probeApRad + 1, coords[1] - self.probeApRad:coords[1] + self.probeApRad + 1])
         up = np.sqrt(i0)/self.probeBeta
