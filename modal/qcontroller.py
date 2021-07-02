@@ -11,6 +11,7 @@ import speckpy as sp
 import mkidreadout.readout.sharedmem as shm
 
 EPSILON = 0.2
+TRAIN_INT = 1000
 
 class Speckle(object):
     
@@ -109,6 +110,7 @@ class Controller(object):
                 for speck in doneSpecks:
                     speck.i1Img = ctrlRegionImage
                     self.qModel.addIter(speck.zImg, speck.upImg, speck.ucImg, speck.i0Img, speck.i1Img)
+                    print 'adding iter'
             
 
             #probing
@@ -127,13 +129,19 @@ class Controller(object):
             specksToDelete = []
             doneSpecks = []
             modeImg = np.zeros(self.qModel.imgShape + (2,))
+            if i % TRAIN_INT == 0 and i > 0:
+                self.qModel.runTrainStep()
             for j, speck in enumerate(self.speckles):
                 snr = speck.getProbeSNR(self.probeApRad)
                 print 'speckle at ', speck.coords, 'snr:', snr
                 if snr >= snrThresh:
                     print 'Nulling speckle at: ', speck.coords
                     specksToDelete.append(j)
-                    uc = self.qModel.getUc(speck.zImg, speck.upImg, speck.i0Img, EPSILON)
+                    if i < TRAIN_INT:
+                        uc = self.qModel.getUc(speck.zImg, speck.upImg, speck.i0Img, 1)
+                    else:
+                        uc = self.qModel.getUc(speck.zImg, speck.upImg, speck.i0Img, EPSILON)
+
                     modeImg += uc
                     speck.ucImg = uc
                     doneSpecks.append(speck)
